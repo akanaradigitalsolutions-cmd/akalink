@@ -58,10 +58,12 @@ export async function daftarTenant(
     email_confirm: true,
   });
   if (createErr || !created.user) {
-    const msg = createErr?.message?.includes("already")
-      ? "Email ini sudah terdaftar. Silakan masuk."
-      : "Gagal membuat akun. Coba lagi.";
-    return { error: msg };
+    console.error("[daftar] createUser gagal:", createErr);
+    const detail = createErr?.message ?? "penyebab tidak diketahui";
+    if (detail.toLowerCase().includes("already")) {
+      return { error: "Email ini sudah terdaftar. Silakan masuk." };
+    }
+    return { error: `Gagal membuat akun: ${detail}` };
   }
   const userId = created.user.id;
 
@@ -96,10 +98,12 @@ export async function daftarTenant(
       app_metadata: { tenant_id: tenantId, role: "owner" },
     });
     if (metaErr) throw metaErr;
-  } catch {
+  } catch (e) {
+    console.error("[daftar] setup tenant gagal:", e);
     // Bila penyiapan data gagal, batalkan akun agar tidak ada user yatim.
     await admin.auth.admin.deleteUser(userId).catch(() => {});
-    return { error: "Gagal menyiapkan data laundry. Silakan coba lagi." };
+    const detail = e instanceof Error ? e.message : String(e);
+    return { error: `Gagal menyiapkan data laundry: ${detail}` };
   }
 
   // 4) Loginkan pengguna (set cookie sesi) lalu arahkan ke dashboard.
