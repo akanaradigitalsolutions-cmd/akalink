@@ -1,0 +1,22 @@
+{
+  "name": "akalink",
+  "version": "0.0.0",
+  "private": true,
+  "description": "AkaLink — Platform SaaS Manajemen Laundry Multi-Tenant (Akanara Digital Solutions)",
+  "packageManager": "pnpm@10.33.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "typecheck": "turbo typecheck",
+    "format": "prettier --write \"**/*.{ts,tsx,md,json,css}\""
+  },
+  "devDependencies": {
+    "prettier": "^3.4.2",
+    "turbo": "2.10.9",
+    "typescript": "5.9.3"
+  }
+}
