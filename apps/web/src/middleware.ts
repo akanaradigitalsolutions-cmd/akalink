@@ -38,8 +38,9 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const path = request.nextUrl.pathname;
-  const isProtected = path.startsWith("/dashboard");
   const isAuthPage = path === "/masuk" || path === "/daftar";
+  // Semua rute yang cocok dengan matcher selain halaman auth adalah rute aplikasi.
+  const isProtected = !isAuthPage;
 
   if (isProtected && !user) {
     return NextResponse.redirect(new URL("/masuk", request.url));
@@ -52,5 +53,15 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/masuk", "/daftar"],
+  matcher: [
+    "/dashboard/:path*",
+    "/layanan/:path*",
+    "/transaksi/:path*",
+    "/konsumen/:path*",
+    "/keuangan/:path*",
+    "/laporan/:path*",
+    "/pengaturan/:path*",
+    "/masuk",
+    "/daftar",
+  ],
 };

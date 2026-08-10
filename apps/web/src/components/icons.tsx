@@ -101,3 +101,28 @@ export function IconSparkle(p: IconProps) {
     </Svg>
   );
 }
+
+export function IconTag(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <path d="M3.5 4.5h7l9.5 9.5-6.5 6.5-9.5-9.5v-6.5Z" />
+      <circle cx="8" cy="9" r="1.4" fill="currentColor" stroke="none" />
+    </Svg>
+  );
+}
+
+export function IconPlus(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <path d="M12 5v14M5 12h14" />
+    </Svg>
+  );
+}
+
+export function IconTrash(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13" />
+    </Svg>
+  );
+}

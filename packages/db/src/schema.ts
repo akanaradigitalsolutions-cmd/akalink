@@ -1,7 +1,10 @@
 import { relations, sql } from "drizzle-orm";
 import {
+  boolean,
   index,
+  integer,
   jsonb,
+  numeric,
   pgEnum,
   pgTable,
   text,
@@ -157,6 +160,7 @@ export const tenantsRelations = relations(tenants, ({ many }) => ({
   outlets: many(outlets),
   employees: many(employees),
   accessLevels: many(accessLevels),
+  services: many(services),
 }));
 
 export const outletsRelations = relations(outlets, ({ one }) => ({
@@ -191,6 +195,53 @@ export const permissionsRelations = relations(permissions, ({ one }) => ({
   }),
 }));
 
+// --- services: katalog layanan laundry (Phase 1) --------------------------
+export const serviceUnitEnum = pgEnum("service_unit", [
+  "kiloan", // per kilogram (KG)
+  "satuan", // per item
+  "koin", // koin / load
+  "luas", // per meter persegi (M2)
+]);
+
+export const services = pgTable(
+  "services",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    // Null = layanan berlaku untuk semua outlet (MVP satu outlet).
+    outletId: uuid("outlet_id").references(() => outlets.id, {
+      onDelete: "set null",
+    }),
+    nama: text("nama").notNull(),
+    tipeSatuan: serviceUnitEnum("tipe_satuan").notNull().default("kiloan"),
+    harga: numeric("harga", { precision: 12, scale: 2 }).notNull().default("0"),
+    estimasiJam: integer("estimasi_jam"),
+    kategori: text("kategori"),
+    expressTersedia: boolean("express_tersedia").notNull().default(false),
+    aktif: boolean("aktif").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("services_tenant_id_idx").on(t.tenantId)],
+);
+
+export const servicesRelations = relations(services, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [services.tenantId],
+    references: [tenants.id],
+  }),
+  outlet: one(outlets, {
+    fields: [services.outletId],
+    references: [outlets.id],
+  }),
+}));
+
 /*
  * ---- Tipe bantu -----------------------------------------------------------
  * Ekspor tipe TypeScript agar aman dipakai di seluruh aplikasi.
@@ -205,3 +256,5 @@ export type AccessLevel = typeof accessLevels.$inferSelect;
 export type NewAccessLevel = typeof accessLevels.$inferInsert;
 export type Permission = typeof permissions.$inferSelect;
 export type NewPermission = typeof permissions.$inferInsert;
+export type Service = typeof services.$inferSelect;
+export type NewService = typeof services.$inferInsert;
