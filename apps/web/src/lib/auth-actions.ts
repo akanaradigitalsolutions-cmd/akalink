@@ -1,7 +1,6 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { getDb, tenants, employees, accessLevels } from "@akalink/db";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -152,20 +151,4 @@ export async function keluar() {
   const supabase = await createSupabaseServerClient();
   await supabase.auth.signOut();
   redirect("/masuk");
-}
-
-// ---- (dipakai dashboard) ambil data tenant & employee saat ini -----------
-export async function getTenantContext(userId: string, tenantId?: string) {
-  const db = getDb();
-  const [me] = await db
-    .select()
-    .from(employees)
-    .where(eq(employees.authUserId, userId))
-    .limit(1);
-
-  const tenant = tenantId
-    ? (await db.select().from(tenants).where(eq(tenants.id, tenantId)).limit(1))[0]
-    : undefined;
-
-  return { me, tenant };
 }
