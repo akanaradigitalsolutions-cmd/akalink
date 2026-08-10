@@ -203,6 +203,9 @@ export const serviceUnitEnum = pgEnum("service_unit", [
   "luas", // per meter persegi (M2)
 ]);
 
+// Satuan waktu untuk estimasi selesai: jam atau hari.
+export const estimasiUnitEnum = pgEnum("estimasi_unit", ["jam", "hari"]);
+
 export const services = pgTable(
   "services",
   {
@@ -217,7 +220,10 @@ export const services = pgTable(
     nama: text("nama").notNull(),
     tipeSatuan: serviceUnitEnum("tipe_satuan").notNull().default("kiloan"),
     harga: numeric("harga", { precision: 12, scale: 2 }).notNull().default("0"),
-    estimasiJam: integer("estimasi_jam"),
+    // Estimasi selesai: nilai + satuan (mis. 6 "jam" atau 2 "hari").
+    // Kolom DB tetap bernama estimasi_jam (menyimpan nilai apa pun satuannya).
+    estimasiNilai: integer("estimasi_jam"),
+    estimasiSatuan: estimasiUnitEnum("estimasi_satuan").notNull().default("jam"),
     kategori: text("kategori"),
     expressTersedia: boolean("express_tersedia").notNull().default(false),
     aktif: boolean("aktif").notNull().default(true),

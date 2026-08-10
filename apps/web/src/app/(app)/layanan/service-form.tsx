@@ -11,8 +11,9 @@ const satuanOptions = [
   { value: "luas", label: "Luas (M²)" },
 ];
 
-const inputClass =
-  "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-200 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100";
+const inputBase =
+  "rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-200 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100";
+const inputClass = `${inputBase} w-full`;
 
 export function ServiceForm({ defaultOpen = false }: { defaultOpen?: boolean }) {
   const [open, setOpen] = useState(defaultOpen);
@@ -100,16 +101,26 @@ export function ServiceForm({ defaultOpen = false }: { defaultOpen?: boolean }) 
           />
         </Field>
         <Field
-          label="Estimasi Selesai (jam)"
-          error={state?.fieldErrors?.estimasiJam}
+          label="Estimasi Selesai"
+          error={state?.fieldErrors?.estimasiNilai}
         >
-          <input
-            name="estimasiJam"
-            type="number"
-            min="0"
-            placeholder="mis. 24"
-            className={inputClass}
-          />
+          <div className="flex gap-2">
+            <input
+              name="estimasiNilai"
+              type="number"
+              min="0"
+              placeholder="mis. 24"
+              className={`${inputBase} min-w-0 flex-1`}
+            />
+            <select
+              name="estimasiSatuan"
+              defaultValue="jam"
+              className={`${inputBase} w-24 flex-none`}
+            >
+              <option value="jam">Jam</option>
+              <option value="hari">Hari</option>
+            </select>
+          </div>
         </Field>
         <Field label="Kategori (opsional)" error={state?.fieldErrors?.kategori}>
           <input

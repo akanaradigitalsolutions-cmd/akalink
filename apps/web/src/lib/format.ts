@@ -5,6 +5,15 @@ export function formatRupiah(value: number | string | null | undefined): string 
   return "Rp " + n.toLocaleString("id-ID");
 }
 
+/** Format estimasi selesai, mis. (6, "jam") → "6 jam", (2, "hari") → "2 hari". */
+export function formatEstimasi(
+  nilai?: number | null,
+  satuan?: string | null,
+): string {
+  if (nilai == null) return "—";
+  return `${nilai} ${satuan === "hari" ? "hari" : "jam"}`;
+}
+
 export const LABEL_SATUAN: Record<string, string> = {
   kiloan: "Kiloan (KG)",
   satuan: "Satuan (item)",

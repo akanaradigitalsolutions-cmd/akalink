@@ -14,7 +14,8 @@ const schema = z.object({
   nama: z.string().trim().min(1, "Nama layanan wajib diisi"),
   tipeSatuan: z.enum(["kiloan", "satuan", "koin", "luas"]),
   harga: z.coerce.number().min(0, "Harga tidak boleh negatif"),
-  estimasiJam: z.coerce.number().int().min(0).max(8760).optional(),
+  estimasiNilai: z.coerce.number().int().min(0).max(9999).optional(),
+  estimasiSatuan: z.enum(["jam", "hari"]).default("jam"),
   kategori: z.string().trim().optional(),
   expressTersedia: z.boolean().optional(),
 });
@@ -42,12 +43,13 @@ export async function createService(
   const tenantId = await requireTenant();
   if (!tenantId) return { error: "Sesi tidak valid. Silakan masuk lagi." };
 
-  const estimasiRaw = formData.get("estimasiJam");
+  const estimasiRaw = formData.get("estimasiNilai");
   const parsed = schema.safeParse({
     nama: formData.get("nama"),
     tipeSatuan: formData.get("tipeSatuan"),
     harga: formData.get("harga"),
-    estimasiJam: estimasiRaw ? estimasiRaw : undefined,
+    estimasiNilai: estimasiRaw ? estimasiRaw : undefined,
+    estimasiSatuan: (formData.get("estimasiSatuan") as string) || "jam",
     kategori: (formData.get("kategori") as string) || undefined,
     expressTersedia: formData.get("expressTersedia") === "on",
   });
@@ -66,7 +68,8 @@ export async function createService(
     nama: d.nama,
     tipeSatuan: d.tipeSatuan,
     harga: String(d.harga),
-    estimasiJam: d.estimasiJam ?? null,
+    estimasiNilai: d.estimasiNilai ?? null,
+    estimasiSatuan: d.estimasiSatuan,
     kategori: d.kategori ?? null,
     expressTersedia: d.expressTersedia ?? false,
   });

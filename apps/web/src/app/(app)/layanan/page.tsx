@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { getSessionUser, getTenantIdFromUser } from "@/lib/auth";
 import { getServices } from "@/lib/services";
 import { deleteService, toggleService } from "@/lib/services-actions";
-import { formatRupiah, LABEL_SATUAN } from "@/lib/format";
+import { formatRupiah, formatEstimasi, LABEL_SATUAN } from "@/lib/format";
 import { ServiceForm } from "./service-form";
 import { IconTag, IconTrash } from "@/components/icons";
 
@@ -91,7 +91,7 @@ export default async function LayananPage() {
                   {formatRupiah(s.harga)}
                 </div>
                 <div className="text-sm text-slate-600 dark:text-slate-300 sm:col-span-2">
-                  {s.estimasiJam ? `${s.estimasiJam} jam` : "—"}
+                  {formatEstimasi(s.estimasiNilai, s.estimasiSatuan)}
                 </div>
                 <div className="flex items-center gap-2 sm:col-span-2 sm:justify-end">
                   <form action={toggleService}>
