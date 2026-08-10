@@ -12,7 +12,11 @@
     "build": "turbo build",
     "lint": "turbo lint",
     "typecheck": "turbo typecheck",
-    "format": "prettier --write \"**/*.{ts,tsx,md,json,css}\""
+    "format": "prettier --write \"**/*.{ts,tsx,md,json,css}\"",
+    "db:generate": "pnpm --filter @akalink/db db:generate",
+    "db:migrate": "pnpm --filter @akalink/db db:migrate",
+    "db:push": "pnpm --filter @akalink/db db:push",
+    "db:studio": "pnpm --filter @akalink/db db:studio"
   },
   "devDependencies": {
     "prettier": "^3.4.2",

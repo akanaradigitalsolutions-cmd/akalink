@@ -1,0 +1,207 @@
+import { relations, sql } from "drizzle-orm";
+import {
+  index,
+  jsonb,
+  pgEnum,
+  pgTable,
+  text,
+  timestamp,
+  unique,
+  uuid,
+} from "drizzle-orm/pg-core";
+
+/*
+ * ============================================================================
+ *  SKEMA DATABASE AKALINK — Phase 0 (Fondasi)
+ * ----------------------------------------------------------------------------
+ *  File ini mendefinisikan "tabel" database dalam TypeScript. Drizzle akan
+ *  menerjemahkannya menjadi perintah SQL (lihat folder migrations/).
+ *
+ *  Aturan multi-tenant: hampir semua tabel bisnis punya kolom `tenant_id`
+ *  agar data setiap laundry terisolasi. Keamanan barisnya (RLS) ditambahkan
+ *  pada Phase 0.4.
+ * ============================================================================
+ */
+
+// --- Enum: himpunan nilai tetap yang diizinkan untuk sebuah kolom ---------
+export const tenantTierEnum = pgEnum("tenant_tier", [
+  "basic",
+  "premium",
+  "power",
+]);
+
+export const tenantStatusEnum = pgEnum("tenant_status", [
+  "trial",
+  "active",
+  "suspended",
+]);
+
+export const employeeStatusEnum = pgEnum("employee_status", [
+  "invited",
+  "active",
+  "inactive",
+]);
+
+// --- tenants: satu baris = satu bisnis laundry (pelanggan platform) --------
+export const tenants = pgTable("tenants", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  nama: text("nama").notNull(),
+  kota: text("kota"),
+  tier: tenantTierEnum("tier").notNull().default("basic"),
+  status: tenantStatusEnum("status").notNull().default("trial"),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+// --- outlets: cabang / gerai milik sebuah tenant --------------------------
+export const outlets = pgTable(
+  "outlets",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    nama: text("nama").notNull(),
+    telepon: text("telepon"),
+    kota: text("kota"),
+    alamat: text("alamat"),
+    logoUrl: text("logo_url"),
+    // jam_operasional disimpan sebagai JSON, mis. { "senin": "08:00-20:00" }
+    jamOperasional: jsonb("jam_operasional"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("outlets_tenant_id_idx").on(t.tenantId)],
+);
+
+// --- access_levels: level akses / peran (bawaan + kustom) per tenant ------
+export const accessLevels = pgTable(
+  "access_levels",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    nama: text("nama").notNull(),
+    deskripsi: text("deskripsi"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("access_levels_tenant_id_idx").on(t.tenantId)],
+);
+
+// --- permissions: izin granular (mis. "transaksi.buat") per access_level --
+export const permissions = pgTable(
+  "permissions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    accessLevelId: uuid("access_level_id")
+      .notNull()
+      .references(() => accessLevels.id, { onDelete: "cascade" }),
+    key: text("key").notNull(),
+  },
+  (t) => [
+    unique("permissions_level_key_unique").on(t.accessLevelId, t.key),
+    index("permissions_access_level_id_idx").on(t.accessLevelId),
+  ],
+);
+
+// --- employees: karyawan milik tenant, terhubung ke Supabase Auth ---------
+export const employees = pgTable(
+  "employees",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    // id user di Supabase Auth (auth.users). Null saat masih "diundang".
+    authUserId: uuid("auth_user_id"),
+    nama: text("nama").notNull(),
+    employeeCode: text("employee_code"),
+    role: text("role").notNull().default("kasir"),
+    // Daftar outlet yang boleh diakses karyawan ini (scope outlet).
+    outletIds: uuid("outlet_ids")
+      .array()
+      .notNull()
+      .default(sql`'{}'::uuid[]`),
+    status: employeeStatusEnum("status").notNull().default("invited"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("employees_tenant_id_idx").on(t.tenantId),
+    index("employees_auth_user_id_idx").on(t.authUserId),
+    unique("employees_tenant_code_unique").on(t.tenantId, t.employeeCode),
+  ],
+);
+
+/*
+ * ---- Relasi ----------------------------------------------------------------
+ * Relasi TIDAK membuat kolom baru. Mereka memberi tahu Drizzle cara
+ * menggabungkan tabel saat query (mis. "ambil tenant beserta semua outlet-nya").
+ */
+export const tenantsRelations = relations(tenants, ({ many }) => ({
+  outlets: many(outlets),
+  employees: many(employees),
+  accessLevels: many(accessLevels),
+}));
+
+export const outletsRelations = relations(outlets, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [outlets.tenantId],
+    references: [tenants.id],
+  }),
+}));
+
+export const employeesRelations = relations(employees, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [employees.tenantId],
+    references: [tenants.id],
+  }),
+}));
+
+export const accessLevelsRelations = relations(
+  accessLevels,
+  ({ one, many }) => ({
+    tenant: one(tenants, {
+      fields: [accessLevels.tenantId],
+      references: [tenants.id],
+    }),
+    permissions: many(permissions),
+  }),
+);
+
+export const permissionsRelations = relations(permissions, ({ one }) => ({
+  accessLevel: one(accessLevels, {
+    fields: [permissions.accessLevelId],
+    references: [accessLevels.id],
+  }),
+}));
+
+/*
+ * ---- Tipe bantu -----------------------------------------------------------
+ * Ekspor tipe TypeScript agar aman dipakai di seluruh aplikasi.
+ */
+export type Tenant = typeof tenants.$inferSelect;
+export type NewTenant = typeof tenants.$inferInsert;
+export type Outlet = typeof outlets.$inferSelect;
+export type NewOutlet = typeof outlets.$inferInsert;
+export type Employee = typeof employees.$inferSelect;
+export type NewEmployee = typeof employees.$inferInsert;
+export type AccessLevel = typeof accessLevels.$inferSelect;
+export type NewAccessLevel = typeof accessLevels.$inferInsert;
+export type Permission = typeof permissions.$inferSelect;
+export type NewPermission = typeof permissions.$inferInsert;
