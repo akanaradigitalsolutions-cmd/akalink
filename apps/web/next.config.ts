@@ -1,8 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Konfigurasi Next.js akan bertambah seiring fase berikutnya
-  // (mis. optimasi gambar, header keamanan, i18n).
+  // Kompilasi paket workspace TypeScript (mis. @akalink/db).
+  transpilePackages: ["@akalink/db"],
+  // Biarkan driver "postgres" dimuat dari node_modules saat runtime (jangan di-bundle).
+  serverExternalPackages: ["postgres"],
 };
 
 export default nextConfig;
