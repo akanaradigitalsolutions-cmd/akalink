@@ -36,6 +36,20 @@
       "when": 1786372597952,
       "tag": "0004_outstanding_medusa",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1786372967268,
+      "tag": "0005_shallow_bulldozer",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1786372968350,
+      "tag": "0006_consumers_rls",
+      "breakpoints": true
     }
   ]
 }

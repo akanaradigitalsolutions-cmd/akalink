@@ -14,6 +14,12 @@ export function formatEstimasi(
   return `${nilai} ${satuan === "hari" ? "hari" : "jam"}`;
 }
 
+/** Tampilkan nomor HP, mis. "6281..." → "+6281...". */
+export function formatHp(hp?: string | null): string {
+  if (!hp) return "—";
+  return hp.startsWith("62") ? "+" + hp : hp;
+}
+
 export const LABEL_SATUAN: Record<string, string> = {
   kiloan: "Kiloan (KG)",
   satuan: "Satuan (item)",

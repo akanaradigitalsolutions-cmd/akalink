@@ -1,6 +1,7 @@
 import { relations, sql } from "drizzle-orm";
 import {
   boolean,
+  date,
   index,
   integer,
   jsonb,
@@ -161,6 +162,7 @@ export const tenantsRelations = relations(tenants, ({ many }) => ({
   employees: many(employees),
   accessLevels: many(accessLevels),
   services: many(services),
+  consumers: many(consumers),
 }));
 
 export const outletsRelations = relations(outlets, ({ one }) => ({
@@ -248,6 +250,45 @@ export const servicesRelations = relations(services, ({ one }) => ({
   }),
 }));
 
+// --- consumers: data konsumen laundry (Phase 1.2) -------------------------
+// Privasi: daftar tidak ditampilkan bebas — akses lewat pencarian.
+export const consumerGenderEnum = pgEnum("consumer_gender", ["pria", "wanita"]);
+
+export const consumers = pgTable(
+  "consumers",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    nama: text("nama").notNull(),
+    hp: text("hp"),
+    gender: consumerGenderEnum("gender"),
+    // Data opsional
+    instansi: text("instansi"),
+    email: text("email"),
+    tanggalLahir: date("tanggal_lahir"),
+    agama: text("agama"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("consumers_tenant_id_idx").on(t.tenantId),
+    index("consumers_hp_idx").on(t.hp),
+  ],
+);
+
+export const consumersRelations = relations(consumers, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [consumers.tenantId],
+    references: [tenants.id],
+  }),
+}));
+
 /*
  * ---- Tipe bantu -----------------------------------------------------------
  * Ekspor tipe TypeScript agar aman dipakai di seluruh aplikasi.
@@ -264,3 +305,5 @@ export type Permission = typeof permissions.$inferSelect;
 export type NewPermission = typeof permissions.$inferInsert;
 export type Service = typeof services.$inferSelect;
 export type NewService = typeof services.$inferInsert;
+export type Consumer = typeof consumers.$inferSelect;
+export type NewConsumer = typeof consumers.$inferInsert;
