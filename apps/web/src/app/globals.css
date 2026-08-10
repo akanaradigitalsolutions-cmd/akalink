@@ -1,8 +1,13 @@
 @import "tailwindcss";
 
 /*
-  Tema brand AkaLink (Tailwind v4, CSS-first).
+  Mode gelap dikendalikan lewat kelas `.dark` (bukan preferensi sistem),
+  sehingga secara default aplikasi SELALU tampil terang/putih.
+  Nanti bisa ditambahkan tombol toggle yang menamb/menghapus kelas `.dark`.
 */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Tema brand AkaLink (Tailwind v4, CSS-first). */
 @theme {
   --color-brand-50: #eff6ff;
   --color-brand-100: #dbeafe;
@@ -26,11 +31,10 @@
   --foreground: #0f172a;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0b1120;
-    --foreground: #e2e8f0;
-  }
+/* Nilai untuk mode gelap — hanya aktif bila kelas .dark dipasang. */
+.dark {
+  --background: #0b1120;
+  --foreground: #e2e8f0;
 }
 
 body {
