@@ -49,6 +49,21 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
+  // Rute khusus pemilik (Owner). Kasir dialihkan ke Beranda.
+  const OWNER_ONLY = [
+    "/keuangan",
+    "/laporan",
+    "/pengaturan",
+    "/layanan",
+    "/karyawan",
+  ];
+  if (user && OWNER_ONLY.some((p) => path === p || path.startsWith(p + "/"))) {
+    const role = (user.app_metadata as { role?: string } | undefined)?.role;
+    if (role !== "owner") {
+      return NextResponse.redirect(new URL("/dashboard", request.url));
+    }
+  }
+
   return response;
 }
 
@@ -61,6 +76,7 @@ export const config = {
     "/keuangan/:path*",
     "/laporan/:path*",
     "/pengaturan/:path*",
+    "/karyawan/:path*",
     "/masuk",
     "/daftar",
   ],

@@ -134,6 +134,7 @@ export const employees = pgTable(
     // id user di Supabase Auth (auth.users). Null saat masih "diundang".
     authUserId: uuid("auth_user_id"),
     nama: text("nama").notNull(),
+    email: text("email"),
     employeeCode: text("employee_code"),
     role: text("role").notNull().default("kasir"),
     // Daftar outlet yang boleh diakses karyawan ini (scope outlet).

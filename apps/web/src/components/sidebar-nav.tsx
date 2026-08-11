@@ -10,6 +10,7 @@ import {
   IconWallet,
   IconChart,
   IconSettings,
+  IconBadge,
 } from "./icons";
 
 type NavItem = {
@@ -17,24 +18,34 @@ type NavItem = {
   href: string;
   icon: (p: { className?: string }) => React.ReactNode;
   soon?: boolean;
+  ownerOnly?: boolean;
 };
 
 const items: NavItem[] = [
   { label: "Beranda", href: "/dashboard", icon: IconDashboard },
-  { label: "Layanan", href: "/layanan", icon: IconTag },
+  { label: "Layanan", href: "/layanan", icon: IconTag, ownerOnly: true },
   { label: "Transaksi", href: "/transaksi", icon: IconReceipt },
   { label: "Konsumen", href: "/konsumen", icon: IconUsers },
-  { label: "Keuangan", href: "/keuangan", icon: IconWallet },
-  { label: "Laporan", href: "/laporan", icon: IconChart },
-  { label: "Pengaturan", href: "/pengaturan", icon: IconSettings },
+  { label: "Keuangan", href: "/keuangan", icon: IconWallet, ownerOnly: true },
+  { label: "Laporan", href: "/laporan", icon: IconChart, ownerOnly: true },
+  { label: "Karyawan", href: "/karyawan", icon: IconBadge, ownerOnly: true },
+  {
+    label: "Pengaturan",
+    href: "/pengaturan",
+    icon: IconSettings,
+    ownerOnly: true,
+  },
 ];
 
-export function SidebarNav() {
+export function SidebarNav({ role }: { role?: string }) {
   const pathname = usePathname();
+  const isOwner = role === "owner";
 
   return (
     <nav className="mt-8 flex flex-1 flex-col gap-1">
-      {items.map((item) => {
+      {items
+        .filter((item) => !item.ownerOnly || isOwner)
+        .map((item) => {
         if (item.soon) {
           return (
             <span

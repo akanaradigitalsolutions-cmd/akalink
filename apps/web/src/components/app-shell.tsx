@@ -33,7 +33,7 @@ export function AppShell({
         <div className="px-2">
           <Logo size={36} subtitle={null} />
         </div>
-        <SidebarNav />
+        <SidebarNav role={role} />
         <form action={keluar}>
           <button
             type="submit"

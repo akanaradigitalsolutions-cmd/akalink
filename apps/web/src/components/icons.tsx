@@ -84,6 +84,18 @@ export function IconSettings(p: IconProps) {
   );
 }
 
+export function IconBadge(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <rect x="3" y="5" width="18" height="15" rx="2.5" />
+      <path d="M9 3.5h6" />
+      <circle cx="9.5" cy="11" r="2" />
+      <path d="M6.2 17a3.3 3.3 0 0 1 6.6 0" />
+      <path d="M15 10h4M15 13.5h4" />
+    </Svg>
+  );
+}
+
 export function IconLogout(p: IconProps) {
   return (
     <Svg {...p}>

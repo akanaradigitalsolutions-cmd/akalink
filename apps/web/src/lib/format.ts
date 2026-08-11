@@ -2,7 +2,8 @@
 export function formatRupiah(value: number | string | null | undefined): string {
   const n = typeof value === "string" ? Number(value) : (value ?? 0);
   if (Number.isNaN(n)) return "Rp 0";
-  return "Rp " + n.toLocaleString("id-ID");
+  // Rupiah dibulatkan ke satuan penuh (tanpa sen).
+  return "Rp " + Math.round(n).toLocaleString("id-ID");
 }
 
 /** Format estimasi selesai, mis. (6, "jam") → "6 jam", (2, "hari") → "2 hari". */
