@@ -1,5 +1,6 @@
 import "server-only";
 
+import { cache } from "react";
 import { and, desc, eq } from "drizzle-orm";
 import {
   getDb,
@@ -69,7 +70,7 @@ export async function getTransactionWithItems(tenantId: string, id: string) {
  * Ambil transaksi berdasarkan id SAJA (untuk halaman nota publik / QR).
  * Tidak dibatasi tenant — id UUID bersifat rahasia (tidak bisa ditebak).
  */
-export async function getPublicTransaction(id: string) {
+export const getPublicTransaction = cache(async (id: string) => {
   if (!UUID_RE.test(id)) return null;
   const db = getDb();
   const [row] = await db
@@ -94,4 +95,4 @@ export async function getPublicTransaction(id: string) {
     tenant: row.tenants,
     items,
   };
-}
+});
