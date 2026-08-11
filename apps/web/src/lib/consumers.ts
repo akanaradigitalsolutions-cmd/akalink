@@ -20,6 +20,17 @@ export async function searchConsumers(tenantId: string, q: string) {
     .limit(25);
 }
 
+/** Ambil konsumen terbaru (default ketika belum ada pencarian). */
+export async function getRecentConsumers(tenantId: string, limit = 25) {
+  const db = getDb();
+  return db
+    .select()
+    .from(consumers)
+    .where(eq(consumers.tenantId, tenantId))
+    .orderBy(desc(consumers.createdAt))
+    .limit(limit);
+}
+
 /** Hitung total konsumen milik tenant. */
 export async function countConsumers(tenantId: string) {
   const db = getDb();

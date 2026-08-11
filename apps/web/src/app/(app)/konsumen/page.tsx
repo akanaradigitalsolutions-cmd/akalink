@@ -1,7 +1,11 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getSessionUser, getTenantIdFromUser } from "@/lib/auth";
-import { searchConsumers, countConsumers } from "@/lib/consumers";
+import {
+  searchConsumers,
+  getRecentConsumers,
+  countConsumers,
+} from "@/lib/consumers";
 import { deleteConsumer } from "@/lib/consumers-actions";
 import { formatHp } from "@/lib/format";
 import { ConsumerForm } from "./consumer-form";
@@ -23,8 +27,12 @@ export default async function KonsumenPage({
   const query = (q ?? "").trim();
 
   const total = tenantId ? await countConsumers(tenantId) : 0;
-  const results =
-    tenantId && query ? await searchConsumers(tenantId, query) : [];
+  // Tanpa pencarian → tampilkan konsumen terbaru. Dengan pencarian → hasil cari.
+  const results = tenantId
+    ? query
+      ? await searchConsumers(tenantId, query)
+      : await getRecentConsumers(tenantId, 25)
+    : [];
 
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-6">
@@ -59,14 +67,20 @@ export default async function KonsumenPage({
       </form>
 
       {/* Hasil */}
-      {!query ? (
-        <EmptyHint total={total} />
+      {total === 0 ? (
+        <EmptyHint total={0} />
       ) : results.length === 0 ? (
         <div className="rounded-2xl border border-slate-200 bg-white py-12 text-center text-sm text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
           Tidak ada konsumen yang cocok dengan “{query}”.
         </div>
       ) : (
         <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+          {!query && (
+            <p className="border-b border-slate-100 px-5 py-2.5 text-xs text-slate-400 dark:border-slate-800">
+              Menampilkan {results.length} konsumen terbaru — gunakan pencarian
+              untuk menemukan lainnya.
+            </p>
+          )}
           <ul className="divide-y divide-slate-100 dark:divide-slate-800">
             {results.map((c) => (
               <li
