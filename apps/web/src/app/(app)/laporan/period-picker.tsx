@@ -1,0 +1,84 @@
+"use client";
+
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+
+const PRESETS: { v: string; label: string }[] = [
+  { v: "hari", label: "Hari Ini" },
+  { v: "7hari", label: "7 Hari" },
+  { v: "30hari", label: "30 Hari" },
+  { v: "bulan", label: "Bulan Ini" },
+];
+
+const inputBase =
+  "rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-200 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100";
+
+export function PeriodPicker({
+  dari,
+  sampai,
+  preset,
+}: {
+  dari: string;
+  sampai: string;
+  preset: string;
+}) {
+  const router = useRouter();
+  const [d1, setD1] = useState(dari);
+  const [d2, setD2] = useState(sampai);
+
+  function go(params: Record<string, string>) {
+    const q = new URLSearchParams(params).toString();
+    router.push(`/laporan?${q}`);
+  }
+
+  return (
+    <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900 sm:flex-row sm:items-end sm:justify-between">
+      <div className="flex flex-wrap gap-2">
+        {PRESETS.map((p) => (
+          <button
+            key={p.v}
+            type="button"
+            onClick={() => go({ preset: p.v })}
+            className={
+              preset === p.v
+                ? "rounded-lg bg-brand-600 px-3 py-1.5 text-sm font-semibold text-white"
+                : "rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-600 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+            }
+          >
+            {p.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="flex items-end gap-2">
+        <label className="flex flex-col gap-1 text-xs text-slate-500">
+          Dari
+          <input
+            type="date"
+            value={d1}
+            max={d2}
+            onChange={(e) => setD1(e.target.value)}
+            className={inputBase}
+          />
+        </label>
+        <label className="flex flex-col gap-1 text-xs text-slate-500">
+          Sampai
+          <input
+            type="date"
+            value={d2}
+            min={d1}
+            onChange={(e) => setD2(e.target.value)}
+            className={inputBase}
+          />
+        </label>
+        <button
+          type="button"
+          onClick={() => go({ dari: d1, sampai: d2 })}
+          className="rounded-lg bg-slate-800 px-3 py-2 text-sm font-semibold text-white transition hover:bg-slate-900 dark:bg-slate-200 dark:text-slate-900 dark:hover:bg-white"
+        >
+          Terapkan
+        </button>
+      </div>
+    </div>
+  );
+}

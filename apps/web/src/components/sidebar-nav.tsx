@@ -25,7 +25,7 @@ const items: NavItem[] = [
   { label: "Transaksi", href: "/transaksi", icon: IconReceipt },
   { label: "Konsumen", href: "/konsumen", icon: IconUsers },
   { label: "Keuangan", href: "/keuangan", icon: IconWallet },
-  { label: "Laporan", href: "/laporan", icon: IconChart, soon: true },
+  { label: "Laporan", href: "/laporan", icon: IconChart },
   { label: "Pengaturan", href: "/pengaturan", icon: IconSettings },
 ];
 
