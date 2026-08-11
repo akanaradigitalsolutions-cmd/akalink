@@ -82,6 +82,40 @@ export async function createConsumer(
   return { ok: true };
 }
 
+export type QuickConsumerResult =
+  | { ok: true; consumer: { id: string; nama: string; hp: string | null } }
+  | { ok: false; error: string };
+
+/**
+ * Buat konsumen cepat dari layar POS (Transaksi Baru) dan kembalikan
+ * data yang baru dibuat agar bisa langsung dipilih tanpa reload.
+ */
+export async function quickCreateConsumer(input: {
+  nama: string;
+  hp?: string;
+}): Promise<QuickConsumerResult> {
+  const user = await getSessionUser();
+  const tenantId = getTenantIdFromUser(user);
+  if (!user || !tenantId)
+    return { ok: false, error: "Sesi tidak valid. Silakan masuk lagi." };
+
+  const nama = String(input.nama ?? "").trim();
+  if (nama.length < 1) return { ok: false, error: "Nama konsumen wajib diisi." };
+
+  const db = getDb();
+  const [row] = await db
+    .insert(consumers)
+    .values({
+      tenantId,
+      nama,
+      hp: normalizeHp(input.hp),
+    })
+    .returning({ id: consumers.id, nama: consumers.nama, hp: consumers.hp });
+
+  revalidatePath("/konsumen");
+  return { ok: true, consumer: row };
+}
+
 export async function deleteConsumer(formData: FormData) {
   const user = await getSessionUser();
   const tenantId = getTenantIdFromUser(user);

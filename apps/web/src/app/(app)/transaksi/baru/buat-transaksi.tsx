@@ -3,6 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createTransaction } from "@/lib/transactions-actions";
+import { quickCreateConsumer } from "@/lib/consumers-actions";
 import { formatRupiah, SATUAN_SINGKAT } from "@/lib/format";
 import { IconPlus, IconTrash } from "@/components/icons";
 
@@ -33,7 +34,7 @@ function toNum(s: string): number {
 
 export function BuatTransaksi({
   services,
-  consumers,
+  consumers: consumersProp,
 }: {
   services: Service[];
   consumers: Consumer[];
@@ -42,8 +43,46 @@ export function BuatTransaksi({
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string>();
 
+  // Daftar konsumen lokal (prop + yang baru dibuat dari layar ini).
+  const [consumers, setConsumers] = useState<Consumer[]>(consumersProp);
   const [consumerId, setConsumerId] = useState<string | null>(null);
   const [consumerQuery, setConsumerQuery] = useState("");
+
+  // Form tambah konsumen cepat.
+  const [addOpen, setAddOpen] = useState(false);
+  const [addNama, setAddNama] = useState("");
+  const [addHp, setAddHp] = useState("");
+  const [addErr, setAddErr] = useState<string>();
+  const [savingConsumer, startSaveConsumer] = useTransition();
+
+  function openAdd() {
+    setAddNama(consumerQuery.trim());
+    setAddHp("");
+    setAddErr(undefined);
+    setAddOpen(true);
+  }
+
+  function saveNewConsumer() {
+    setAddErr(undefined);
+    if (addNama.trim().length < 1) {
+      setAddErr("Nama konsumen wajib diisi.");
+      return;
+    }
+    startSaveConsumer(async () => {
+      const res = await quickCreateConsumer({
+        nama: addNama.trim(),
+        hp: addHp.trim() || undefined,
+      });
+      if (res.ok) {
+        setConsumers((prev) => [res.consumer, ...prev]);
+        setConsumerId(res.consumer.id);
+        setConsumerQuery("");
+        setAddOpen(false);
+      } else {
+        setAddErr(res.error);
+      }
+    });
+  }
   const [items, setItems] = useState<Item[]>([]);
   const [isExpress, setIsExpress] = useState(false);
   const [biayaExpress, setBiayaExpress] = useState(0);
@@ -174,10 +213,81 @@ export function BuatTransaksi({
                     <span className="text-slate-400">{c.hp ?? ""}</span>
                   </button>
                 ))}
-                <p className="px-3 pt-1 text-xs text-slate-400">
-                  Konsumen belum ada? Tambahkan dulu di menu Konsumen, atau
-                  lanjut tanpa konsumen (umum).
-                </p>
+
+                {consumerQuery.trim() && filteredConsumers.length === 0 && (
+                  <p className="px-3 pt-1 text-xs text-slate-400">
+                    Tidak ada konsumen cocok dengan &ldquo;{consumerQuery.trim()}
+                    &rdquo;.
+                  </p>
+                )}
+
+                {/* Tombol tambah konsumen cepat */}
+                {!addOpen && (
+                  <button
+                    onClick={openAdd}
+                    className="mt-1 flex items-center gap-2 rounded-lg border border-dashed border-brand-300 px-3 py-2 text-left text-sm font-medium text-brand-700 transition hover:bg-brand-50 dark:border-brand-800 dark:text-brand-300 dark:hover:bg-brand-950/30"
+                  >
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-brand-100 text-brand-600 dark:bg-brand-900 dark:text-brand-300">
+                      <IconPlus className="h-3.5 w-3.5" />
+                    </span>
+                    {consumerQuery.trim()
+                      ? `Tambah konsumen baru: “${consumerQuery.trim()}”`
+                      : "Tambah konsumen baru"}
+                  </button>
+                )}
+
+                {/* Form tambah konsumen cepat (inline) */}
+                {addOpen && (
+                  <div className="mt-2 rounded-xl border border-brand-200 bg-brand-50/40 p-3 dark:border-brand-900/60 dark:bg-brand-950/20">
+                    <p className="mb-2 text-sm font-semibold text-slate-800 dark:text-slate-100">
+                      Konsumen Baru
+                    </p>
+                    <div className="flex flex-col gap-2">
+                      <input
+                        value={addNama}
+                        onChange={(e) => setAddNama(e.target.value)}
+                        placeholder="Nama konsumen"
+                        autoFocus
+                        className={`${inputBase} w-full`}
+                      />
+                      <input
+                        value={addHp}
+                        onChange={(e) => setAddHp(e.target.value)}
+                        inputMode="tel"
+                        placeholder="No. HP / WhatsApp (opsional)"
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") saveNewConsumer();
+                        }}
+                        className={`${inputBase} w-full`}
+                      />
+                      {addErr && (
+                        <p className="text-sm text-red-600">{addErr}</p>
+                      )}
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={saveNewConsumer}
+                          disabled={savingConsumer}
+                          className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-700 disabled:opacity-60"
+                        >
+                          {savingConsumer ? "Menyimpan…" : "Simpan & Pilih"}
+                        </button>
+                        <button
+                          onClick={() => setAddOpen(false)}
+                          disabled={savingConsumer}
+                          className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                        >
+                          Batal
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {!addOpen && (
+                  <p className="px-3 pt-1 text-xs text-slate-400">
+                    Atau lanjut tanpa konsumen (umum).
+                  </p>
+                )}
               </div>
             </div>
           )}
