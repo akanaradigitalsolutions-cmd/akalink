@@ -1,12 +1,23 @@
 "use client";
 
-export function PrintButton() {
+import { useEffect } from "react";
+
+/** Otomatis membuka dialog cetak saat halaman dibuka dengan ?print=1. */
+export function AutoPrint() {
+  useEffect(() => {
+    const t = setTimeout(() => window.print(), 500);
+    return () => clearTimeout(t);
+  }, []);
+  return null;
+}
+
+export function PrintButton({ label = "🖨️ Cetak" }: { label?: string }) {
   return (
     <button
       onClick={() => window.print()}
       className="no-print inline-flex items-center gap-2 rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
     >
-      🖨️ Cetak Nota
+      {label}
     </button>
   );
 }

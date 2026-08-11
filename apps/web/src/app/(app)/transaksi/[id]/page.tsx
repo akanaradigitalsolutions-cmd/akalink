@@ -17,7 +17,8 @@ import {
   LABEL_STATUS_KERJA,
   LABEL_STATUS_BAYAR,
 } from "@/lib/format";
-import { PrintButton, WhatsappButton } from "./nota-actions";
+import { WhatsappButton } from "@/components/nota/client";
+import { getBaseUrl } from "@/lib/nota";
 
 export const metadata: Metadata = {
   title: "Detail Transaksi — AkaLink",
@@ -41,6 +42,8 @@ export default async function DetailTransaksiPage({
   if (!data) notFound();
   const { tx, consumer, items } = data;
   const { tenant } = await getTenantContext(user.id, tenantId);
+  const base = await getBaseUrl();
+  const notaLink = `${base}/n/${tx.id}`;
 
   // Pesan WhatsApp
   const waLines = [
@@ -58,6 +61,7 @@ export default async function DetailTransaksiPage({
     tx.estimasiSelesai
       ? `Estimasi selesai: ${formatDateTime(tx.estimasiSelesai)}`
       : "",
+    `Cek status & nota: ${notaLink}`,
     "Terima kasih 🙏",
   ].filter(Boolean);
   const waMessage = waLines.join("\n");
@@ -76,8 +80,10 @@ export default async function DetailTransaksiPage({
             Detail Transaksi
           </h1>
         </div>
-        <div className="flex gap-2">
-          <PrintButton />
+        <div className="flex flex-wrap gap-2">
+          <PrintLink href={`/n/${tx.id}?print=1`} label="🖨️ Cetak Nota" />
+          <PrintLink href={`/label/${tx.id}?print=1`} label="🏷️ Cetak Label" />
+          <PrintLink href={`/n/${tx.id}`} label="🔗 Lihat Nota" />
           <WhatsappButton hp={consumer?.hp} message={waMessage} />
         </div>
       </header>
@@ -264,5 +270,18 @@ function Row({ label, value }: { label: string; value: string }) {
       <span>{label}</span>
       <span>{value}</span>
     </div>
+  );
+}
+
+function PrintLink({ href, label }: { href: string; label: string }) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="no-print inline-flex items-center gap-2 rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+    >
+      {label}
+    </a>
   );
 }

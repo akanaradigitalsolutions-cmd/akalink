@@ -1,28 +1,48 @@
-// PRATINJAU SEMENTARA — untuk screenshot. Akan dihapus.
-import { AppShell } from "@/components/app-shell";
-import { BuatTransaksi } from "../(app)/transaksi/baru/buat-transaksi";
+// PRATINJAU SEMENTARA — untuk screenshot nota. Akan dihapus.
+import { NotaView } from "@/components/nota/nota-view";
+import { qrSvg, SYARAT_KETENTUAN_DEFAULT } from "@/lib/nota";
 
-const services = [
-  { id: "1", nama: "Cuci Setrika Reguler", tipeSatuan: "kiloan", harga: "7000", kategori: "Reguler" },
-  { id: "2", nama: "Cuci Kering", tipeSatuan: "kiloan", harga: "5000", kategori: "Reguler" },
-  { id: "3", nama: "Bed Cover", tipeSatuan: "satuan", harga: "25000", kategori: "Satuan" },
-  { id: "4", nama: "Cuci Express", tipeSatuan: "kiloan", harga: "12000", kategori: "Express" },
-];
-const consumers = [
-  { id: "c1", nama: "Andi", hp: "6285737606345" },
-  { id: "c2", nama: "Budi Santoso", hp: "628123456789" },
-];
+export const dynamic = "force-dynamic";
 
-export default function Pratinjau() {
+export default async function Pratinjau() {
+  const qr = await qrSvg("https://akalink.app/n/demo", 132);
+  const tenant = { nama: "Aka Express Laundry", kota: "Mambal, Badung" } as never;
+  const consumer = { nama: "Pak Dewa Aji", hp: "6285726199189" } as never;
+  const tx = {
+    id: "demo",
+    noNota: "AKA260811021055725",
+    tipe: "reguler",
+    orderDiterima: new Date("2026-08-10T17:54:00"),
+    estimasiSelesai: new Date("2026-08-13T17:55:00"),
+    statusPembayaran: "belum_dibayar",
+    subtotal: "66000",
+    diskon: "0",
+    biayaExpress: "0",
+    grandTotal: "66000",
+  } as never;
+  const items = [
+    {
+      id: "i1",
+      namaLayanan: "Cuci Kering Setrika Min 2kg",
+      tipeSatuan: "kiloan",
+      qty: "11",
+      harga: "6000",
+      subtotal: "66000",
+      status: "belum_dikerjakan",
+    },
+  ] as never;
+
   return (
-    <AppShell tenantName="Aka Express Laundry" userName="Putu Agnes Andika" role="owner">
-      <div className="mx-auto flex max-w-5xl flex-col gap-6">
-        <header className="flex items-center gap-3">
-          <span className="text-sm text-slate-400">← Transaksi</span>
-          <h1 className="text-xl font-bold text-slate-900">Transaksi Baru</h1>
-        </header>
-        <BuatTransaksi services={services} consumers={consumers} />
-      </div>
-    </AppShell>
+    <main className="min-h-dvh bg-slate-100 px-4 py-6">
+      <NotaView
+        tenant={tenant}
+        consumer={consumer}
+        tx={tx}
+        items={items}
+        qr={qr}
+        link="https://akalink.app/n/demo"
+        sk={SYARAT_KETENTUAN_DEFAULT}
+      />
+    </main>
   );
 }
