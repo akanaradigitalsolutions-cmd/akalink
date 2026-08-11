@@ -204,6 +204,9 @@ export async function updateStatuses(input: {
 
   const [txRow] = await db
     .select({
+      subtotal: transactions.subtotal,
+      diskon: transactions.diskon,
+      biayaExpress: transactions.biayaExpress,
       grandTotal: transactions.grandTotal,
       noNota: transactions.noNota,
     })
@@ -223,24 +226,47 @@ export async function updateStatuses(input: {
       and(eq(transactions.id, input.id), eq(transactions.tenantId, tenantId)),
     );
 
-  // Saat menjadi Lunas: posting jurnal pelunasan (sekali saja).
-  if (pay === "lunas") {
-    await seedDefaultCoaIfEmpty(tenantId);
-    const already = await hasJournal(tenantId, "pelunasan", input.id);
-    const total = Number(txRow.grandTotal);
-    if (!already && total > 0) {
-      await db.transaction(async (tx) => {
-        await postJournal(tx, tenantId, {
-          keterangan: `Pelunasan ${txRow.noNota}`,
-          refType: "pelunasan",
-          refId: input.id,
-          lines: [
-            { kode: "1.1.02", debit: total }, // Dr Kas Outlet
-            { kode: "1.2", kredit: total }, // Cr Piutang Usaha
-          ],
-        });
+  // Pastikan jurnal lengkap (self-heal untuk transaksi lama pra-engine).
+  await seedDefaultCoaIfEmpty(tenantId);
+  const grand = Number(txRow.grandTotal);
+  const diskonN = Number(txRow.diskon);
+  const subtotalN = Number(txRow.subtotal);
+  const expressN = Number(txRow.biayaExpress);
+
+  // Jurnal penjualan (bila belum ada).
+  if (grand > 0 && !(await hasJournal(tenantId, "transaksi", input.id))) {
+    const lines: { kode: string; debit?: number; kredit?: number }[] = [
+      { kode: "1.2", debit: grand },
+    ];
+    if (diskonN > 0) lines.push({ kode: "4.9", debit: diskonN });
+    lines.push({ kode: "4.1", kredit: subtotalN + expressN });
+    await db.transaction(async (tx) => {
+      await postJournal(tx, tenantId, {
+        keterangan: `Transaksi ${txRow.noNota}`,
+        refType: "transaksi",
+        refId: input.id,
+        lines,
       });
-    }
+    });
+  }
+
+  // Jurnal pelunasan (sekali saja) saat status menjadi Lunas.
+  if (
+    pay === "lunas" &&
+    grand > 0 &&
+    !(await hasJournal(tenantId, "pelunasan", input.id))
+  ) {
+    await db.transaction(async (tx) => {
+      await postJournal(tx, tenantId, {
+        keterangan: `Pelunasan ${txRow.noNota}`,
+        refType: "pelunasan",
+        refId: input.id,
+        lines: [
+          { kode: "1.1.02", debit: grand }, // Dr Kas Outlet
+          { kode: "1.2", kredit: grand }, // Cr Piutang Usaha
+        ],
+      });
+    });
   }
 
   revalidatePath(`/transaksi/${input.id}`);
