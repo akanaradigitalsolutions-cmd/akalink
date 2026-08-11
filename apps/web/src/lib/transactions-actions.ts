@@ -162,44 +162,40 @@ export async function createTransaction(
 }
 
 // ---- Ubah status pengerjaan / pembayaran / item (Phase 1.4) --------------
-export async function setWorkStatus(formData: FormData) {
+export type UpdateStatusResult = { ok: true } | { ok: false; error: string };
+
+export async function updateStatuses(input: {
+  id: string;
+  statusPekerjaan: string;
+  statusPembayaran: string;
+}): Promise<UpdateStatusResult> {
   const tenantId = await requireTenant();
-  if (!tenantId) return;
-  const id = String(formData.get("id"));
-  const status = String(formData.get("status"));
-  if (!WORK_STATUSES.includes(status as (typeof WORK_STATUSES)[number])) return;
+  if (!tenantId) return { ok: false, error: "Sesi tidak valid." };
+
+  const work = input.statusPekerjaan;
+  const pay = input.statusPembayaran;
+  if (
+    !WORK_STATUSES.includes(work as (typeof WORK_STATUSES)[number]) ||
+    !PAY_STATUSES.includes(pay as (typeof PAY_STATUSES)[number])
+  ) {
+    return { ok: false, error: "Status tidak valid." };
+  }
 
   const db = getDb();
   await db
     .update(transactions)
     .set({
-      statusPekerjaan: status as (typeof WORK_STATUSES)[number],
+      statusPekerjaan: work as (typeof WORK_STATUSES)[number],
+      statusPembayaran: pay as (typeof PAY_STATUSES)[number],
       updatedAt: new Date(),
     })
-    .where(and(eq(transactions.id, id), eq(transactions.tenantId, tenantId)));
+    .where(
+      and(eq(transactions.id, input.id), eq(transactions.tenantId, tenantId)),
+    );
 
-  revalidatePath(`/transaksi/${id}`);
+  revalidatePath(`/transaksi/${input.id}`);
   revalidatePath("/transaksi");
-}
-
-export async function setPaymentStatus(formData: FormData) {
-  const tenantId = await requireTenant();
-  if (!tenantId) return;
-  const id = String(formData.get("id"));
-  const status = String(formData.get("status"));
-  if (!PAY_STATUSES.includes(status as (typeof PAY_STATUSES)[number])) return;
-
-  const db = getDb();
-  await db
-    .update(transactions)
-    .set({
-      statusPembayaran: status as (typeof PAY_STATUSES)[number],
-      updatedAt: new Date(),
-    })
-    .where(and(eq(transactions.id, id), eq(transactions.tenantId, tenantId)));
-
-  revalidatePath(`/transaksi/${id}`);
-  revalidatePath("/transaksi");
+  return { ok: true };
 }
 
 export async function toggleItemStatus(formData: FormData) {

@@ -5,7 +5,7 @@ import { getTenantContext } from "@/lib/tenant";
 import { getTransactionWithItems } from "@/lib/transactions";
 import { getBaseUrl, qrSvg } from "@/lib/nota";
 import { AutoPrint, PrintButton } from "@/components/nota/client";
-import { formatDateTime, SATUAN_SINGKAT } from "@/lib/format";
+import { formatDateTime, formatRupiah, SATUAN_SINGKAT } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
@@ -38,38 +38,55 @@ export default async function LabelPage({
 
   return (
     <main className="min-h-dvh bg-slate-100 px-4 py-6">
-      {/* Label ~58mm */}
-      <div className="printable mx-auto w-64 rounded-lg border border-slate-300 bg-white p-3 text-xs text-slate-800">
-        <p className="text-center text-sm font-bold text-slate-900">
+      {/* Label ~58mm (dibuat besar & jelas untuk dicetak/ditempel) */}
+      <div className="printable mx-auto w-72 rounded-lg border-2 border-slate-500 bg-white p-4 text-slate-900">
+        <p className="text-center text-lg font-extrabold leading-tight">
           {tenant?.nama ?? "AkaLink"}
         </p>
-        <p className="text-center font-semibold">{tx.noNota}</p>
-        <div className="my-1.5 border-t border-dashed border-slate-300" />
-        <div className="flex justify-between">
-          <span className="font-medium">{consumer?.nama ?? "Umum"}</span>
-          <span className="text-slate-500">{totalUnit} unit</span>
+        <p className="text-center text-sm font-bold tracking-wide">
+          {tx.noNota}
+        </p>
+
+        <div className="my-2 border-t-2 border-dashed border-slate-400" />
+
+        <p className="text-2xl font-extrabold leading-tight">
+          {consumer?.nama ?? "Umum"}
+        </p>
+        <div className="mt-1 flex items-center justify-between text-base font-bold">
+          <span>{totalUnit} unit</span>
+          <span>{formatRupiah(tx.grandTotal)}</span>
         </div>
-        <p className="text-[11px] text-slate-500">
+        <p className="mt-1 text-xs font-medium text-slate-600">
           Masuk: {formatDateTime(tx.orderDiterima)}
         </p>
-        <p className="text-[11px] text-slate-500">
+        <p className="text-xs font-medium text-slate-600">
           Selesai: {formatDateTime(tx.estimasiSelesai)}
         </p>
-        <div className="my-1.5 border-t border-dashed border-slate-300" />
-        <ul className="space-y-0.5">
+
+        <div className="my-2 border-t-2 border-dashed border-slate-400" />
+
+        <ul className="space-y-1 text-sm font-semibold">
           {items.map((it) => (
-            <li key={it.id}>
-              {Number(it.qty)} {SATUAN_SINGKAT[it.tipeSatuan] ?? ""} ·{" "}
-              {it.namaLayanan}
+            <li key={it.id} className="flex items-start justify-between gap-2">
+              <span>
+                {Number(it.qty)} {SATUAN_SINGKAT[it.tipeSatuan] ?? ""} ·{" "}
+                {it.namaLayanan}
+              </span>
+              <span className="whitespace-nowrap">
+                {formatRupiah(it.subtotal)}
+              </span>
             </li>
           ))}
         </ul>
-        <div className="mt-2 flex flex-col items-center">
+
+        <div className="mt-3 flex flex-col items-center">
           <div
-            className="h-24 w-24"
+            className="h-28 w-28"
             dangerouslySetInnerHTML={{ __html: qr }}
           />
-          <p className="text-[10px] text-slate-500">Scan cek status</p>
+          <p className="text-xs font-medium text-slate-600">
+            Scan untuk cek status
+          </p>
         </div>
       </div>
 

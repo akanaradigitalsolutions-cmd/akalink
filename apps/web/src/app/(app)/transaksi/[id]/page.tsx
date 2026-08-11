@@ -4,11 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { getSessionUser, getTenantIdFromUser } from "@/lib/auth";
 import { getTenantContext } from "@/lib/tenant";
 import { getTransactionWithItems } from "@/lib/transactions";
-import {
-  setWorkStatus,
-  setPaymentStatus,
-  toggleItemStatus,
-} from "@/lib/transactions-actions";
+import { toggleItemStatus } from "@/lib/transactions-actions";
 import {
   formatRupiah,
   formatDateTime,
@@ -18,14 +14,12 @@ import {
   LABEL_STATUS_BAYAR,
 } from "@/lib/format";
 import { WhatsappButton } from "@/components/nota/client";
-import { getBaseUrl } from "@/lib/nota";
+import { getBaseUrl, buildWaNota, SYARAT_KETENTUAN_DEFAULT } from "@/lib/nota";
+import { StatusEditor } from "./status-editor";
 
 export const metadata: Metadata = {
   title: "Detail Transaksi — AkaLink",
 };
-
-const WORK = ["belum_dikerjakan", "proses", "selesai", "diambil"] as const;
-const PAY = ["belum_dibayar", "dp", "lunas"] as const;
 
 export default async function DetailTransaksiPage({
   params,
@@ -45,26 +39,24 @@ export default async function DetailTransaksiPage({
   const base = await getBaseUrl();
   const notaLink = `${base}/n/${tx.id}`;
 
-  // Pesan WhatsApp
-  const waLines = [
-    `*${tenant?.nama ?? "AkaLink"}*`,
-    `Nota: ${tx.noNota}`,
-    consumer?.nama ? `Konsumen: ${consumer.nama}` : "",
-    "————————",
-    ...items.map(
-      (it) =>
-        `${it.namaLayanan} (${Number(it.qty)} ${SATUAN_SINGKAT[it.tipeSatuan] ?? ""}) ${formatRupiah(it.subtotal)}`,
-    ),
-    "————————",
-    `Total: ${formatRupiah(tx.grandTotal)}`,
-    `Pembayaran: ${LABEL_STATUS_BAYAR[tx.statusPembayaran]}`,
-    tx.estimasiSelesai
-      ? `Estimasi selesai: ${formatDateTime(tx.estimasiSelesai)}`
-      : "",
-    `Cek status & nota: ${notaLink}`,
-    "Terima kasih 🙏",
-  ].filter(Boolean);
-  const waMessage = waLines.join("\n");
+  // Pesan WhatsApp — nota lengkap (mirip nota cetak)
+  const waMessage = buildWaNota({
+    tenantNama: tenant?.nama ?? "AkaLink",
+    tenantKota: tenant?.kota,
+    tipe: tx.tipe,
+    noNota: tx.noNota,
+    konsumen: consumer?.nama,
+    terima: tx.orderDiterima,
+    selesai: tx.estimasiSelesai,
+    items,
+    subtotal: tx.subtotal,
+    biayaExpress: tx.biayaExpress,
+    diskon: tx.diskon,
+    grandTotal: tx.grandTotal,
+    statusPembayaran: tx.statusPembayaran,
+    link: notaLink,
+    sk: SYARAT_KETENTUAN_DEFAULT,
+  });
 
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-5">
@@ -188,69 +180,12 @@ export default async function DetailTransaksiPage({
         )}
       </div>
 
-      {/* Kontrol status (tidak ikut tercetak) */}
-      <section className="no-print rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
-        <StatusGroup
-          title="Status Pengerjaan"
-          options={WORK}
-          labels={LABEL_STATUS_KERJA}
-          current={tx.statusPekerjaan}
-          action={setWorkStatus}
-          txId={tx.id}
-        />
-        <div className="mt-5">
-          <StatusGroup
-            title="Status Pembayaran"
-            options={PAY}
-            labels={LABEL_STATUS_BAYAR}
-            current={tx.statusPembayaran}
-            action={setPaymentStatus}
-            txId={tx.id}
-          />
-        </div>
-      </section>
-    </div>
-  );
-}
-
-function StatusGroup({
-  title,
-  options,
-  labels,
-  current,
-  action,
-  txId,
-}: {
-  title: string;
-  options: readonly string[];
-  labels: Record<string, string>;
-  current: string;
-  action: (formData: FormData) => void;
-  txId: string;
-}) {
-  return (
-    <div>
-      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
-        {title}
-      </p>
-      <div className="flex flex-wrap gap-2">
-        {options.map((s) => (
-          <form action={action} key={s}>
-            <input type="hidden" name="id" value={txId} />
-            <input type="hidden" name="status" value={s} />
-            <button
-              type="submit"
-              className={
-                current === s
-                  ? "rounded-lg bg-brand-600 px-3 py-1.5 text-sm font-semibold text-white"
-                  : "rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-600 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
-              }
-            >
-              {labels[s]}
-            </button>
-          </form>
-        ))}
-      </div>
+      {/* Kontrol status dengan tombol Simpan (tidak ikut tercetak) */}
+      <StatusEditor
+        txId={tx.id}
+        work={tx.statusPekerjaan}
+        pay={tx.statusPembayaran}
+      />
     </div>
   );
 }
