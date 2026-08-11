@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getSessionUser, getTenantIdFromUser } from "@/lib/auth";
 import { getCoa, seedDefaultCoaIfEmpty } from "@/lib/coa";
 import { CoaTree } from "./coa-tree";
+import { KeuanganTabs } from "./tabs";
 
 export const metadata: Metadata = {
   title: "Keuangan — AkaLink",
@@ -25,10 +26,12 @@ export default async function KeuanganPage() {
           Keuangan — Data Akun (COA)
         </h1>
         <p className="text-sm text-slate-500 dark:text-slate-400">
-          Bagan akun (Chart of Accounts). Setiap pergerakan uang akan
-          diposting ke akun-akun ini sebagai jurnal (langkah berikutnya).
+          Bagan akun (Chart of Accounts). Setiap pergerakan uang diposting ke
+          akun-akun ini sebagai jurnal.
         </p>
       </header>
+
+      <KeuanganTabs />
 
       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
         <div className="hidden grid-cols-12 gap-4 border-b border-slate-100 px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:border-slate-800 sm:grid">

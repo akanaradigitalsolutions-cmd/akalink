@@ -11,6 +11,8 @@ import {
   employees,
 } from "@akalink/db";
 import { getSessionUser, getTenantIdFromUser } from "@/lib/auth";
+import { seedDefaultCoaIfEmpty } from "@/lib/coa";
+import { postJournal, hasJournal } from "@/lib/journal";
 
 const WORK_STATUSES = ["belum_dikerjakan", "proses", "selesai", "diambil"] as const;
 const PAY_STATUSES = ["belum_dibayar", "dp", "lunas"] as const;
@@ -129,6 +131,9 @@ export async function createTransaction(
 
   const noNota = genNota();
 
+  // Pastikan COA tersedia sebelum memposting jurnal.
+  await seedDefaultCoaIfEmpty(tenantId);
+
   const txId = await db.transaction(async (tx) => {
     const [row] = await tx
       .insert(transactions)
@@ -154,6 +159,20 @@ export async function createTransaction(
         transactionId: row.id,
       })),
     );
+
+    // Jurnal penjualan: Dr Piutang (+ Dr Diskon) / Cr Pendapatan.
+    const jLines: { kode: string; debit?: number; kredit?: number }[] = [
+      { kode: "1.2", debit: grandTotal },
+    ];
+    if (diskon > 0) jLines.push({ kode: "4.9", debit: diskon });
+    jLines.push({ kode: "4.1", kredit: subtotal + biayaExpress });
+    await postJournal(tx, tenantId, {
+      keterangan: `Transaksi ${noNota}`,
+      refType: "transaksi",
+      refId: row.id,
+      lines: jLines,
+    });
+
     return row.id;
   });
 
@@ -182,6 +201,17 @@ export async function updateStatuses(input: {
   }
 
   const db = getDb();
+
+  const [txRow] = await db
+    .select({
+      grandTotal: transactions.grandTotal,
+      noNota: transactions.noNota,
+    })
+    .from(transactions)
+    .where(and(eq(transactions.id, input.id), eq(transactions.tenantId, tenantId)))
+    .limit(1);
+  if (!txRow) return { ok: false, error: "Transaksi tidak ditemukan." };
+
   await db
     .update(transactions)
     .set({
@@ -192,6 +222,26 @@ export async function updateStatuses(input: {
     .where(
       and(eq(transactions.id, input.id), eq(transactions.tenantId, tenantId)),
     );
+
+  // Saat menjadi Lunas: posting jurnal pelunasan (sekali saja).
+  if (pay === "lunas") {
+    await seedDefaultCoaIfEmpty(tenantId);
+    const already = await hasJournal(tenantId, "pelunasan", input.id);
+    const total = Number(txRow.grandTotal);
+    if (!already && total > 0) {
+      await db.transaction(async (tx) => {
+        await postJournal(tx, tenantId, {
+          keterangan: `Pelunasan ${txRow.noNota}`,
+          refType: "pelunasan",
+          refId: input.id,
+          lines: [
+            { kode: "1.1.02", debit: total }, // Dr Kas Outlet
+            { kode: "1.2", kredit: total }, // Cr Piutang Usaha
+          ],
+        });
+      });
+    }
+  }
 
   revalidatePath(`/transaksi/${input.id}`);
   revalidatePath("/transaksi");

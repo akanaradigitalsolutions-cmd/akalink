@@ -472,6 +472,83 @@ export const chartOfAccountsRelations = relations(
   }),
 );
 
+// --- journal_entries / journal_lines: double-entry (Phase 2.2) ------------
+export const journalEntries = pgTable(
+  "journal_entries",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    tanggal: timestamp("tanggal", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    keterangan: text("keterangan").notNull(),
+    // Sumber jurnal (idempotensi): mis. refType="pelunasan", refId=transaksi.id
+    refType: text("ref_type"),
+    refId: uuid("ref_id"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("je_tenant_id_idx").on(t.tenantId),
+    index("je_ref_idx").on(t.refType, t.refId),
+  ],
+);
+
+export const journalLines = pgTable(
+  "journal_lines",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    entryId: uuid("entry_id")
+      .notNull()
+      .references(() => journalEntries.id, { onDelete: "cascade" }),
+    accountId: uuid("account_id")
+      .notNull()
+      .references(() => chartOfAccounts.id),
+    debit: numeric("debit", { precision: 14, scale: 2 })
+      .notNull()
+      .default("0"),
+    kredit: numeric("kredit", { precision: 14, scale: 2 })
+      .notNull()
+      .default("0"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("jl_entry_idx").on(t.entryId),
+    index("jl_account_idx").on(t.accountId),
+    index("jl_tenant_id_idx").on(t.tenantId),
+  ],
+);
+
+export const journalEntriesRelations = relations(
+  journalEntries,
+  ({ one, many }) => ({
+    tenant: one(tenants, {
+      fields: [journalEntries.tenantId],
+      references: [tenants.id],
+    }),
+    lines: many(journalLines),
+  }),
+);
+
+export const journalLinesRelations = relations(journalLines, ({ one }) => ({
+  entry: one(journalEntries, {
+    fields: [journalLines.entryId],
+    references: [journalEntries.id],
+  }),
+  account: one(chartOfAccounts, {
+    fields: [journalLines.accountId],
+    references: [chartOfAccounts.id],
+  }),
+}));
+
 /*
  * ---- Tipe bantu -----------------------------------------------------------
  * Ekspor tipe TypeScript agar aman dipakai di seluruh aplikasi.
@@ -496,3 +573,7 @@ export type TransactionItem = typeof transactionItems.$inferSelect;
 export type NewTransactionItem = typeof transactionItems.$inferInsert;
 export type ChartAccount = typeof chartOfAccounts.$inferSelect;
 export type NewChartAccount = typeof chartOfAccounts.$inferInsert;
+export type JournalEntry = typeof journalEntries.$inferSelect;
+export type NewJournalEntry = typeof journalEntries.$inferInsert;
+export type JournalLine = typeof journalLines.$inferSelect;
+export type NewJournalLine = typeof journalLines.$inferInsert;
