@@ -26,3 +26,35 @@ export const LABEL_SATUAN: Record<string, string> = {
   koin: "Koin / load",
   luas: "Luas (M²)",
 };
+
+export const SATUAN_SINGKAT: Record<string, string> = {
+  kiloan: "kg",
+  satuan: "item",
+  koin: "koin",
+  luas: "m²",
+};
+
+export function formatDateTime(d: Date | string | null | undefined): string {
+  if (!d) return "—";
+  const date = typeof d === "string" ? new Date(d) : d;
+  return date.toLocaleString("id-ID", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+export const LABEL_STATUS_KERJA: Record<string, string> = {
+  belum_dikerjakan: "Belum Dikerjakan",
+  proses: "Proses",
+  selesai: "Selesai",
+  diambil: "Diambil",
+};
+
+export const LABEL_STATUS_BAYAR: Record<string, string> = {
+  belum_dibayar: "Belum Dibayar",
+  dp: "DP",
+  lunas: "Lunas",
+};

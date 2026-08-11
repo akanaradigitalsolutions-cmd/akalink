@@ -50,6 +50,20 @@
       "when": 1786372968350,
       "tag": "0006_consumers_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1786412121582,
+      "tag": "0007_unusual_senator_kelly",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1786412122752,
+      "tag": "0008_transactions_rls",
+      "breakpoints": true
     }
   ]
 }

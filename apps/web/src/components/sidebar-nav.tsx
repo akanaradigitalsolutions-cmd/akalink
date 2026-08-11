@@ -22,7 +22,7 @@ type NavItem = {
 const items: NavItem[] = [
   { label: "Beranda", href: "/dashboard", icon: IconDashboard },
   { label: "Layanan", href: "/layanan", icon: IconTag },
-  { label: "Transaksi", href: "/transaksi", icon: IconReceipt, soon: true },
+  { label: "Transaksi", href: "/transaksi", icon: IconReceipt },
   { label: "Konsumen", href: "/konsumen", icon: IconUsers },
   { label: "Keuangan", href: "/keuangan", icon: IconWallet, soon: true },
   { label: "Laporan", href: "/laporan", icon: IconChart, soon: true },

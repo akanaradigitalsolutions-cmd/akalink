@@ -1,0 +1,54 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { getSessionUser, getTenantIdFromUser } from "@/lib/auth";
+import { getActiveServices } from "@/lib/transactions";
+import { getRecentConsumers } from "@/lib/consumers";
+import { BuatTransaksi } from "./buat-transaksi";
+
+export const metadata: Metadata = {
+  title: "Transaksi Baru — AkaLink",
+};
+
+export default async function TransaksiBaruPage() {
+  const user = await getSessionUser();
+  if (!user) redirect("/masuk");
+  const tenantId = getTenantIdFromUser(user);
+  if (!tenantId) redirect("/masuk");
+
+  const [services, consumers] = await Promise.all([
+    getActiveServices(tenantId),
+    getRecentConsumers(tenantId, 100),
+  ]);
+
+  return (
+    <div className="mx-auto flex max-w-5xl flex-col gap-6">
+      <header className="flex items-center gap-3">
+        <Link
+          href="/transaksi"
+          className="text-sm text-slate-400 hover:text-slate-600"
+        >
+          ← Transaksi
+        </Link>
+        <h1 className="text-xl font-bold text-slate-900 dark:text-white">
+          Transaksi Baru
+        </h1>
+      </header>
+
+      <BuatTransaksi
+        services={services.map((s) => ({
+          id: s.id,
+          nama: s.nama,
+          tipeSatuan: s.tipeSatuan,
+          harga: s.harga,
+          kategori: s.kategori,
+        }))}
+        consumers={consumers.map((c) => ({
+          id: c.id,
+          nama: c.nama,
+          hp: c.hp,
+        }))}
+      />
+    </div>
+  );
+}

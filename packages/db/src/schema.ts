@@ -289,6 +289,144 @@ export const consumersRelations = relations(consumers, ({ one }) => ({
   }),
 }));
 
+// --- transactions: jantung POS (Phase 1.3) --------------------------------
+export const transactionTypeEnum = pgEnum("transaction_type", [
+  "reguler",
+  "self_service",
+  "dropoff",
+  "deposit",
+]);
+export const workStatusEnum = pgEnum("work_status", [
+  "belum_dikerjakan",
+  "proses",
+  "selesai",
+  "diambil",
+]);
+export const paymentStatusEnum = pgEnum("payment_status", [
+  "belum_dibayar",
+  "dp",
+  "lunas",
+]);
+export const itemStatusEnum = pgEnum("item_status", [
+  "belum_dikerjakan",
+  "selesai",
+]);
+
+export const transactions = pgTable(
+  "transactions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    outletId: uuid("outlet_id").references(() => outlets.id, {
+      onDelete: "set null",
+    }),
+    noNota: text("no_nota").notNull().unique(),
+    tipe: transactionTypeEnum("tipe").notNull().default("reguler"),
+    consumerId: uuid("consumer_id").references(() => consumers.id, {
+      onDelete: "set null",
+    }),
+    kasirId: uuid("kasir_id").references(() => employees.id, {
+      onDelete: "set null",
+    }),
+    orderDiterima: timestamp("order_diterima", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    estimasiSelesai: timestamp("estimasi_selesai", { withTimezone: true }),
+    statusPekerjaan: workStatusEnum("status_pekerjaan")
+      .notNull()
+      .default("belum_dikerjakan"),
+    statusPembayaran: paymentStatusEnum("status_pembayaran")
+      .notNull()
+      .default("belum_dibayar"),
+    isExpress: boolean("is_express").notNull().default(false),
+    catatan: text("catatan"),
+    subtotal: numeric("subtotal", { precision: 12, scale: 2 })
+      .notNull()
+      .default("0"),
+    diskon: numeric("diskon", { precision: 12, scale: 2 })
+      .notNull()
+      .default("0"),
+    biayaExpress: numeric("biaya_express", { precision: 12, scale: 2 })
+      .notNull()
+      .default("0"),
+    grandTotal: numeric("grand_total", { precision: 12, scale: 2 })
+      .notNull()
+      .default("0"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("transactions_tenant_id_idx").on(t.tenantId),
+    index("transactions_consumer_id_idx").on(t.consumerId),
+  ],
+);
+
+export const transactionItems = pgTable(
+  "transaction_items",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    transactionId: uuid("transaction_id")
+      .notNull()
+      .references(() => transactions.id, { onDelete: "cascade" }),
+    serviceId: uuid("service_id").references(() => services.id, {
+      onDelete: "set null",
+    }),
+    namaLayanan: text("nama_layanan").notNull(),
+    tipeSatuan: text("tipe_satuan").notNull(),
+    qty: numeric("qty", { precision: 12, scale: 2 }).notNull().default("1"),
+    harga: numeric("harga", { precision: 12, scale: 2 }).notNull().default("0"),
+    subtotal: numeric("subtotal", { precision: 12, scale: 2 })
+      .notNull()
+      .default("0"),
+    status: itemStatusEnum("status").notNull().default("belum_dikerjakan"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("transaction_items_tx_idx").on(t.transactionId),
+    index("transaction_items_tenant_id_idx").on(t.tenantId),
+  ],
+);
+
+export const transactionsRelations = relations(
+  transactions,
+  ({ one, many }) => ({
+    tenant: one(tenants, {
+      fields: [transactions.tenantId],
+      references: [tenants.id],
+    }),
+    consumer: one(consumers, {
+      fields: [transactions.consumerId],
+      references: [consumers.id],
+    }),
+    items: many(transactionItems),
+  }),
+);
+
+export const transactionItemsRelations = relations(
+  transactionItems,
+  ({ one }) => ({
+    transaction: one(transactions, {
+      fields: [transactionItems.transactionId],
+      references: [transactions.id],
+    }),
+    service: one(services, {
+      fields: [transactionItems.serviceId],
+      references: [services.id],
+    }),
+  }),
+);
+
 /*
  * ---- Tipe bantu -----------------------------------------------------------
  * Ekspor tipe TypeScript agar aman dipakai di seluruh aplikasi.
@@ -307,3 +445,7 @@ export type Service = typeof services.$inferSelect;
 export type NewService = typeof services.$inferInsert;
 export type Consumer = typeof consumers.$inferSelect;
 export type NewConsumer = typeof consumers.$inferInsert;
+export type Transaction = typeof transactions.$inferSelect;
+export type NewTransaction = typeof transactions.$inferInsert;
+export type TransactionItem = typeof transactionItems.$inferSelect;
+export type NewTransactionItem = typeof transactionItems.$inferInsert;
