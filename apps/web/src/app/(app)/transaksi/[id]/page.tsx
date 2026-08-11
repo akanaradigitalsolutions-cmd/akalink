@@ -1,7 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { getSessionUser, getTenantIdFromUser } from "@/lib/auth";
+import {
+  getSessionUser,
+  getTenantIdFromUser,
+  getRoleFromUser,
+} from "@/lib/auth";
 import { getTenantContext } from "@/lib/tenant";
 import { getTransactionWithItems } from "@/lib/transactions";
 import { toggleItemStatus } from "@/lib/transactions-actions";
@@ -16,6 +20,7 @@ import {
 import { WhatsappButton } from "@/components/nota/client";
 import { getBaseUrl, buildWaNota, SYARAT_KETENTUAN_DEFAULT } from "@/lib/nota";
 import { StatusEditor } from "./status-editor";
+import { DeleteNota } from "./delete-nota";
 
 export const metadata: Metadata = {
   title: "Detail Transaksi — AkaLink",
@@ -188,6 +193,11 @@ export default async function DetailTransaksiPage({
         work={tx.statusPekerjaan}
         pay={tx.statusPembayaran}
       />
+
+      {/* Hapus nota — hanya untuk pemilik (Owner) */}
+      {getRoleFromUser(user) === "owner" && (
+        <DeleteNota txId={tx.id} noNota={tx.noNota} />
+      )}
     </div>
   );
 }

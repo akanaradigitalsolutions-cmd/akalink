@@ -9,8 +9,13 @@ import {
   transactionItems,
   services,
   employees,
+  journalEntries,
 } from "@akalink/db";
-import { getSessionUser, getTenantIdFromUser } from "@/lib/auth";
+import {
+  getSessionUser,
+  getTenantIdFromUser,
+  getRoleFromUser,
+} from "@/lib/auth";
 import { seedDefaultCoaIfEmpty } from "@/lib/coa";
 import { postJournal, hasJournal } from "@/lib/journal";
 
@@ -271,6 +276,64 @@ export async function updateStatuses(input: {
 
   revalidatePath(`/transaksi/${input.id}`);
   revalidatePath("/transaksi");
+  return { ok: true };
+}
+
+// ---- Hapus nota (khusus Owner + konfirmasi) ------------------------------
+export type DeleteTxResult = { ok: true } | { ok: false; error: string };
+
+export async function deleteTransaction(
+  id: string,
+): Promise<DeleteTxResult> {
+  const user = await getSessionUser();
+  const tenantId = getTenantIdFromUser(user);
+  if (!user || !tenantId) return { ok: false, error: "Sesi tidak valid." };
+  if (getRoleFromUser(user) !== "owner")
+    return {
+      ok: false,
+      error: "Hanya pemilik (Owner) yang dapat menghapus nota.",
+    };
+
+  const db = getDb();
+  const [tx] = await db
+    .select({ id: transactions.id })
+    .from(transactions)
+    .where(and(eq(transactions.id, id), eq(transactions.tenantId, tenantId)))
+    .limit(1);
+  if (!tx) return { ok: false, error: "Transaksi tidak ditemukan." };
+
+  try {
+    await db.transaction(async (trx) => {
+      // Hapus jurnal penjualan & pelunasan terkait.
+      // Baris jurnal (journal_lines) ikut terhapus lewat cascade.
+      await trx
+        .delete(journalEntries)
+        .where(
+          and(
+            eq(journalEntries.tenantId, tenantId),
+            eq(journalEntries.refId, id),
+            inArray(journalEntries.refType, ["transaksi", "pelunasan"]),
+          ),
+        );
+      // Hapus transaksi. Item transaksi ikut terhapus lewat cascade.
+      await trx
+        .delete(transactions)
+        .where(
+          and(eq(transactions.id, id), eq(transactions.tenantId, tenantId)),
+        );
+    });
+  } catch (e) {
+    return {
+      ok: false,
+      error: e instanceof Error ? e.message : "Gagal menghapus nota.",
+    };
+  }
+
+  revalidatePath("/transaksi");
+  revalidatePath("/keuangan/jurnal");
+  revalidatePath("/keuangan/buku-besar");
+  revalidatePath("/keuangan/laba-rugi");
+  revalidatePath("/keuangan/neraca");
   return { ok: true };
 }
 
