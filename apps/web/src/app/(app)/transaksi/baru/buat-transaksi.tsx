@@ -19,11 +19,17 @@ type Item = {
   nama: string;
   tipeSatuan: string;
   harga: number;
-  qty: number;
+  qty: string; // string mentah agar bisa mengetik desimal (mis. "1.5")
 };
 
 const inputBase =
   "rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-200 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100";
+
+/** Ubah teks jumlah ("1,5" / "1.5") menjadi angka. */
+function toNum(s: string): number {
+  const n = parseFloat(String(s).replace(",", "."));
+  return Number.isFinite(n) ? n : 0;
+}
 
 export function BuatTransaksi({
   services,
@@ -57,7 +63,7 @@ export function BuatTransaksi({
   }, [consumerQuery, consumers]);
 
   const subtotal = useMemo(
-    () => items.reduce((sum, it) => sum + it.harga * it.qty, 0),
+    () => items.reduce((sum, it) => sum + it.harga * toNum(it.qty), 0),
     [items],
   );
   const grandTotal = Math.max(
@@ -70,7 +76,7 @@ export function BuatTransaksi({
       const found = prev.find((i) => i.serviceId === s.id);
       if (found)
         return prev.map((i) =>
-          i.serviceId === s.id ? { ...i, qty: i.qty + 1 } : i,
+          i.serviceId === s.id ? { ...i, qty: String(toNum(i.qty) + 1) } : i,
         );
       return [
         ...prev,
@@ -79,13 +85,13 @@ export function BuatTransaksi({
           nama: s.nama,
           tipeSatuan: s.tipeSatuan,
           harga: Number(s.harga),
-          qty: 1,
+          qty: "1",
         },
       ];
     });
   }
 
-  function setQty(serviceId: string, qty: number) {
+  function setQty(serviceId: string, qty: string) {
     setItems((prev) =>
       prev.map((i) => (i.serviceId === serviceId ? { ...i, qty } : i)),
     );
@@ -100,10 +106,17 @@ export function BuatTransaksi({
       setError("Tambahkan minimal satu layanan.");
       return;
     }
+    const payloadItems = items
+      .map((i) => ({ serviceId: i.serviceId, qty: toNum(i.qty) }))
+      .filter((i) => i.qty > 0);
+    if (payloadItems.length === 0) {
+      setError("Isi jumlah setiap layanan (lebih dari 0).");
+      return;
+    }
     startTransition(async () => {
       const res = await createTransaction({
         consumerId,
-        items: items.map((i) => ({ serviceId: i.serviceId, qty: i.qty })),
+        items: payloadItems,
         isExpress,
         biayaExpress: isExpress ? biayaExpress : 0,
         diskon,
@@ -231,17 +244,19 @@ export function BuatTransaksi({
                     </p>
                   </div>
                   <input
-                    type="number"
-                    min="0"
-                    step={it.tipeSatuan === "satuan" ? "1" : "0.1"}
+                    type="text"
+                    inputMode="decimal"
                     value={it.qty}
                     onChange={(e) =>
-                      setQty(it.serviceId, Number(e.target.value) || 0)
+                      setQty(
+                        it.serviceId,
+                        e.target.value.replace(/[^0-9.,]/g, ""),
+                      )
                     }
                     className={`${inputBase} w-20 text-right`}
                   />
                   <span className="w-24 text-right text-sm font-semibold text-slate-800 dark:text-slate-100">
-                    {formatRupiah(it.harga * it.qty)}
+                    {formatRupiah(it.harga * toNum(it.qty))}
                   </span>
                   <button
                     onClick={() => removeItem(it.serviceId)}
