@@ -77,6 +77,7 @@ export const config = {
     "/laporan/:path*",
     "/pengaturan/:path*",
     "/karyawan/:path*",
+    "/akun/:path*",
     "/masuk",
     "/daftar",
   ],

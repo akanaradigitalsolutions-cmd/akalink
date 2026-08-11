@@ -11,6 +11,7 @@ import {
   IconChart,
   IconSettings,
   IconBadge,
+  IconUser,
 } from "./icons";
 
 type NavItem = {
@@ -35,6 +36,7 @@ const items: NavItem[] = [
     icon: IconSettings,
     ownerOnly: true,
   },
+  { label: "Akun Saya", href: "/akun", icon: IconUser },
 ];
 
 export function SidebarNav({ role }: { role?: string }) {
