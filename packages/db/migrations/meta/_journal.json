@@ -64,6 +64,20 @@
       "when": 1786412122752,
       "tag": "0008_transactions_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1786431210603,
+      "tag": "0009_petite_silver_surfer",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1786431211514,
+      "tag": "0010_coa_rls",
+      "breakpoints": true
     }
   ]
 }

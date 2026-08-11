@@ -427,6 +427,51 @@ export const transactionItemsRelations = relations(
   }),
 );
 
+// --- chart_of_accounts: bagan akun / COA (Phase 2.1) ----------------------
+export const accountTypeEnum = pgEnum("account_type", [
+  "aset",
+  "kewajiban",
+  "modal",
+  "pendapatan",
+  "beban",
+]);
+export const normalBalanceEnum = pgEnum("normal_balance", ["debit", "kredit"]);
+
+export const chartOfAccounts = pgTable(
+  "chart_of_accounts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    kode: text("kode").notNull(),
+    nama: text("nama").notNull(),
+    tipe: accountTypeEnum("tipe").notNull(),
+    saldoNormal: normalBalanceEnum("saldo_normal").notNull(),
+    // parent akun (hierarki) — id akun induk, tanpa FK ketat.
+    parentId: uuid("parent_id"),
+    isKas: boolean("is_kas").notNull().default(false),
+    aktif: boolean("aktif").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("coa_tenant_id_idx").on(t.tenantId),
+    unique("coa_tenant_kode_unique").on(t.tenantId, t.kode),
+  ],
+);
+
+export const chartOfAccountsRelations = relations(
+  chartOfAccounts,
+  ({ one }) => ({
+    tenant: one(tenants, {
+      fields: [chartOfAccounts.tenantId],
+      references: [tenants.id],
+    }),
+  }),
+);
+
 /*
  * ---- Tipe bantu -----------------------------------------------------------
  * Ekspor tipe TypeScript agar aman dipakai di seluruh aplikasi.
@@ -449,3 +494,5 @@ export type Transaction = typeof transactions.$inferSelect;
 export type NewTransaction = typeof transactions.$inferInsert;
 export type TransactionItem = typeof transactionItems.$inferSelect;
 export type NewTransactionItem = typeof transactionItems.$inferInsert;
+export type ChartAccount = typeof chartOfAccounts.$inferSelect;
+export type NewChartAccount = typeof chartOfAccounts.$inferInsert;
