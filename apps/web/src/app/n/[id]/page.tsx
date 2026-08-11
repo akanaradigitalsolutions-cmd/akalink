@@ -66,7 +66,7 @@ export default async function PublicNotaPage({
         items={data.items}
         qr={qr}
         link={link}
-        sk={SYARAT_KETENTUAN_DEFAULT}
+        sk={data.tenant?.syaratKetentuan ?? SYARAT_KETENTUAN_DEFAULT}
       />
       <div className="no-print mx-auto mt-4 flex max-w-sm justify-center">
         <PrintButton label="🖨️ Cetak Nota" />

@@ -33,6 +33,8 @@ export async function qrSvg(text: string, size = 132): Promise<string> {
 export function buildWaNota(o: {
   tenantNama: string;
   tenantKota?: string | null;
+  tenantAlamat?: string | null;
+  tenantTelepon?: string | null;
   tipe: string;
   noNota: string;
   konsumen?: string | null;
@@ -58,7 +60,11 @@ export function buildWaNota(o: {
   const L: string[] = [];
   L.push(`*FAKTUR ELEKTRONIK — TRANSAKSI ${o.tipe.toUpperCase()}*`);
   L.push(`*${o.tenantNama}*`);
-  if (o.tenantKota) L.push(o.tenantKota);
+  if (o.tenantAlamat) L.push(o.tenantAlamat);
+  {
+    const kontak = [o.tenantKota, o.tenantTelepon].filter(Boolean).join(" · ");
+    if (kontak) L.push(kontak);
+  }
   L.push("");
   L.push(`Nota: ${o.noNota}`);
   if (o.konsumen) L.push(`Pelanggan: ${o.konsumen}`);

@@ -43,6 +43,8 @@ export default async function DetailTransaksiPage({
   const waMessage = buildWaNota({
     tenantNama: tenant?.nama ?? "AkaLink",
     tenantKota: tenant?.kota,
+    tenantAlamat: tenant?.alamat,
+    tenantTelepon: tenant?.telepon,
     tipe: tx.tipe,
     noNota: tx.noNota,
     konsumen: consumer?.nama,
@@ -55,7 +57,7 @@ export default async function DetailTransaksiPage({
     grandTotal: tx.grandTotal,
     statusPembayaran: tx.statusPembayaran,
     link: notaLink,
-    sk: SYARAT_KETENTUAN_DEFAULT,
+    sk: tenant?.syaratKetentuan ?? SYARAT_KETENTUAN_DEFAULT,
   });
 
   return (

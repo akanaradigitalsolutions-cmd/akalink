@@ -26,7 +26,7 @@ const items: NavItem[] = [
   { label: "Konsumen", href: "/konsumen", icon: IconUsers },
   { label: "Keuangan", href: "/keuangan", icon: IconWallet },
   { label: "Laporan", href: "/laporan", icon: IconChart, soon: true },
-  { label: "Pengaturan", href: "/pengaturan", icon: IconSettings, soon: true },
+  { label: "Pengaturan", href: "/pengaturan", icon: IconSettings },
 ];
 
 export function SidebarNav() {

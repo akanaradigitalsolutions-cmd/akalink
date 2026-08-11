@@ -51,6 +51,10 @@ export const tenants = pgTable("tenants", {
   id: uuid("id").primaryKey().defaultRandom(),
   nama: text("nama").notNull(),
   kota: text("kota"),
+  telepon: text("telepon"),
+  alamat: text("alamat"),
+  // Daftar poin syarat & ketentuan yang tampil di nota (array string).
+  syaratKetentuan: jsonb("syarat_ketentuan").$type<string[]>(),
   tier: tenantTierEnum("tier").notNull().default("basic"),
   status: tenantStatusEnum("status").notNull().default("trial"),
   createdAt: timestamp("created_at", { withTimezone: true })

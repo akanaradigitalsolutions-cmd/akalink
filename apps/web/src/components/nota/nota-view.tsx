@@ -46,7 +46,14 @@ export function NotaView({
         <p className="mt-1 text-base font-bold text-slate-900">
           {tenant?.nama ?? "AkaLink"}
         </p>
-        {tenant?.kota && <p className="text-xs text-slate-500">{tenant.kota}</p>}
+        {tenant?.alamat && (
+          <p className="text-xs text-slate-500">{tenant.alamat}</p>
+        )}
+        {(tenant?.kota || tenant?.telepon) && (
+          <p className="text-xs text-slate-500">
+            {[tenant?.kota, tenant?.telepon].filter(Boolean).join(" · ")}
+          </p>
+        )}
       </div>
 
       <Divider />

@@ -92,6 +92,13 @@
       "when": 1786435178672,
       "tag": "0012_journal_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1786449139571,
+      "tag": "0013_easy_silver_sable",
+      "breakpoints": true
     }
   ]
 }
