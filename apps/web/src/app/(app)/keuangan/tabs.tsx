@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 
 const tabs = [
   { href: "/keuangan", label: "Data Akun" },
+  { href: "/keuangan/catat", label: "Kas & Biaya" },
   { href: "/keuangan/jurnal", label: "Jurnal" },
   { href: "/keuangan/buku-besar", label: "Buku Besar" },
   { href: "/keuangan/laba-rugi", label: "Laba-Rugi" },
