@@ -21,14 +21,24 @@ export default async function JurnalPage() {
 
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-6">
-      <div>
-        <h1 className="text-xl font-bold text-slate-900 dark:text-white">
-          Keuangan — Jurnal
-        </h1>
-        <p className="text-sm text-slate-500 dark:text-slate-400">
-          Jurnal umum (double-entry). Dibuat otomatis dari transaksi &
-          pembayaran.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-bold text-slate-900 dark:text-white">
+            Keuangan — Jurnal
+          </h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            Jurnal umum (double-entry). Dibuat otomatis dari transaksi &
+            pembayaran.
+          </p>
+        </div>
+        {entries.length > 0 && (
+          <a
+            href="/api/jurnal-csv"
+            className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+          >
+            ⬇ Ekspor CSV
+          </a>
+        )}
       </div>
 
       <KeuanganTabs />
