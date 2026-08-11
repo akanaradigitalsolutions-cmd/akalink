@@ -12,6 +12,15 @@ import {
 } from "@akalink/db";
 import { getSessionUser, getTenantIdFromUser } from "@/lib/auth";
 
+const WORK_STATUSES = ["belum_dikerjakan", "proses", "selesai", "diambil"] as const;
+const PAY_STATUSES = ["belum_dibayar", "dp", "lunas"] as const;
+
+async function requireTenant() {
+  const user = await getSessionUser();
+  const tenantId = getTenantIdFromUser(user);
+  return user && tenantId ? tenantId : null;
+}
+
 export type CreateTxResult =
   | { ok: true; id: string; noNota: string }
   | { ok: false; error: string };
@@ -150,4 +159,67 @@ export async function createTransaction(
 
   revalidatePath("/transaksi");
   return { ok: true, id: txId, noNota };
+}
+
+// ---- Ubah status pengerjaan / pembayaran / item (Phase 1.4) --------------
+export async function setWorkStatus(formData: FormData) {
+  const tenantId = await requireTenant();
+  if (!tenantId) return;
+  const id = String(formData.get("id"));
+  const status = String(formData.get("status"));
+  if (!WORK_STATUSES.includes(status as (typeof WORK_STATUSES)[number])) return;
+
+  const db = getDb();
+  await db
+    .update(transactions)
+    .set({
+      statusPekerjaan: status as (typeof WORK_STATUSES)[number],
+      updatedAt: new Date(),
+    })
+    .where(and(eq(transactions.id, id), eq(transactions.tenantId, tenantId)));
+
+  revalidatePath(`/transaksi/${id}`);
+  revalidatePath("/transaksi");
+}
+
+export async function setPaymentStatus(formData: FormData) {
+  const tenantId = await requireTenant();
+  if (!tenantId) return;
+  const id = String(formData.get("id"));
+  const status = String(formData.get("status"));
+  if (!PAY_STATUSES.includes(status as (typeof PAY_STATUSES)[number])) return;
+
+  const db = getDb();
+  await db
+    .update(transactions)
+    .set({
+      statusPembayaran: status as (typeof PAY_STATUSES)[number],
+      updatedAt: new Date(),
+    })
+    .where(and(eq(transactions.id, id), eq(transactions.tenantId, tenantId)));
+
+  revalidatePath(`/transaksi/${id}`);
+  revalidatePath("/transaksi");
+}
+
+export async function toggleItemStatus(formData: FormData) {
+  const tenantId = await requireTenant();
+  if (!tenantId) return;
+  const itemId = String(formData.get("itemId"));
+  const txId = String(formData.get("txId"));
+  const next =
+    formData.get("current") === "selesai" ? "belum_dikerjakan" : "selesai";
+
+  const db = getDb();
+  await db
+    .update(transactionItems)
+    .set({ status: next })
+    .where(
+      and(
+        eq(transactionItems.id, itemId),
+        eq(transactionItems.tenantId, tenantId),
+      ),
+    );
+
+  revalidatePath(`/transaksi/${txId}`);
 }
