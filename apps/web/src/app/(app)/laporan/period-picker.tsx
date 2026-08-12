@@ -18,23 +18,48 @@ export function PeriodPicker({
   sampai,
   preset,
   basePath = "/laporan",
+  outlet = "",
+  outlets = [],
 }: {
   dari: string;
   sampai: string;
   preset: string;
   basePath?: string;
+  outlet?: string;
+  outlets?: { id: string; nama: string }[];
 }) {
   const router = useRouter();
   const [d1, setD1] = useState(dari);
   const [d2, setD2] = useState(sampai);
 
   function go(params: Record<string, string>) {
-    const q = new URLSearchParams(params).toString();
-    router.push(`${basePath}?${q}`);
+    // Selalu bawa filter outlet aktif kecuali diganti eksplisit.
+    const merged: Record<string, string> = { outlet, ...params };
+    const sp = new URLSearchParams();
+    for (const [k, v] of Object.entries(merged)) if (v) sp.set(k, v);
+    router.push(`${basePath}?${sp.toString()}`);
   }
 
   return (
-    <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900 sm:flex-row sm:items-end sm:justify-between">
+    <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+      {outlets.length > 1 && (
+        <div className="flex items-center gap-2 border-b border-slate-100 pb-3 dark:border-slate-800">
+          <span className="text-xs font-medium text-slate-500">Outlet:</span>
+          <select
+            value={outlet}
+            onChange={(e) => go({ dari, sampai, outlet: e.target.value })}
+            className={inputBase}
+          >
+            <option value="">Semua Outlet</option>
+            {outlets.map((o) => (
+              <option key={o.id} value={o.id}>
+                {o.nama}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
       <div className="flex flex-wrap gap-2">
         {PRESETS.map((p) => (
           <button
@@ -80,6 +105,7 @@ export function PeriodPicker({
         >
           Terapkan
         </button>
+      </div>
       </div>
     </div>
   );

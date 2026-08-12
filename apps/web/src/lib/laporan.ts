@@ -83,6 +83,7 @@ export async function getSalesReport(
   tenantId: string,
   dari: string,
   sampai: string,
+  outletId?: string,
 ): Promise<SalesReport> {
   const db = getDb();
   const start = startInstant(dari);
@@ -91,6 +92,7 @@ export async function getSalesReport(
     eq(transactions.tenantId, tenantId),
     gte(transactions.createdAt, start),
     lte(transactions.createdAt, end),
+    outletId ? eq(transactions.outletId, outletId) : undefined,
   );
 
   const [ringkasanRow] = await db

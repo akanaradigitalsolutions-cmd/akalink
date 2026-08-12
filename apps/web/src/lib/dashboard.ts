@@ -17,10 +17,14 @@ function startOfToday(): Date {
   return new Date(`${ymd}T00:00:00+08:00`);
 }
 
-export async function getDashboardStats(tenantId: string) {
+export async function getDashboardStats(tenantId: string, outletId?: string) {
   const db = getDb();
   const start = startOfToday();
   const now = new Date();
+
+  const outletCond = outletId
+    ? eq(transactions.outletId, outletId)
+    : undefined;
 
   const [today] = await db
     .select({
@@ -32,6 +36,7 @@ export async function getDashboardStats(tenantId: string) {
       and(
         eq(transactions.tenantId, tenantId),
         gte(transactions.createdAt, start),
+        outletCond,
       ),
     );
 
@@ -45,6 +50,7 @@ export async function getDashboardStats(tenantId: string) {
       and(
         eq(transactions.tenantId, tenantId),
         ne(transactions.statusPembayaran, "lunas"),
+        outletCond,
       ),
     );
 
@@ -56,6 +62,7 @@ export async function getDashboardStats(tenantId: string) {
         eq(transactions.tenantId, tenantId),
         lt(transactions.estimasiSelesai, now),
         notInArray(transactions.statusPekerjaan, ["selesai", "diambil"]),
+        outletCond,
       ),
     );
 
@@ -69,6 +76,7 @@ export async function getDashboardStats(tenantId: string) {
       and(
         eq(transactions.tenantId, tenantId),
         notInArray(transactions.statusPekerjaan, ["diambil"]),
+        outletCond,
       ),
     )
     .groupBy(transactions.statusPekerjaan);

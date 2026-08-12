@@ -7,6 +7,7 @@ import {
   presetRange,
   normalizeYmd,
 } from "@/lib/laporan";
+import { getOutlets } from "@/lib/outlets";
 import { formatRupiah } from "@/lib/format";
 import { IconReceipt, IconWallet, IconChart, IconTag } from "@/components/icons";
 import { PeriodPicker } from "./period-picker";
@@ -25,7 +26,12 @@ function labelHari(ymd: string): string {
 export default async function LaporanPage({
   searchParams,
 }: {
-  searchParams: Promise<{ preset?: string; dari?: string; sampai?: string }>;
+  searchParams: Promise<{
+    preset?: string;
+    dari?: string;
+    sampai?: string;
+    outlet?: string;
+  }>;
 }) {
   const user = await getSessionUser();
   if (!user) redirect("/masuk");
@@ -41,7 +47,11 @@ export default async function LaporanPage({
   const dari = normalizeYmd(sp.dari, base.dari);
   const sampai = normalizeYmd(sp.sampai, base.sampai);
 
-  const rep = await getSalesReport(tenantId, dari, sampai);
+  const outletList = await getOutlets(tenantId);
+  const outlet =
+    sp.outlet && outletList.some((o) => o.id === sp.outlet) ? sp.outlet : "";
+
+  const rep = await getSalesReport(tenantId, dari, sampai, outlet || undefined);
   const r = rep.ringkasan;
 
   const lunas = rep.statusBayar.find((s) => s.status === "lunas");
@@ -58,7 +68,9 @@ export default async function LaporanPage({
   const maxHari = Math.max(1, ...rep.perHari.map((h) => h.omzet));
   const maxLayanan = Math.max(1, ...rep.layanan.map((l) => l.omzet));
 
-  const csvHref = `/api/laporan-csv?dari=${dari}&sampai=${sampai}`;
+  const csvHref = `/api/laporan-csv?dari=${dari}&sampai=${sampai}${
+    outlet ? `&outlet=${outlet}` : ""
+  }`;
 
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-6">
@@ -81,7 +93,13 @@ export default async function LaporanPage({
 
       <LaporanTabs />
 
-      <PeriodPicker dari={dari} sampai={sampai} preset={preset} />
+      <PeriodPicker
+        dari={dari}
+        sampai={sampai}
+        preset={preset}
+        outlet={outlet}
+        outlets={outletList.map((o) => ({ id: o.id, nama: o.nama }))}
+      />
 
       {/* KPI */}
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

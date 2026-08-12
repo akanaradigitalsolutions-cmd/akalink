@@ -22,6 +22,11 @@ export async function GET(req: Request) {
   const sampai = normalizeYmd(url.searchParams.get("sampai"), base.sampai);
   const start = new Date(`${dari}T00:00:00.000+08:00`);
   const end = new Date(`${sampai}T23:59:59.999+08:00`);
+  const outletParam = url.searchParams.get("outlet");
+  const UUID_RE =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const outletId =
+    outletParam && UUID_RE.test(outletParam) ? outletParam : null;
 
   const db = getDb();
   const rows = await db
@@ -44,6 +49,7 @@ export async function GET(req: Request) {
         eq(transactions.tenantId, tenantId),
         gte(transactions.createdAt, start),
         lte(transactions.createdAt, end),
+        outletId ? eq(transactions.outletId, outletId) : undefined,
       ),
     )
     .orderBy(transactions.createdAt);

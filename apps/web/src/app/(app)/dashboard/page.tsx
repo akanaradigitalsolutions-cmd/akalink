@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { getSessionUser, getTenantIdFromUser } from "@/lib/auth";
 import { getTenantContext } from "@/lib/tenant";
 import { getDashboardStats } from "@/lib/dashboard";
+import { getOutlets, getActiveOutlet } from "@/lib/outlets";
 import { formatRupiah } from "@/lib/format";
 import {
   IconReceipt,
@@ -24,14 +25,19 @@ export default async function DashboardPage() {
   let me: Awaited<ReturnType<typeof getTenantContext>>["me"] | undefined;
   let stats: Awaited<ReturnType<typeof getDashboardStats>> | undefined;
   let loadError: string | undefined;
+  let outletNama: string | null = null;
+  let outletCount = 0;
   try {
     if (tenantId) {
-      const [ctx, s] = await Promise.all([
+      const [ctx, active, outletList] = await Promise.all([
         getTenantContext(user.id, tenantId),
-        getDashboardStats(tenantId),
+        getActiveOutlet(tenantId),
+        getOutlets(tenantId),
       ]);
       me = ctx.me;
-      stats = s;
+      outletNama = active?.nama ?? null;
+      outletCount = outletList.length;
+      stats = await getDashboardStats(tenantId, active?.id);
     }
   } catch (e) {
     loadError = e instanceof Error ? e.message : String(e);
@@ -62,7 +68,9 @@ export default async function DashboardPage() {
           <p className="text-sm text-brand-100">Selamat datang kembali,</p>
           <h2 className="mt-1 text-2xl font-bold">{namaUser} 👋</h2>
           <p className="mt-1 text-sm text-brand-100">
-            Berikut ringkasan laundry Anda hari ini.
+            {outletCount > 1 && outletNama
+              ? `Ringkasan hari ini untuk 🏪 ${outletNama}.`
+              : "Berikut ringkasan laundry Anda hari ini."}
           </p>
         </div>
         <Link
