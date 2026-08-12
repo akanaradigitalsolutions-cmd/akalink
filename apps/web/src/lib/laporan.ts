@@ -1,7 +1,14 @@
 import "server-only";
 
-import { and, desc, eq, gte, lte, sql } from "drizzle-orm";
-import { getDb, transactions, transactionItems } from "@akalink/db";
+import { and, desc, eq, gte, lt, lte, sql } from "drizzle-orm";
+import {
+  getDb,
+  transactions,
+  transactionItems,
+  journalLines,
+  journalEntries,
+  chartOfAccounts,
+} from "@akalink/db";
 
 // Zona waktu aplikasi (WITA/Bali). Selaras dengan lib/dashboard.ts.
 const APP_TZ = "Asia/Makassar";
@@ -154,5 +161,160 @@ export async function getSalesReport(
     statusBayar: statusRows,
     perHari: perHariRows,
     layanan: layananRows,
+  };
+}
+
+export type CashFlow = {
+  dari: string;
+  sampai: string;
+  saldoAwal: number;
+  masuk: { kategori: string; nilai: number }[];
+  keluar: { kategori: string; nilai: number }[];
+  masukTotal: number;
+  keluarTotal: number;
+  net: number;
+  saldoAkhir: number;
+  perKas: {
+    nama: string;
+    saldoAwal: number;
+    masuk: number;
+    keluar: number;
+    saldoAkhir: number;
+  }[];
+};
+
+/** Laporan arus kas: kas masuk/keluar akun kas untuk rentang [dari, sampai]. */
+export async function getCashFlow(
+  tenantId: string,
+  dari: string,
+  sampai: string,
+): Promise<CashFlow> {
+  const db = getDb();
+  const start = startInstant(dari);
+  const end = endInstant(sampai);
+
+  // Akun kas milik tenant.
+  const kasRows = await db
+    .select({ id: chartOfAccounts.id, nama: chartOfAccounts.nama })
+    .from(chartOfAccounts)
+    .where(
+      and(
+        eq(chartOfAccounts.tenantId, tenantId),
+        eq(chartOfAccounts.isKas, true),
+      ),
+    );
+  const kasIds = new Set(kasRows.map((r) => r.id));
+
+  // Saldo awal per akun kas (semua mutasi sebelum tanggal mulai).
+  const openRows = await db
+    .select({
+      accountId: journalLines.accountId,
+      debit: sql<number>`coalesce(sum(${journalLines.debit}),0)::float8`,
+      kredit: sql<number>`coalesce(sum(${journalLines.kredit}),0)::float8`,
+    })
+    .from(journalLines)
+    .innerJoin(journalEntries, eq(journalLines.entryId, journalEntries.id))
+    .where(
+      and(
+        eq(journalLines.tenantId, tenantId),
+        lt(journalEntries.tanggal, start),
+      ),
+    )
+    .groupBy(journalLines.accountId);
+  const openPer = new Map<string, number>();
+  let saldoAwal = 0;
+  for (const r of openRows) {
+    if (!kasIds.has(r.accountId)) continue;
+    const v = r.debit - r.kredit;
+    openPer.set(r.accountId, v);
+    saldoAwal += v;
+  }
+
+  // Semua baris jurnal dari entri dalam rentang (untuk cari lawan akun).
+  const lines = await db
+    .select({
+      entryId: journalLines.entryId,
+      accountId: journalLines.accountId,
+      nama: chartOfAccounts.nama,
+      debit: sql<number>`${journalLines.debit}::float8`,
+      kredit: sql<number>`${journalLines.kredit}::float8`,
+    })
+    .from(journalLines)
+    .innerJoin(journalEntries, eq(journalLines.entryId, journalEntries.id))
+    .innerJoin(
+      chartOfAccounts,
+      eq(journalLines.accountId, chartOfAccounts.id),
+    )
+    .where(
+      and(
+        eq(journalLines.tenantId, tenantId),
+        gte(journalEntries.tanggal, start),
+        lte(journalEntries.tanggal, end),
+      ),
+    );
+
+  type Line = (typeof lines)[number];
+  const byEntry = new Map<string, Line[]>();
+  for (const l of lines) {
+    const arr = byEntry.get(l.entryId);
+    if (arr) arr.push(l);
+    else byEntry.set(l.entryId, [l]);
+  }
+
+  const masukMap = new Map<string, number>();
+  const keluarMap = new Map<string, number>();
+  const perKasMov = new Map<string, { masuk: number; keluar: number }>();
+
+  for (const ls of byEntry.values()) {
+    for (const l of ls) {
+      if (!kasIds.has(l.accountId)) continue;
+      const lawan = ls.find((x) => x.accountId !== l.accountId);
+      const label = lawan?.nama ?? "Lainnya";
+      const mov = perKasMov.get(l.accountId) ?? { masuk: 0, keluar: 0 };
+      if (l.debit > 0) {
+        masukMap.set(label, (masukMap.get(label) ?? 0) + l.debit);
+        mov.masuk += l.debit;
+      }
+      if (l.kredit > 0) {
+        keluarMap.set(label, (keluarMap.get(label) ?? 0) + l.kredit);
+        mov.keluar += l.kredit;
+      }
+      perKasMov.set(l.accountId, mov);
+    }
+  }
+
+  const masuk = [...masukMap.entries()]
+    .map(([kategori, nilai]) => ({ kategori, nilai }))
+    .sort((a, b) => b.nilai - a.nilai);
+  const keluar = [...keluarMap.entries()]
+    .map(([kategori, nilai]) => ({ kategori, nilai }))
+    .sort((a, b) => b.nilai - a.nilai);
+  const masukTotal = masuk.reduce((s, x) => s + x.nilai, 0);
+  const keluarTotal = keluar.reduce((s, x) => s + x.nilai, 0);
+  const net = masukTotal - keluarTotal;
+
+  const perKas = kasRows.map((k) => {
+    const mov = perKasMov.get(k.id) ?? { masuk: 0, keluar: 0 };
+    const awal = openPer.get(k.id) ?? 0;
+    return {
+      nama: k.nama,
+      saldoAwal: awal,
+      masuk: mov.masuk,
+      keluar: mov.keluar,
+      saldoAkhir: awal + mov.masuk - mov.keluar,
+    };
+  });
+
+  return {
+    dari,
+    sampai,
+    saldoAwal,
+    masuk,
+    keluar,
+    masukTotal,
+    keluarTotal,
+    net,
+    saldoAkhir: saldoAwal + net,
+    perKas,
   };
 }

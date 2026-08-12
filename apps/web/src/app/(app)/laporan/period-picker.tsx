@@ -17,10 +17,12 @@ export function PeriodPicker({
   dari,
   sampai,
   preset,
+  basePath = "/laporan",
 }: {
   dari: string;
   sampai: string;
   preset: string;
+  basePath?: string;
 }) {
   const router = useRouter();
   const [d1, setD1] = useState(dari);
@@ -28,7 +30,7 @@ export function PeriodPicker({
 
   function go(params: Record<string, string>) {
     const q = new URLSearchParams(params).toString();
-    router.push(`/laporan?${q}`);
+    router.push(`${basePath}?${q}`);
   }
 
   return (

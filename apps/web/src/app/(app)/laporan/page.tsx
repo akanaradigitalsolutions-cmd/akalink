@@ -10,6 +10,7 @@ import {
 import { formatRupiah } from "@/lib/format";
 import { IconReceipt, IconWallet, IconChart, IconTag } from "@/components/icons";
 import { PeriodPicker } from "./period-picker";
+import { LaporanTabs } from "./tabs";
 
 export const metadata: Metadata = { title: "Laporan — AkaLink" };
 
@@ -77,6 +78,8 @@ export default async function LaporanPage({
           ⬇️ Ekspor CSV
         </a>
       </div>
+
+      <LaporanTabs />
 
       <PeriodPicker dari={dari} sampai={sampai} preset={preset} />
 
