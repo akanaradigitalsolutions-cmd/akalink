@@ -98,6 +98,39 @@ export function buildWaNota(o: {
   return L.join("\n");
 }
 
+/** Pesan WhatsApp singkat: barang sudah selesai & siap diambil. */
+export function buildWaSiapAmbil(o: {
+  tenantNama: string;
+  konsumen?: string | null;
+  noNota: string;
+  grandTotal: string;
+  statusPembayaran: string;
+  link: string;
+}): string {
+  const sisa = o.statusPembayaran === "lunas" ? 0 : Number(o.grandTotal);
+  const L: string[] = [];
+  L.push(`Halo ${o.konsumen?.trim() ? o.konsumen : "Kak"} 👋`);
+  L.push("");
+  L.push(
+    `Cucian Anda di *${o.tenantNama}* (nota ${o.noNota}) sudah *selesai* dan *siap diambil*. 🎉`,
+  );
+  if (sisa > 0) {
+    L.push("");
+    L.push(
+      `Mohon siapkan sisa pembayaran sebesar *${formatRupiah(sisa)}* saat pengambilan ya.`,
+    );
+  } else {
+    L.push("");
+    L.push("Pembayaran sudah *lunas*, tinggal diambil. 🙏");
+  }
+  L.push("");
+  L.push("Detail nota:");
+  L.push(o.link);
+  L.push("");
+  L.push("Terima kasih 🙏");
+  return L.join("\n");
+}
+
 /** URL dasar situs (dari header request). */
 export async function getBaseUrl(): Promise<string> {
   const h = await headers();

@@ -18,7 +18,12 @@ import {
   LABEL_STATUS_BAYAR,
 } from "@/lib/format";
 import { WhatsappButton } from "@/components/nota/client";
-import { getBaseUrl, buildWaNota, SYARAT_KETENTUAN_DEFAULT } from "@/lib/nota";
+import {
+  getBaseUrl,
+  buildWaNota,
+  buildWaSiapAmbil,
+  SYARAT_KETENTUAN_DEFAULT,
+} from "@/lib/nota";
 import { StatusEditor } from "./status-editor";
 import { DeleteNota } from "./delete-nota";
 
@@ -65,6 +70,16 @@ export default async function DetailTransaksiPage({
     sk: tenant?.syaratKetentuan ?? SYARAT_KETENTUAN_DEFAULT,
   });
 
+  // Pesan WhatsApp singkat "siap diambil" (muncul saat pekerjaan selesai)
+  const waSiapAmbil = buildWaSiapAmbil({
+    tenantNama: tenant?.nama ?? "AkaLink",
+    konsumen: consumer?.nama,
+    noNota: tx.noNota,
+    grandTotal: tx.grandTotal,
+    statusPembayaran: tx.statusPembayaran,
+    link: notaLink,
+  });
+
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-5">
       <header className="no-print flex flex-wrap items-center justify-between gap-3">
@@ -92,6 +107,14 @@ export default async function DetailTransaksiPage({
           <PrintLink href={`/n/${tx.id}?print=1`} label="🖨️ Cetak Nota" />
           <PrintLink href={`/label/${tx.id}?print=1`} label="🏷️ Cetak Label" />
           <PrintLink href={`/n/${tx.id}`} label="🔗 Lihat Nota" />
+          {tx.statusPekerjaan === "selesai" && (
+            <WhatsappButton
+              hp={consumer?.hp}
+              message={waSiapAmbil}
+              label="📦 Kabari Siap Diambil"
+              variant="outline"
+            />
+          )}
           <WhatsappButton hp={consumer?.hp} message={waMessage} />
         </div>
       </header>
