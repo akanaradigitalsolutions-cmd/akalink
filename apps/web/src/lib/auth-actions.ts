@@ -174,8 +174,13 @@ export async function kirimResetPassword(input: {
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
     redirectTo,
   });
-  // Jangan bocorkan apakah email terdaftar — selalu balas sukses.
-  if (error) console.error("[reset] resetPasswordForEmail:", error.message);
+  // Catatan: Supabase membalas sukses meski email tak terdaftar, jadi error di
+  // sini berkaitan dengan konfigurasi/pengiriman (redirect, rate limit, SMTP)
+  // — bukan bocornya keberadaan email. Tampilkan agar mudah didiagnosa.
+  if (error) {
+    console.error("[reset] resetPasswordForEmail:", error.message);
+    return { ok: false, error: `Gagal kirim: ${error.message}` };
+  }
   return { ok: true };
 }
 
