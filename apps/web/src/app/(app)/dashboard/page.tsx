@@ -4,12 +4,18 @@ import { redirect } from "next/navigation";
 import { getSessionUser, getTenantIdFromUser } from "@/lib/auth";
 import { getTenantContext } from "@/lib/tenant";
 import { getDashboardStats } from "@/lib/dashboard";
+import { searchTransactions } from "@/lib/transactions";
 import {
   getOutlets,
   getActiveOutlet,
   backfillOrphanTransactions,
 } from "@/lib/outlets";
-import { formatRupiah } from "@/lib/format";
+import {
+  formatRupiah,
+  formatDateTime,
+  LABEL_STATUS_KERJA,
+  LABEL_STATUS_BAYAR,
+} from "@/lib/format";
 import {
   IconReceipt,
   IconWallet,
@@ -28,6 +34,7 @@ export default async function DashboardPage() {
 
   let me: Awaited<ReturnType<typeof getTenantContext>>["me"] | undefined;
   let stats: Awaited<ReturnType<typeof getDashboardStats>> | undefined;
+  let recent: Awaited<ReturnType<typeof searchTransactions>> = [];
   let loadError: string | undefined;
   let outletNama: string | null = null;
   let outletCount = 0;
@@ -45,6 +52,10 @@ export default async function DashboardPage() {
       if (outletList[0])
         await backfillOrphanTransactions(tenantId, outletList[0].id);
       stats = await getDashboardStats(tenantId, active?.id);
+      recent = await searchTransactions(tenantId, {
+        outlet: active?.id,
+        limit: 6,
+      });
     }
   } catch (e) {
     loadError = e instanceof Error ? e.message : String(e);
@@ -143,6 +154,73 @@ export default async function DashboardPage() {
             color="text-green-600"
           />
         </div>
+      </section>
+
+      {/* Transaksi terakhir */}
+      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+        <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4 dark:border-slate-800">
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-400">
+            Transaksi Terakhir
+          </h3>
+          <Link
+            href="/transaksi"
+            className="text-sm font-medium text-brand-600 hover:underline"
+          >
+            Lihat semua →
+          </Link>
+        </div>
+        {recent.length === 0 ? (
+          <div className="flex flex-col items-center gap-3 px-6 py-10 text-center">
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              Belum ada transaksi.
+            </p>
+            <Link
+              href="/transaksi/baru"
+              className="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-700"
+            >
+              <IconPlus className="h-4 w-4" />
+              Buat Transaksi
+            </Link>
+          </div>
+        ) : (
+          <ul className="divide-y divide-slate-100 dark:divide-slate-800">
+            {recent.map((t) => (
+              <li key={t.id}>
+                <Link
+                  href={`/transaksi/${t.id}`}
+                  className="flex flex-wrap items-center justify-between gap-3 px-6 py-3.5 transition hover:bg-slate-50 dark:hover:bg-slate-800/50"
+                >
+                  <div className="min-w-0">
+                    <p className="font-semibold text-slate-900 dark:text-white">
+                      {t.noNota}
+                    </p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      {t.consumerNama ?? "Umum"} ·{" "}
+                      {formatDateTime(t.orderDiterima)}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="hidden rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300 sm:inline">
+                      {LABEL_STATUS_KERJA[t.statusPekerjaan]}
+                    </span>
+                    <span
+                      className={
+                        t.statusPembayaran === "lunas"
+                          ? "rounded-full bg-green-100 px-2 py-0.5 text-[11px] font-medium text-green-700 dark:bg-green-950 dark:text-green-300"
+                          : "rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-medium text-red-700 dark:bg-red-950 dark:text-red-300"
+                      }
+                    >
+                      {LABEL_STATUS_BAYAR[t.statusPembayaran]}
+                    </span>
+                    <span className="w-24 text-right font-bold text-slate-900 dark:text-white">
+                      {formatRupiah(t.grandTotal)}
+                    </span>
+                  </div>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
     </div>
   );
