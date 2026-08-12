@@ -185,6 +185,164 @@ export async function createTransaction(
   return { ok: true, id: txId, noNota };
 }
 
+// ---- Edit transaksi (khusus Owner, selama belum lunas) -------------------
+const updateSchema = inputSchema.extend({ id: z.string().uuid() });
+
+export async function updateTransaction(
+  input: unknown,
+): Promise<CreateTxResult> {
+  const user = await getSessionUser();
+  const tenantId = getTenantIdFromUser(user);
+  if (!user || !tenantId)
+    return { ok: false, error: "Sesi tidak valid. Silakan masuk lagi." };
+  if (getRoleFromUser(user) !== "owner")
+    return {
+      ok: false,
+      error: "Hanya pemilik (Owner) yang dapat mengedit transaksi.",
+    };
+
+  const parsed = updateSchema.safeParse(input);
+  if (!parsed.success)
+    return { ok: false, error: "Data transaksi tidak valid." };
+  const d = parsed.data;
+
+  const db = getDb();
+
+  const [existing] = await db
+    .select({
+      noNota: transactions.noNota,
+      statusPembayaran: transactions.statusPembayaran,
+    })
+    .from(transactions)
+    .where(and(eq(transactions.id, d.id), eq(transactions.tenantId, tenantId)))
+    .limit(1);
+  if (!existing) return { ok: false, error: "Transaksi tidak ditemukan." };
+  if (existing.statusPembayaran === "lunas")
+    return {
+      ok: false,
+      error:
+        "Transaksi sudah lunas tidak bisa diedit. Ubah status pembayaran ke belum lunas dulu.",
+    };
+
+  // Ambil layanan otoritatif dari DB (jangan percaya harga dari klien).
+  const ids = [...new Set(d.items.map((i) => i.serviceId))];
+  const svcRows = await db
+    .select()
+    .from(services)
+    .where(and(eq(services.tenantId, tenantId), inArray(services.id, ids)));
+  const svcMap = new Map(svcRows.map((s) => [s.id, s]));
+
+  let subtotal = 0;
+  let maxEstMs = 0;
+  const itemsToInsert: {
+    serviceId: string;
+    namaLayanan: string;
+    tipeSatuan: string;
+    qty: string;
+    harga: string;
+    subtotal: string;
+  }[] = [];
+
+  for (const it of d.items) {
+    const s = svcMap.get(it.serviceId);
+    if (!s) continue;
+    const harga = Number(s.harga);
+    const sub = harga * it.qty;
+    subtotal += sub;
+    const estMs =
+      (s.estimasiNilai ?? 0) *
+      (s.estimasiSatuan === "hari" ? 86_400_000 : 3_600_000);
+    if (estMs > maxEstMs) maxEstMs = estMs;
+    itemsToInsert.push({
+      serviceId: s.id,
+      namaLayanan: s.nama,
+      tipeSatuan: s.tipeSatuan,
+      qty: String(it.qty),
+      harga: String(harga),
+      subtotal: String(sub),
+    });
+  }
+
+  if (itemsToInsert.length === 0)
+    return { ok: false, error: "Tidak ada layanan valid pada transaksi." };
+
+  const biayaExpress = d.isExpress ? (d.biayaExpress ?? 0) : 0;
+  const diskon = d.diskon ?? 0;
+  const grandTotal = Math.max(0, subtotal + biayaExpress - diskon);
+  const estimasiSelesai =
+    maxEstMs > 0 ? new Date(Date.now() + maxEstMs) : null;
+
+  await seedDefaultCoaIfEmpty(tenantId);
+
+  await db.transaction(async (tx) => {
+    await tx
+      .update(transactions)
+      .set({
+        consumerId: d.consumerId ?? null,
+        estimasiSelesai,
+        isExpress: !!d.isExpress,
+        catatan: d.catatan ?? null,
+        subtotal: String(subtotal),
+        diskon: String(diskon),
+        biayaExpress: String(biayaExpress),
+        grandTotal: String(grandTotal),
+        updatedAt: new Date(),
+      })
+      .where(
+        and(eq(transactions.id, d.id), eq(transactions.tenantId, tenantId)),
+      );
+
+    // Ganti seluruh item.
+    await tx
+      .delete(transactionItems)
+      .where(
+        and(
+          eq(transactionItems.transactionId, d.id),
+          eq(transactionItems.tenantId, tenantId),
+        ),
+      );
+    await tx.insert(transactionItems).values(
+      itemsToInsert.map((i) => ({
+        ...i,
+        tenantId,
+        transactionId: d.id,
+      })),
+    );
+
+    // Susun ulang jurnal penjualan (hapus lama, posting baru).
+    // Aman: transaksi belum lunas, jadi tidak ada jurnal pelunasan.
+    await tx
+      .delete(journalEntries)
+      .where(
+        and(
+          eq(journalEntries.tenantId, tenantId),
+          eq(journalEntries.refType, "transaksi"),
+          eq(journalEntries.refId, d.id),
+        ),
+      );
+
+    const jLines: { kode: string; debit?: number; kredit?: number }[] = [
+      { kode: "1.2", debit: grandTotal },
+    ];
+    if (diskon > 0) jLines.push({ kode: "4.9", debit: diskon });
+    jLines.push({ kode: "4.1", kredit: subtotal + biayaExpress });
+    await postJournal(tx, tenantId, {
+      keterangan: `Transaksi ${existing.noNota}`,
+      refType: "transaksi",
+      refId: d.id,
+      lines: jLines,
+    });
+  });
+
+  revalidatePath(`/transaksi/${d.id}`);
+  revalidatePath("/transaksi");
+  revalidatePath("/keuangan/jurnal");
+  revalidatePath("/keuangan/buku-besar");
+  revalidatePath("/keuangan/laba-rugi");
+  revalidatePath("/keuangan/neraca");
+  return { ok: true, id: d.id, noNota: existing.noNota };
+}
+
 // ---- Ubah status pengerjaan / pembayaran / item (Phase 1.4) --------------
 export type UpdateStatusResult = { ok: true } | { ok: false; error: string };
 

@@ -2,7 +2,10 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { createTransaction } from "@/lib/transactions-actions";
+import {
+  createTransaction,
+  updateTransaction,
+} from "@/lib/transactions-actions";
 import { quickCreateConsumer } from "@/lib/consumers-actions";
 import { formatRupiah, SATUAN_SINGKAT } from "@/lib/format";
 import { IconPlus, IconTrash } from "@/components/icons";
@@ -32,20 +35,38 @@ function toNum(s: string): number {
   return Number.isFinite(n) ? n : 0;
 }
 
+export type InitialTx = {
+  consumerId: string | null;
+  items: Item[];
+  isExpress: boolean;
+  biayaExpress: number;
+  diskon: number;
+  catatan: string;
+};
+
 export function BuatTransaksi({
   services,
   consumers: consumersProp,
+  mode = "create",
+  txId,
+  initial,
 }: {
   services: Service[];
   consumers: Consumer[];
+  mode?: "create" | "edit";
+  txId?: string;
+  initial?: InitialTx;
 }) {
   const router = useRouter();
+  const isEdit = mode === "edit";
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string>();
 
   // Daftar konsumen lokal (prop + yang baru dibuat dari layar ini).
   const [consumers, setConsumers] = useState<Consumer[]>(consumersProp);
-  const [consumerId, setConsumerId] = useState<string | null>(null);
+  const [consumerId, setConsumerId] = useState<string | null>(
+    initial?.consumerId ?? null,
+  );
   const [consumerQuery, setConsumerQuery] = useState("");
 
   // Form tambah konsumen cepat.
@@ -83,11 +104,11 @@ export function BuatTransaksi({
       }
     });
   }
-  const [items, setItems] = useState<Item[]>([]);
-  const [isExpress, setIsExpress] = useState(false);
-  const [biayaExpress, setBiayaExpress] = useState(0);
-  const [diskon, setDiskon] = useState(0);
-  const [catatan, setCatatan] = useState("");
+  const [items, setItems] = useState<Item[]>(initial?.items ?? []);
+  const [isExpress, setIsExpress] = useState(initial?.isExpress ?? false);
+  const [biayaExpress, setBiayaExpress] = useState(initial?.biayaExpress ?? 0);
+  const [diskon, setDiskon] = useState(initial?.diskon ?? 0);
+  const [catatan, setCatatan] = useState(initial?.catatan ?? "");
 
   const selectedConsumer = consumers.find((c) => c.id === consumerId);
   const filteredConsumers = useMemo(() => {
@@ -153,14 +174,18 @@ export function BuatTransaksi({
       return;
     }
     startTransition(async () => {
-      const res = await createTransaction({
+      const payload = {
         consumerId,
         items: payloadItems,
         isExpress,
         biayaExpress: isExpress ? biayaExpress : 0,
         diskon,
         catatan: catatan || undefined,
-      });
+      };
+      const res =
+        isEdit && txId
+          ? await updateTransaction({ id: txId, ...payload })
+          : await createTransaction(payload);
       if (res.ok) router.push(`/transaksi/${res.id}`);
       else setError(res.error);
     });
@@ -458,7 +483,11 @@ export function BuatTransaksi({
             disabled={pending}
             className="rounded-lg bg-brand-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-brand-700 disabled:opacity-60"
           >
-            {pending ? "Menyimpan…" : "Simpan Transaksi"}
+            {pending
+              ? "Menyimpan…"
+              : isEdit
+                ? "Simpan Perubahan"
+                : "Simpan Transaksi"}
           </button>
         </section>
       </div>

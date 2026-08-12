@@ -80,6 +80,15 @@ export default async function DetailTransaksiPage({
           </h1>
         </div>
         <div className="flex flex-wrap gap-2">
+          {getRoleFromUser(user) === "owner" &&
+            tx.statusPembayaran !== "lunas" && (
+              <Link
+                href={`/transaksi/${tx.id}/edit`}
+                className="no-print inline-flex items-center gap-2 rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+              >
+                ✏️ Edit
+              </Link>
+            )}
           <PrintLink href={`/n/${tx.id}?print=1`} label="🖨️ Cetak Nota" />
           <PrintLink href={`/label/${tx.id}?print=1`} label="🏷️ Cetak Label" />
           <PrintLink href={`/n/${tx.id}`} label="🔗 Lihat Nota" />
