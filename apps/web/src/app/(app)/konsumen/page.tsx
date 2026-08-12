@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSessionUser, getTenantIdFromUser } from "@/lib/auth";
 import {
@@ -85,9 +86,12 @@ export default async function KonsumenPage({
             {results.map((c) => (
               <li
                 key={c.id}
-                className="flex items-center justify-between gap-4 px-5 py-4"
+                className="flex items-center justify-between gap-4 pr-5 transition hover:bg-slate-50 dark:hover:bg-slate-800/50"
               >
-                <div className="flex items-center gap-3">
+                <Link
+                  href={`/konsumen/${c.id}`}
+                  className="flex flex-1 items-center gap-3 px-5 py-4"
+                >
                   <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-50 text-sm font-bold text-brand-600 dark:bg-brand-950/50 dark:text-brand-400">
                     {c.nama.slice(0, 2).toUpperCase()}
                   </div>
@@ -100,7 +104,7 @@ export default async function KonsumenPage({
                       {c.gender ? ` · ${c.gender}` : ""}
                     </p>
                   </div>
-                </div>
+                </Link>
                 <form action={deleteConsumer}>
                   <input type="hidden" name="id" value={c.id} />
                   <button
