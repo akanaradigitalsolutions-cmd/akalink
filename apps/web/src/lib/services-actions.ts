@@ -5,6 +5,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { getDb, services } from "@akalink/db";
 import { getSessionUser, getTenantIdFromUser } from "@/lib/auth";
+import { getActiveOutlet, seedDefaultOutletIfEmpty } from "@/lib/outlets";
 
 export type ServiceFormState =
   | { error?: string; fieldErrors?: Record<string, string>; ok?: boolean }
@@ -63,8 +64,14 @@ export async function createService(
 
   const d = parsed.data;
   const db = getDb();
+
+  // Layanan ditautkan ke outlet aktif (katalog & harga per cabang).
+  await seedDefaultOutletIfEmpty(tenantId);
+  const activeOutlet = await getActiveOutlet(tenantId);
+
   await db.insert(services).values({
     tenantId,
+    outletId: activeOutlet?.id ?? null,
     nama: d.nama,
     tipeSatuan: d.tipeSatuan,
     harga: String(d.harga),

@@ -24,13 +24,14 @@ export default async function EditTransaksiPage({
   if (!tenantId) redirect("/masuk");
   if (getRoleFromUser(user) !== "owner") redirect(`/transaksi/${id}`);
 
-  const [data, services, consumers] = await Promise.all([
-    getTransactionWithItems(tenantId, id),
-    getActiveServices(tenantId),
-    getRecentConsumers(tenantId, 100),
-  ]);
+  const data = await getTransactionWithItems(tenantId, id);
   if (!data) notFound();
   const { tx, items } = data;
+
+  const [services, consumers] = await Promise.all([
+    getActiveServices(tenantId, tx.outletId ?? undefined),
+    getRecentConsumers(tenantId, 100),
+  ]);
 
   if (tx.statusPembayaran === "lunas") {
     return (

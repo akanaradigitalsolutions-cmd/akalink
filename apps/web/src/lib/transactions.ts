@@ -25,13 +25,15 @@ const PAY_STATUSES = ["belum_dibayar", "dp", "lunas"] as const;
 type WorkStatus = (typeof WORK_STATUSES)[number];
 type PayStatus = (typeof PAY_STATUSES)[number];
 
-/** Layanan aktif (untuk dipilih di POS). */
-export async function getActiveServices(tenantId: string) {
+/** Layanan aktif untuk dipilih di POS (opsional difilter per outlet). */
+export async function getActiveServices(tenantId: string, outletId?: string) {
   const db = getDb();
+  const conds = [eq(services.tenantId, tenantId), eq(services.aktif, true)];
+  if (outletId) conds.push(eq(services.outletId, outletId));
   return db
     .select()
     .from(services)
-    .where(and(eq(services.tenantId, tenantId), eq(services.aktif, true)))
+    .where(and(...conds))
     .orderBy(services.nama);
 }
 

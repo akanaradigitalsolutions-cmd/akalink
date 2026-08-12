@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { getSessionUser, getTenantIdFromUser } from "@/lib/auth";
 import { getActiveServices } from "@/lib/transactions";
 import { getRecentConsumers } from "@/lib/consumers";
+import { getActiveOutlet, seedDefaultOutletIfEmpty } from "@/lib/outlets";
 import { BuatTransaksi } from "./buat-transaksi";
 
 export const metadata: Metadata = {
@@ -16,8 +17,10 @@ export default async function TransaksiBaruPage() {
   const tenantId = getTenantIdFromUser(user);
   if (!tenantId) redirect("/masuk");
 
+  await seedDefaultOutletIfEmpty(tenantId);
+  const activeOutlet = await getActiveOutlet(tenantId);
   const [services, consumers] = await Promise.all([
-    getActiveServices(tenantId),
+    getActiveServices(tenantId, activeOutlet?.id),
     getRecentConsumers(tenantId, 100),
   ]);
 

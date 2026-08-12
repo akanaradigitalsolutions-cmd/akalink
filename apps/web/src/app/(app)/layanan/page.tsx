@@ -1,7 +1,12 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getSessionUser, getTenantIdFromUser } from "@/lib/auth";
-import { getServices } from "@/lib/services";
+import { getServices, backfillOrphanServices } from "@/lib/services";
+import {
+  getOutlets,
+  getActiveOutlet,
+  seedDefaultOutletIfEmpty,
+} from "@/lib/outlets";
 import { deleteService, toggleService } from "@/lib/services-actions";
 import { formatRupiah, formatEstimasi, LABEL_SATUAN } from "@/lib/format";
 import { ServiceForm } from "./service-form";
@@ -15,7 +20,20 @@ export default async function LayananPage() {
   const user = await getSessionUser();
   if (!user) redirect("/masuk");
   const tenantId = getTenantIdFromUser(user);
-  const list = tenantId ? await getServices(tenantId) : [];
+
+  let list: Awaited<ReturnType<typeof getServices>> = [];
+  let activeOutletNama: string | null = null;
+  let outletCount = 0;
+  if (tenantId) {
+    await seedDefaultOutletIfEmpty(tenantId);
+    const outletList = await getOutlets(tenantId);
+    outletCount = outletList.length;
+    // Layanan lama (tanpa outlet) dipindahkan ke outlet pertama sekali saja.
+    if (outletList[0]) await backfillOrphanServices(tenantId, outletList[0].id);
+    const active = await getActiveOutlet(tenantId);
+    activeOutletNama = active?.nama ?? null;
+    list = active ? await getServices(tenantId, active.id) : [];
+  }
 
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-6">
@@ -25,8 +43,19 @@ export default async function LayananPage() {
             Katalog Layanan
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400">
-            Daftar layanan laundry beserta tarifnya. Dipakai saat membuat
-            transaksi.
+            {activeOutletNama ? (
+              <>
+                Katalog &amp; tarif untuk outlet{" "}
+                <span className="font-semibold text-slate-700 dark:text-slate-200">
+                  🏪 {activeOutletNama}
+                </span>
+                {outletCount > 1
+                  ? ". Ganti outlet aktif di atas untuk mengelola cabang lain."
+                  : "."}
+              </>
+            ) : (
+              "Daftar layanan laundry beserta tarifnya. Dipakai saat membuat transaksi."
+            )}
           </p>
         </div>
         <ServiceForm />
