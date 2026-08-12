@@ -69,7 +69,7 @@ export default async function NeracaPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Total label="Total Aset" value={aset.total} />
         <Total label="Total Kewajiban + Modal" value={totalPasiva} />
       </div>

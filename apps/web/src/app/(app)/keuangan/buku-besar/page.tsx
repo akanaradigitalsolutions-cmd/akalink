@@ -33,6 +33,8 @@ export default async function BukuBesarPage() {
         <Empty />
       ) : (
         <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+          <div className="overflow-x-auto">
+          <div className="min-w-[560px]">
           <div className="grid grid-cols-12 gap-2 border-b border-slate-100 px-5 py-3 text-[11px] font-semibold uppercase tracking-wide text-slate-400 dark:border-slate-800">
             <div className="col-span-6">Akun</div>
             <div className="col-span-2 text-right">Debit</div>
@@ -83,6 +85,8 @@ export default async function BukuBesarPage() {
               {formatRupiah(totalKredit)}
             </div>
             <div className="col-span-2" />
+          </div>
+          </div>
           </div>
         </div>
       )}

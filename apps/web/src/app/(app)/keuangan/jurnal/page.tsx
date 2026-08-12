@@ -74,6 +74,8 @@ export default async function JurnalPage() {
                   )}
                 </div>
 
+                <div className="overflow-x-auto">
+                <div className="min-w-[420px]">
                 <div className="grid grid-cols-12 gap-2 px-5 py-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
                   <div className="col-span-6">Akun</div>
                   <div className="col-span-3 text-right">Debit</div>
@@ -108,6 +110,8 @@ export default async function JurnalPage() {
                   <div className="col-span-3 text-right text-slate-900 dark:text-white">
                     {formatRupiah(totalK)}
                   </div>
+                </div>
+                </div>
                 </div>
               </div>
             );
