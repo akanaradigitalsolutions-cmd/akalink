@@ -2,8 +2,8 @@ import "server-only";
 
 import { cache } from "react";
 import { cookies } from "next/headers";
-import { and, asc, eq } from "drizzle-orm";
-import { getDb, outlets, tenants } from "@akalink/db";
+import { and, asc, eq, isNull } from "drizzle-orm";
+import { getDb, outlets, tenants, transactions } from "@akalink/db";
 
 export const OUTLET_COOKIE = "akalink_outlet";
 
@@ -78,6 +78,26 @@ export const getActiveOutlet = cache(
     return found ?? list[0];
   },
 );
+
+/**
+ * Pindahkan transaksi lama tanpa outlet (dibuat sebelum fitur multi-outlet,
+ * outlet_id NULL) ke outlet default. Idempoten — hanya menyentuh baris NULL.
+ */
+export async function backfillOrphanTransactions(
+  tenantId: string,
+  outletId: string,
+) {
+  const db = getDb();
+  await db
+    .update(transactions)
+    .set({ outletId })
+    .where(
+      and(
+        eq(transactions.tenantId, tenantId),
+        isNull(transactions.outletId),
+      ),
+    );
+}
 
 /** Validasi bahwa sebuah outletId milik tenant (untuk server action). */
 export async function outletBelongsToTenant(

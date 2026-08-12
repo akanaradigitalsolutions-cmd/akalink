@@ -1,7 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { setActiveOutlet } from "@/lib/outlets-actions";
 
 type Outlet = { id: string; nama: string };
@@ -14,9 +14,13 @@ export function OutletSwitcher({
   activeId: string | null;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [pending, start] = useTransition();
 
   if (outlets.length === 0) return null;
+  // Halaman Laporan punya pemilih outlet sendiri (dengan opsi "Semua Outlet"),
+  // jadi sembunyikan switcher topbar di sana agar tidak ada dua kontrol.
+  if (pathname.startsWith("/laporan")) return null;
 
   // Satu outlet: cukup tampilkan namanya (tanpa dropdown).
   if (outlets.length === 1) {

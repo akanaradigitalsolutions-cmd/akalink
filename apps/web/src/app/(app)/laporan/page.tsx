@@ -7,7 +7,11 @@ import {
   presetRange,
   normalizeYmd,
 } from "@/lib/laporan";
-import { getOutlets } from "@/lib/outlets";
+import {
+  getOutlets,
+  seedDefaultOutletIfEmpty,
+  backfillOrphanTransactions,
+} from "@/lib/outlets";
 import { formatRupiah } from "@/lib/format";
 import { IconReceipt, IconWallet, IconChart, IconTag } from "@/components/icons";
 import { PeriodPicker } from "./period-picker";
@@ -47,7 +51,11 @@ export default async function LaporanPage({
   const dari = normalizeYmd(sp.dari, base.dari);
   const sampai = normalizeYmd(sp.sampai, base.sampai);
 
+  await seedDefaultOutletIfEmpty(tenantId);
   const outletList = await getOutlets(tenantId);
+  // Tautkan transaksi lama tanpa outlet ke outlet pertama (sekali saja).
+  if (outletList[0])
+    await backfillOrphanTransactions(tenantId, outletList[0].id);
   const outlet =
     sp.outlet && outletList.some((o) => o.id === sp.outlet) ? sp.outlet : "";
 

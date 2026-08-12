@@ -4,7 +4,11 @@ import { redirect } from "next/navigation";
 import { getSessionUser, getTenantIdFromUser } from "@/lib/auth";
 import { getTenantContext } from "@/lib/tenant";
 import { getDashboardStats } from "@/lib/dashboard";
-import { getOutlets, getActiveOutlet } from "@/lib/outlets";
+import {
+  getOutlets,
+  getActiveOutlet,
+  backfillOrphanTransactions,
+} from "@/lib/outlets";
 import { formatRupiah } from "@/lib/format";
 import {
   IconReceipt,
@@ -37,6 +41,9 @@ export default async function DashboardPage() {
       me = ctx.me;
       outletNama = active?.nama ?? null;
       outletCount = outletList.length;
+      // Tautkan transaksi lama tanpa outlet ke outlet pertama (sekali saja).
+      if (outletList[0])
+        await backfillOrphanTransactions(tenantId, outletList[0].id);
       stats = await getDashboardStats(tenantId, active?.id);
     }
   } catch (e) {
