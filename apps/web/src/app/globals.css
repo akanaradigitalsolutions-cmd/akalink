@@ -45,8 +45,17 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-/* Saat mencetak: sembunyikan semua kecuali area .printable (nota). */
+/* Saat mencetak: sembunyikan semua kecuali area .printable (nota/label).
+   Dioptimalkan untuk printer struk termal 80mm (standar POS). */
 @media print {
+  @page {
+    size: 80mm auto;
+    margin: 4mm;
+  }
+  html,
+  body {
+    background: #fff !important;
+  }
   body * {
     visibility: hidden;
   }
@@ -56,10 +65,25 @@ body {
   }
   .printable {
     position: absolute;
-    inset: 0;
-    margin: 0;
+    left: 0;
+    top: 0;
+    width: 100%;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
     border: none !important;
+    border-radius: 0 !important;
     box-shadow: none !important;
+    color: #000 !important;
+    font-size: 12px;
+    line-height: 1.35;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  /* Teks & garis hitam pekat agar tajam di kertas termal. */
+  .printable * {
+    color: #000 !important;
+    border-color: #000 !important;
   }
   .no-print {
     display: none !important;

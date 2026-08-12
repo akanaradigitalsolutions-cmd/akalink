@@ -71,8 +71,10 @@ export function NotaView({
       <ul className="space-y-2">
         {items.map((it) => (
           <li key={it.id}>
-            <p className="flex items-start gap-1">
-              <span>{it.status === "selesai" ? "✅" : "⬜"}</span>
+            <p className="flex items-start gap-1.5">
+              <span className="font-semibold">
+                {it.status === "selesai" ? "✓" : "•"}
+              </span>
               <span className="flex-1">
                 {it.namaLayanan} — {Number(it.qty)}{" "}
                 {SATUAN_SINGKAT[it.tipeSatuan] ?? ""}
