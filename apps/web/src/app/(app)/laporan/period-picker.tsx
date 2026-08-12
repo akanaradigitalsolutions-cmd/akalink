@@ -77,31 +77,31 @@ export function PeriodPicker({
         ))}
       </div>
 
-      <div className="flex items-end gap-2">
-        <label className="flex flex-col gap-1 text-xs text-slate-500">
+      <div className="flex flex-wrap items-end gap-2">
+        <label className="flex min-w-[8rem] flex-1 flex-col gap-1 text-xs text-slate-500 sm:flex-none">
           Dari
           <input
             type="date"
             value={d1}
             max={d2}
             onChange={(e) => setD1(e.target.value)}
-            className={inputBase}
+            className={`${inputBase} w-full`}
           />
         </label>
-        <label className="flex flex-col gap-1 text-xs text-slate-500">
+        <label className="flex min-w-[8rem] flex-1 flex-col gap-1 text-xs text-slate-500 sm:flex-none">
           Sampai
           <input
             type="date"
             value={d2}
             min={d1}
             onChange={(e) => setD2(e.target.value)}
-            className={inputBase}
+            className={`${inputBase} w-full`}
           />
         </label>
         <button
           type="button"
           onClick={() => go({ dari: d1, sampai: d2 })}
-          className="rounded-lg bg-slate-800 px-3 py-2 text-sm font-semibold text-white transition hover:bg-slate-900 dark:bg-slate-200 dark:text-slate-900 dark:hover:bg-white"
+          className="rounded-lg bg-slate-800 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-900 dark:bg-slate-200 dark:text-slate-900 dark:hover:bg-white"
         >
           Terapkan
         </button>
