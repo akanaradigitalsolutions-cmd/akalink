@@ -12,6 +12,13 @@ export const metadata: Metadata = {
   title: "AkaLink — Sistem Manajemen Laundry",
   description:
     "Platform SaaS manajemen laundry multi-tenant oleh Akanara Digital Solutions.",
+  applicationName: "AkaLink",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    title: "AkaLink",
+    statusBarStyle: "default",
+  },
 };
 
 export const viewport: Viewport = {
