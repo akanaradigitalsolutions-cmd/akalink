@@ -1,6 +1,7 @@
 import { Logo } from "./logo";
 import { SidebarNav } from "./sidebar-nav";
 import { OutletSwitcher } from "./outlet-switcher";
+import { MobileNav } from "./mobile-nav";
 import { keluar } from "@/lib/auth-actions";
 import { IconLogout } from "./icons";
 
@@ -55,6 +56,7 @@ export function AppShell({
         {/* Topbar */}
         <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b border-slate-200 bg-white/80 px-4 backdrop-blur dark:border-slate-800 dark:bg-slate-900/80 sm:px-6">
           <div className="flex items-center gap-3">
+            <MobileNav role={role} userName={userName} />
             <div className="md:hidden">
               <Logo size={30} showText={false} />
             </div>
@@ -76,15 +78,6 @@ export function AppShell({
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-brand-700 text-sm font-bold text-white">
               {initials}
             </div>
-            <form action={keluar} className="md:hidden">
-              <button
-                type="submit"
-                aria-label="Keluar"
-                className="rounded-lg border border-slate-200 p-2 text-slate-500 dark:border-slate-700 dark:text-slate-400"
-              >
-                <IconLogout className="h-4 w-4" />
-              </button>
-            </form>
           </div>
         </header>
 

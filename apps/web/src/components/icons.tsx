@@ -84,6 +84,22 @@ export function IconSettings(p: IconProps) {
   );
 }
 
+export function IconMenu(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <path d="M4 6h16M4 12h16M4 18h16" />
+    </Svg>
+  );
+}
+
+export function IconClose(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <path d="M6 6l12 12M18 6L6 18" />
+    </Svg>
+  );
+}
+
 export function IconStore(p: IconProps) {
   return (
     <Svg {...p}>
