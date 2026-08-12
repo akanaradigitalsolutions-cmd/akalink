@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSessionUser, getTenantIdFromUser } from "@/lib/auth";
-import { getRecentTransactions } from "@/lib/transactions";
+import { searchTransactions } from "@/lib/transactions";
+import { TransaksiFilters } from "./transaksi-filters";
 import {
   formatRupiah,
   formatDateTime,
@@ -27,11 +28,22 @@ const bayarColor: Record<string, string> = {
   lunas: "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300",
 };
 
-export default async function TransaksiPage() {
+export default async function TransaksiPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; kerja?: string; bayar?: string }>;
+}) {
   const user = await getSessionUser();
   if (!user) redirect("/masuk");
   const tenantId = getTenantIdFromUser(user);
-  const list = tenantId ? await getRecentTransactions(tenantId) : [];
+  const sp = await searchParams;
+  const q = sp.q ?? "";
+  const kerja = sp.kerja ?? "";
+  const bayar = sp.bayar ?? "";
+  const adaFilter = !!(q || kerja || bayar);
+  const list = tenantId
+    ? await searchTransactions(tenantId, { q, kerja, bayar })
+    : [];
 
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-6">
@@ -41,7 +53,9 @@ export default async function TransaksiPage() {
             Transaksi
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400">
-            Daftar transaksi terbaru.
+            {adaFilter
+              ? `${list.length} hasil ditemukan`
+              : "Daftar transaksi terbaru."}
           </p>
         </div>
         <Link
@@ -53,16 +67,20 @@ export default async function TransaksiPage() {
         </Link>
       </header>
 
+      <TransaksiFilters q={q} kerja={kerja} bayar={bayar} />
+
       {list.length === 0 ? (
         <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-slate-300 bg-white py-16 text-center dark:border-slate-700 dark:bg-slate-900">
           <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-brand-50 text-brand-600 dark:bg-brand-950/50 dark:text-brand-400">
             <IconReceipt className="h-6 w-6" />
           </div>
           <p className="font-medium text-slate-700 dark:text-slate-200">
-            Belum ada transaksi
+            {adaFilter ? "Tidak ada transaksi cocok" : "Belum ada transaksi"}
           </p>
           <p className="max-w-sm text-sm text-slate-500 dark:text-slate-400">
-            Klik Transaksi Baru untuk membuat order pertama.
+            {adaFilter
+              ? "Coba ubah kata kunci atau reset filter."
+              : "Klik Transaksi Baru untuk membuat order pertama."}
           </p>
         </div>
       ) : (

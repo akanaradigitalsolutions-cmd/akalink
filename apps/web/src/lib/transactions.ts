@@ -1,7 +1,7 @@
 import "server-only";
 
 import { cache } from "react";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, ilike, or, type SQL } from "drizzle-orm";
 import {
   getDb,
   transactions,
@@ -13,6 +13,16 @@ import {
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+const WORK_STATUSES = [
+  "belum_dikerjakan",
+  "proses",
+  "selesai",
+  "diambil",
+] as const;
+const PAY_STATUSES = ["belum_dibayar", "dp", "lunas"] as const;
+type WorkStatus = (typeof WORK_STATUSES)[number];
+type PayStatus = (typeof PAY_STATUSES)[number];
 
 /** Layanan aktif (untuk dipilih di POS). */
 export async function getActiveServices(tenantId: string) {
@@ -43,6 +53,46 @@ export async function getRecentTransactions(tenantId: string, limit = 30) {
     .where(eq(transactions.tenantId, tenantId))
     .orderBy(desc(transactions.createdAt))
     .limit(limit);
+}
+
+/** Transaksi dengan pencarian teks (nota/konsumen) + filter status. */
+export async function searchTransactions(
+  tenantId: string,
+  opts: { q?: string; kerja?: string; bayar?: string; limit?: number } = {},
+) {
+  const db = getDb();
+  const conds: SQL[] = [eq(transactions.tenantId, tenantId)];
+
+  const q = (opts.q ?? "").trim();
+  if (q) {
+    const like = `%${q}%`;
+    const cond = or(
+      ilike(transactions.noNota, like),
+      ilike(consumers.nama, like),
+    );
+    if (cond) conds.push(cond);
+  }
+  if (WORK_STATUSES.includes(opts.kerja as WorkStatus))
+    conds.push(eq(transactions.statusPekerjaan, opts.kerja as WorkStatus));
+  if (PAY_STATUSES.includes(opts.bayar as PayStatus))
+    conds.push(eq(transactions.statusPembayaran, opts.bayar as PayStatus));
+
+  return db
+    .select({
+      id: transactions.id,
+      noNota: transactions.noNota,
+      grandTotal: transactions.grandTotal,
+      statusPekerjaan: transactions.statusPekerjaan,
+      statusPembayaran: transactions.statusPembayaran,
+      isExpress: transactions.isExpress,
+      orderDiterima: transactions.orderDiterima,
+      consumerNama: consumers.nama,
+    })
+    .from(transactions)
+    .leftJoin(consumers, eq(transactions.consumerId, consumers.id))
+    .where(and(...conds))
+    .orderBy(desc(transactions.createdAt))
+    .limit(opts.limit ?? 50);
 }
 
 /** Satu transaksi lengkap dengan item + data konsumen. */
