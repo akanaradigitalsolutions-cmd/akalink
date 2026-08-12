@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSessionUser, getTenantIdFromUser } from "@/lib/auth";
 import { searchTransactions } from "@/lib/transactions";
+import { getOutlets } from "@/lib/outlets";
 import { TransaksiFilters } from "./transaksi-filters";
 import {
   formatRupiah,
@@ -31,7 +32,12 @@ const bayarColor: Record<string, string> = {
 export default async function TransaksiPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; kerja?: string; bayar?: string }>;
+  searchParams: Promise<{
+    q?: string;
+    kerja?: string;
+    bayar?: string;
+    outlet?: string;
+  }>;
 }) {
   const user = await getSessionUser();
   if (!user) redirect("/masuk");
@@ -40,10 +46,14 @@ export default async function TransaksiPage({
   const q = sp.q ?? "";
   const kerja = sp.kerja ?? "";
   const bayar = sp.bayar ?? "";
-  const adaFilter = !!(q || kerja || bayar);
-  const list = tenantId
-    ? await searchTransactions(tenantId, { q, kerja, bayar })
-    : [];
+  const outlet = sp.outlet ?? "";
+  const adaFilter = !!(q || kerja || bayar || outlet);
+  const [list, outletList] = tenantId
+    ? await Promise.all([
+        searchTransactions(tenantId, { q, kerja, bayar, outlet }),
+        getOutlets(tenantId),
+      ])
+    : [[], []];
 
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-6">
@@ -67,7 +77,13 @@ export default async function TransaksiPage({
         </Link>
       </header>
 
-      <TransaksiFilters q={q} kerja={kerja} bayar={bayar} />
+      <TransaksiFilters
+        q={q}
+        kerja={kerja}
+        bayar={bayar}
+        outlet={outlet}
+        outlets={outletList.map((o) => ({ id: o.id, nama: o.nama }))}
+      />
 
       {list.length === 0 ? (
         <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-slate-300 bg-white py-16 text-center dark:border-slate-700 dark:bg-slate-900">
@@ -102,7 +118,11 @@ export default async function TransaksiPage({
                       )}
                     </p>
                     <p className="text-sm text-slate-500 dark:text-slate-400">
-                      {t.consumerNama ?? "Umum"} · {formatDateTime(t.orderDiterima)}
+                      {t.consumerNama ?? "Umum"} ·{" "}
+                      {formatDateTime(t.orderDiterima)}
+                      {outletList.length > 1 && t.outletNama
+                        ? ` · 🏪 ${t.outletNama}`
+                        : ""}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">

@@ -9,6 +9,7 @@ import {
   consumers,
   services,
   tenants,
+  outlets,
 } from "@akalink/db";
 
 const UUID_RE =
@@ -58,7 +59,13 @@ export async function getRecentTransactions(tenantId: string, limit = 30) {
 /** Transaksi dengan pencarian teks (nota/konsumen) + filter status. */
 export async function searchTransactions(
   tenantId: string,
-  opts: { q?: string; kerja?: string; bayar?: string; limit?: number } = {},
+  opts: {
+    q?: string;
+    kerja?: string;
+    bayar?: string;
+    outlet?: string;
+    limit?: number;
+  } = {},
 ) {
   const db = getDb();
   const conds: SQL[] = [eq(transactions.tenantId, tenantId)];
@@ -76,6 +83,8 @@ export async function searchTransactions(
     conds.push(eq(transactions.statusPekerjaan, opts.kerja as WorkStatus));
   if (PAY_STATUSES.includes(opts.bayar as PayStatus))
     conds.push(eq(transactions.statusPembayaran, opts.bayar as PayStatus));
+  if (opts.outlet && UUID_RE.test(opts.outlet))
+    conds.push(eq(transactions.outletId, opts.outlet));
 
   return db
     .select({
@@ -87,9 +96,11 @@ export async function searchTransactions(
       isExpress: transactions.isExpress,
       orderDiterima: transactions.orderDiterima,
       consumerNama: consumers.nama,
+      outletNama: outlets.nama,
     })
     .from(transactions)
     .leftJoin(consumers, eq(transactions.consumerId, consumers.id))
+    .leftJoin(outlets, eq(transactions.outletId, outlets.id))
     .where(and(...conds))
     .orderBy(desc(transactions.createdAt))
     .limit(opts.limit ?? 50);

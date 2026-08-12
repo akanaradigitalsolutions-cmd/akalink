@@ -1,5 +1,6 @@
 import { Logo } from "./logo";
 import { SidebarNav } from "./sidebar-nav";
+import { OutletSwitcher } from "./outlet-switcher";
 import { keluar } from "@/lib/auth-actions";
 import { IconLogout } from "./icons";
 
@@ -17,11 +18,15 @@ export function AppShell({
   tenantName,
   userName,
   role,
+  outlets = [],
+  activeOutletId = null,
   children,
 }: {
   tenantName: string;
   userName: string;
   role: string;
+  outlets?: { id: string; nama: string }[];
+  activeOutletId?: string | null;
   children: React.ReactNode;
 }) {
   const initials = initialsOf(userName || "?");
@@ -61,6 +66,7 @@ export function AppShell({
             </div>
           </div>
           <div className="flex items-center gap-3">
+            <OutletSwitcher outlets={outlets} activeId={activeOutletId} />
             <div className="hidden text-right sm:block">
               <p className="text-sm font-semibold text-slate-900 dark:text-white">
                 {userName}

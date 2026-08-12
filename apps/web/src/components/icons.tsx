@@ -84,6 +84,17 @@ export function IconSettings(p: IconProps) {
   );
 }
 
+export function IconStore(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <path d="M4 9.5 5.2 4h13.6L20 9.5" />
+      <path d="M4 9.5a2.5 2.5 0 0 0 5 0 2.5 2.5 0 0 0 5 0 2.5 2.5 0 0 0 5 0" />
+      <path d="M5 11v8a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-8" />
+      <path d="M10 20v-5h4v5" />
+    </Svg>
+  );
+}
+
 export function IconUser(p: IconProps) {
   return (
     <Svg {...p}>

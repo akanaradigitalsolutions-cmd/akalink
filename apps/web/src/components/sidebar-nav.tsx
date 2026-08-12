@@ -12,6 +12,7 @@ import {
   IconSettings,
   IconBadge,
   IconUser,
+  IconStore,
 } from "./icons";
 
 type NavItem = {
@@ -29,6 +30,7 @@ const items: NavItem[] = [
   { label: "Konsumen", href: "/konsumen", icon: IconUsers },
   { label: "Keuangan", href: "/keuangan", icon: IconWallet, ownerOnly: true },
   { label: "Laporan", href: "/laporan", icon: IconChart, ownerOnly: true },
+  { label: "Outlet", href: "/outlet", icon: IconStore, ownerOnly: true },
   { label: "Karyawan", href: "/karyawan", icon: IconBadge, ownerOnly: true },
   {
     label: "Pengaturan",

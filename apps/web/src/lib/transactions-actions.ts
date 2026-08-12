@@ -17,6 +17,7 @@ import {
   getRoleFromUser,
 } from "@/lib/auth";
 import { seedDefaultCoaIfEmpty } from "@/lib/coa";
+import { getActiveOutlet, seedDefaultOutletIfEmpty } from "@/lib/outlets";
 import { postJournal, hasJournal } from "@/lib/journal";
 
 const WORK_STATUSES = ["belum_dikerjakan", "proses", "selesai", "diambil"] as const;
@@ -136,8 +137,10 @@ export async function createTransaction(
 
   const noNota = genNota();
 
-  // Pastikan COA tersedia sebelum memposting jurnal.
+  // Pastikan COA & outlet tersedia; tandai transaksi pada outlet aktif.
   await seedDefaultCoaIfEmpty(tenantId);
+  await seedDefaultOutletIfEmpty(tenantId);
+  const activeOutlet = await getActiveOutlet(tenantId);
 
   const txId = await db.transaction(async (tx) => {
     const [row] = await tx
@@ -145,6 +148,7 @@ export async function createTransaction(
       .values({
         tenantId,
         noNota,
+        outletId: activeOutlet?.id ?? null,
         consumerId: d.consumerId ?? null,
         kasirId: me?.id ?? null,
         estimasiSelesai,

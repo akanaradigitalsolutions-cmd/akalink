@@ -24,24 +24,34 @@ export function TransaksiFilters({
   q,
   kerja,
   bayar,
+  outlet,
+  outlets = [],
 }: {
   q: string;
   kerja: string;
   bayar: string;
+  outlet?: string;
+  outlets?: { id: string; nama: string }[];
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [text, setText] = useState(q);
 
   function push(params: Record<string, string>) {
-    const merged: Record<string, string> = { q, kerja, bayar, ...params };
+    const merged: Record<string, string> = {
+      q,
+      kerja,
+      bayar,
+      outlet: outlet ?? "",
+      ...params,
+    };
     const sp = new URLSearchParams();
     for (const [k, v] of Object.entries(merged)) if (v) sp.set(k, v);
     const qs = sp.toString();
     start(() => router.push(qs ? `/transaksi?${qs}` : "/transaksi"));
   }
 
-  const aktifFilter = q || kerja || bayar;
+  const aktifFilter = q || kerja || bayar || outlet;
 
   return (
     <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
@@ -81,6 +91,20 @@ export function TransaksiFilters({
               </option>
             ))}
           </select>
+          {outlets.length > 1 && (
+            <select
+              value={outlet ?? ""}
+              onChange={(e) => push({ outlet: e.target.value })}
+              className={inputBase}
+            >
+              <option value="">Semua Outlet</option>
+              {outlets.map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.nama}
+                </option>
+              ))}
+            </select>
+          )}
           <button
             type="submit"
             disabled={pending}
