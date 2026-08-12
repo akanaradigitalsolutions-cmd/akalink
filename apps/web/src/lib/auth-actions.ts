@@ -1,10 +1,20 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { z } from "zod";
 import { getDb, tenants, employees, accessLevels } from "@akalink/db";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+
+async function baseUrl(): Promise<string> {
+  const h = await headers();
+  const host = h.get("host") ?? "localhost:3000";
+  const proto =
+    h.get("x-forwarded-proto") ??
+    (host.startsWith("localhost") ? "http" : "https");
+  return `${proto}://${host}`;
+}
 
 export type ActionState =
   | { error?: string; fieldErrors?: Record<string, string> }
@@ -142,6 +152,54 @@ export async function masuk(
     return { error: "Email atau password salah." };
   }
   redirect("/dashboard");
+}
+
+// ---- Lupa password: kirim email reset -----------------------------------
+export type ResetResult = { ok: true } | { ok: false; error: string };
+
+export async function kirimResetPassword(input: {
+  email: string;
+}): Promise<ResetResult> {
+  const email = String(input.email ?? "").trim();
+  const parsed = z.string().email().safeParse(email);
+  if (!parsed.success)
+    return { ok: false, error: "Format email tidak valid." };
+
+  const supabase = await createSupabaseServerClient();
+  const base = await baseUrl();
+  const redirectTo = `${base}/auth/konfirmasi?next=${encodeURIComponent(
+    "/atur-ulang-password",
+  )}`;
+
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo,
+  });
+  // Jangan bocorkan apakah email terdaftar — selalu balas sukses.
+  if (error) console.error("[reset] resetPasswordForEmail:", error.message);
+  return { ok: true };
+}
+
+// ---- Atur ulang password (setelah klik link email) ----------------------
+export async function setPasswordBaru(input: {
+  next: string;
+}): Promise<ResetResult> {
+  const next = String(input.next ?? "");
+  if (next.length < 8)
+    return { ok: false, error: "Password baru minimal 8 karakter." };
+
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user)
+    return {
+      ok: false,
+      error: "Sesi pemulihan tidak ditemukan atau sudah kedaluwarsa.",
+    };
+
+  const { error } = await supabase.auth.updateUser({ password: next });
+  if (error) return { ok: false, error: "Gagal menyimpan password baru." };
+  return { ok: true };
 }
 
 // ---- Logout --------------------------------------------------------------

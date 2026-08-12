@@ -52,6 +52,15 @@ export function MasukForm({ baruTerdaftar }: { baruTerdaftar?: boolean }) {
         error={state?.fieldErrors?.password}
       />
 
+      <div className="-mt-1 text-right">
+        <Link
+          href="/lupa-password"
+          className="text-sm font-medium text-brand-600 hover:underline"
+        >
+          Lupa password?
+        </Link>
+      </div>
+
       <button
         type="submit"
         disabled={pending}
