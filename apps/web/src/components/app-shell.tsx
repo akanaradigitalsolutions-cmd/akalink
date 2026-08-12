@@ -54,28 +54,32 @@ export function AppShell({
       {/* Main */}
       <div className="md:pl-64">
         {/* Topbar */}
-        <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b border-slate-200 bg-white/80 px-4 backdrop-blur dark:border-slate-800 dark:bg-slate-900/80 sm:px-6">
-          <div className="flex items-center gap-3">
+        <header className="sticky top-0 z-10 flex h-16 items-center gap-2 border-b border-slate-200 bg-white/80 px-3 backdrop-blur dark:border-slate-800 dark:bg-slate-900/80 sm:gap-3 sm:px-6">
+          <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
             <MobileNav role={role} userName={userName} />
-            <div className="md:hidden">
+            <div className="shrink-0 md:hidden">
               <Logo size={30} showText={false} />
             </div>
-            <div>
-              <p className="text-xs text-slate-400">Dashboard</p>
-              <h1 className="text-sm font-bold text-slate-900 dark:text-white sm:text-base">
+            <div className="min-w-0">
+              <p className="hidden text-xs text-slate-400 sm:block">Dashboard</p>
+              <h1 className="truncate text-sm font-bold text-slate-900 dark:text-white sm:text-base">
                 {tenantName}
               </h1>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <OutletSwitcher outlets={outlets} activeId={activeOutletId} />
+          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+            <OutletSwitcher
+              outlets={outlets}
+              activeId={activeOutletId}
+              tenantName={tenantName}
+            />
             <div className="hidden text-right sm:block">
               <p className="text-sm font-semibold text-slate-900 dark:text-white">
                 {userName}
               </p>
               <p className="text-xs capitalize text-slate-400">{role}</p>
             </div>
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-brand-700 text-sm font-bold text-white">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-brand-700 text-sm font-bold text-white">
               {initials}
             </div>
           </div>
