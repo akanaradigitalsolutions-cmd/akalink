@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { getSessionUser, getTenantIdFromUser } from "@/lib/auth";
 import { getTenantContext } from "@/lib/tenant";
 import {
-  getOutlets,
+  getAllowedOutlets,
   getActiveOutlet,
   seedDefaultOutletIfEmpty,
 } from "@/lib/outlets";
@@ -36,7 +36,7 @@ export default async function AppLayout({
     if (tenantId) {
       await seedDefaultOutletIfEmpty(tenantId);
       const [list, active] = await Promise.all([
-        getOutlets(tenantId),
+        getAllowedOutlets(tenantId),
         getActiveOutlet(tenantId),
       ]);
       outlets = list.map((o) => ({ id: o.id, nama: o.nama }));

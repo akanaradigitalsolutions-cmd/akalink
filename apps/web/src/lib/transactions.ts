@@ -1,7 +1,7 @@
 import "server-only";
 
 import { cache } from "react";
-import { and, desc, eq, ilike, or, type SQL } from "drizzle-orm";
+import { and, desc, eq, ilike, inArray, or, type SQL } from "drizzle-orm";
 import {
   getDb,
   transactions,
@@ -66,11 +66,16 @@ export async function searchTransactions(
     kerja?: string;
     bayar?: string;
     outlet?: string;
+    outletScope?: string[];
     limit?: number;
   } = {},
 ) {
   const db = getDb();
   const conds: SQL[] = [eq(transactions.tenantId, tenantId)];
+
+  // Pembatasan akses outlet (mis. kasir): hanya transaksi outlet yang boleh.
+  if (opts.outletScope && opts.outletScope.length > 0)
+    conds.push(inArray(transactions.outletId, opts.outletScope));
 
   const q = (opts.q ?? "").trim();
   if (q) {

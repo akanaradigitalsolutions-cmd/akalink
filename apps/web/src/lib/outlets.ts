@@ -3,7 +3,8 @@ import "server-only";
 import { cache } from "react";
 import { cookies } from "next/headers";
 import { and, asc, eq, isNull } from "drizzle-orm";
-import { getDb, outlets, tenants, transactions } from "@akalink/db";
+import { getDb, outlets, tenants, transactions, employees } from "@akalink/db";
+import { getSessionUser, getRoleFromUser } from "@/lib/auth";
 
 export const OUTLET_COOKIE = "akalink_outlet";
 
@@ -64,12 +65,43 @@ export async function seedDefaultOutletIfEmpty(tenantId: string) {
 }
 
 /**
- * Outlet aktif (dari cookie); jika tidak valid/kosong, jatuh ke outlet
- * pertama. Mengembalikan null hanya bila tenant benar-benar tak punya outlet.
+ * Outlet yang boleh diakses pengguna saat ini:
+ *  - Owner: semua outlet.
+ *  - Kasir: hanya outlet yang ditugaskan (employees.outletIds). Bila belum
+ *    diatur (kosong), boleh semua (kompatibilitas mundur).
+ */
+export const getAllowedOutlets = cache(
+  async (tenantId: string): Promise<OutletRow[]> => {
+    const all = await getOutlets(tenantId);
+    const user = await getSessionUser();
+    if (!user || getRoleFromUser(user) === "owner") return all;
+
+    const db = getDb();
+    const [emp] = await db
+      .select({ outletIds: employees.outletIds })
+      .from(employees)
+      .where(
+        and(
+          eq(employees.authUserId, user.id),
+          eq(employees.tenantId, tenantId),
+        ),
+      )
+      .limit(1);
+    const ids = emp?.outletIds ?? [];
+    if (ids.length === 0) return all;
+    const allowed = all.filter((o) => ids.includes(o.id));
+    return allowed.length ? allowed : all;
+  },
+);
+
+/**
+ * Outlet aktif (dari cookie) di antara outlet yang boleh diakses; jika tidak
+ * valid/kosong, jatuh ke outlet pertama yang diizinkan. Null hanya bila tak
+ * ada outlet sama sekali.
  */
 export const getActiveOutlet = cache(
   async (tenantId: string): Promise<OutletRow | null> => {
-    const list = await getOutlets(tenantId);
+    const list = await getAllowedOutlets(tenantId);
     if (list.length === 0) return null;
 
     const jar = await cookies();

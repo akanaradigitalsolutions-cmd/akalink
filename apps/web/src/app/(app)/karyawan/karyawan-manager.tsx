@@ -5,23 +5,32 @@ import { useRouter } from "next/navigation";
 import {
   createEmployee,
   setEmployeeStatus,
+  setEmployeeOutlets,
   deleteEmployee,
 } from "@/lib/employees-actions";
 import { IconPlus, IconTrash } from "@/components/icons";
 
+type Outlet = { id: string; nama: string };
 type Emp = {
   id: string;
   nama: string;
   email: string | null;
   role: string;
   status: string;
+  outletIds: string[];
   isSelf: boolean;
 };
 
 const inputBase =
   "rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-200 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100";
 
-export function KaryawanManager({ daftar }: { daftar: Emp[] }) {
+export function KaryawanManager({
+  daftar,
+  outlets,
+}: {
+  daftar: Emp[];
+  outlets: Outlet[];
+}) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [pending, start] = useTransition();
@@ -31,6 +40,13 @@ export function KaryawanManager({ daftar }: { daftar: Emp[] }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("kasir");
+  const [outletIds, setOutletIds] = useState<string[]>([]);
+
+  function toggleOutlet(id: string) {
+    setOutletIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    );
+  }
 
   function submit() {
     setMsg(undefined);
@@ -39,13 +55,20 @@ export function KaryawanManager({ daftar }: { daftar: Emp[] }) {
     if (password.length < 8)
       return setMsg({ text: "Password minimal 8 karakter." });
     start(async () => {
-      const res = await createEmployee({ nama, email, password, role });
+      const res = await createEmployee({
+        nama,
+        email,
+        password,
+        role,
+        outletIds: role === "kasir" ? outletIds : [],
+      });
       if (res.ok) {
         setMsg({ ok: true, text: "Akun karyawan dibuat ✓" });
         setNama("");
         setEmail("");
         setPassword("");
         setRole("kasir");
+        setOutletIds([]);
         setOpen(false);
         router.refresh();
       } else {
@@ -135,6 +158,39 @@ export function KaryawanManager({ daftar }: { daftar: Emp[] }) {
               />
             </Field>
           </div>
+
+          {role === "kasir" && outlets.length > 1 && (
+            <div className="mt-4">
+              <p className="mb-2 text-sm font-medium text-slate-700 dark:text-slate-200">
+                Akses Outlet
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {outlets.map((o) => {
+                  const on = outletIds.includes(o.id);
+                  return (
+                    <button
+                      key={o.id}
+                      type="button"
+                      onClick={() => toggleOutlet(o.id)}
+                      className={
+                        on
+                          ? "rounded-lg border border-brand-500 bg-brand-50 px-3 py-1.5 text-sm font-medium text-brand-700 dark:border-brand-700 dark:bg-brand-950/40 dark:text-brand-300"
+                          : "rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-600 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                      }
+                    >
+                      {on ? "✓ " : ""}
+                      {o.nama}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="mt-1.5 text-xs text-slate-400">
+                Pilih cabang yang boleh diakses kasir ini. Kosongkan = semua
+                outlet.
+              </p>
+            </div>
+          )}
+
           <p className="mt-3 text-xs text-slate-400">
             Bagikan email &amp; password ini ke karyawan. Mereka bisa mengganti
             password nanti. Peran <b>Kasir</b> tidak melihat menu Keuangan,
@@ -169,10 +225,8 @@ export function KaryawanManager({ daftar }: { daftar: Emp[] }) {
       <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
         <ul className="divide-y divide-slate-100 dark:divide-slate-800">
           {daftar.map((e) => (
-            <li
-              key={e.id}
-              className="flex flex-wrap items-center justify-between gap-3 px-5 py-4"
-            >
+            <li key={e.id} className="flex flex-col gap-3 px-5 py-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
                   <p className="font-medium text-slate-900 dark:text-white">
@@ -212,6 +266,11 @@ export function KaryawanManager({ daftar }: { daftar: Emp[] }) {
                   </button>
                 </div>
               )}
+              </div>
+
+              {e.role !== "owner" && outlets.length > 1 && (
+                <OutletAccess emp={e} outlets={outlets} />
+              )}
             </li>
           ))}
         </ul>
@@ -248,6 +307,102 @@ function Field({
         {label}
       </label>
       {children}
+    </div>
+  );
+}
+
+/** Baris "Akses Outlet" per kasir: tampilkan & ubah cabang yang boleh diakses. */
+function OutletAccess({ emp, outlets }: { emp: Emp; outlets: Outlet[] }) {
+  const router = useRouter();
+  const [editing, setEditing] = useState(false);
+  const [sel, setSel] = useState<string[]>(emp.outletIds);
+  const [pending, start] = useTransition();
+  const [err, setErr] = useState<string>();
+
+  const namaOf = (id: string) => outlets.find((o) => o.id === id)?.nama ?? id;
+  const ringkas =
+    emp.outletIds.length === 0
+      ? "Semua outlet"
+      : emp.outletIds.map(namaOf).join(", ");
+
+  function toggle(id: string) {
+    setSel((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
+  }
+  function simpan() {
+    setErr(undefined);
+    start(async () => {
+      const res = await setEmployeeOutlets({ id: emp.id, outletIds: sel });
+      if (res.ok) {
+        setEditing(false);
+        router.refresh();
+      } else {
+        setErr(res.error);
+      }
+    });
+  }
+
+  if (!editing) {
+    return (
+      <div className="flex flex-wrap items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 text-xs dark:bg-slate-800/50">
+        <span className="text-slate-400">🏪 Akses:</span>
+        <span className="font-medium text-slate-600 dark:text-slate-300">
+          {ringkas}
+        </span>
+        <button
+          onClick={() => {
+            setSel(emp.outletIds);
+            setEditing(true);
+          }}
+          className="ml-auto font-medium text-brand-600 hover:underline"
+        >
+          Atur
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-2 rounded-lg bg-slate-50 px-3 py-3 dark:bg-slate-800/50">
+      <div className="flex flex-wrap gap-2">
+        {outlets.map((o) => {
+          const on = sel.includes(o.id);
+          return (
+            <button
+              key={o.id}
+              type="button"
+              onClick={() => toggle(o.id)}
+              className={
+                on
+                  ? "rounded-lg border border-brand-500 bg-brand-50 px-3 py-1.5 text-xs font-medium text-brand-700 dark:border-brand-700 dark:bg-brand-950/40 dark:text-brand-300"
+                  : "rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-600 transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
+              }
+            >
+              {on ? "✓ " : ""}
+              {o.nama}
+            </button>
+          );
+        })}
+      </div>
+      <p className="text-[11px] text-slate-400">
+        Kosongkan = boleh semua outlet.
+      </p>
+      {err && <p className="text-xs text-red-600">{err}</p>}
+      <div className="flex items-center gap-2">
+        <button
+          onClick={simpan}
+          disabled={pending}
+          className="rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-700 disabled:opacity-60"
+        >
+          {pending ? "Menyimpan…" : "Simpan"}
+        </button>
+        <button
+          onClick={() => setEditing(false)}
+          disabled={pending}
+          className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-white dark:border-slate-700 dark:text-slate-300"
+        >
+          Batal
+        </button>
+      </div>
     </div>
   );
 }

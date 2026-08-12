@@ -1,9 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getSessionUser, getTenantIdFromUser } from "@/lib/auth";
+import {
+  getSessionUser,
+  getTenantIdFromUser,
+  getRoleFromUser,
+} from "@/lib/auth";
 import { searchTransactions } from "@/lib/transactions";
-import { getOutlets } from "@/lib/outlets";
+import { getOutlets, getAllowedOutlets } from "@/lib/outlets";
 import { TransaksiFilters } from "./transaksi-filters";
 import {
   formatRupiah,
@@ -48,12 +52,24 @@ export default async function TransaksiPage({
   const bayar = sp.bayar ?? "";
   const outlet = sp.outlet ?? "";
   const adaFilter = !!(q || kerja || bayar || outlet);
-  const [list, outletList] = tenantId
-    ? await Promise.all([
-        searchTransactions(tenantId, { q, kerja, bayar, outlet }),
-        getOutlets(tenantId),
-      ])
+  const isOwner = getRoleFromUser(user) === "owner";
+
+  // Kasir dibatasi ke outlet yang ditugaskan; owner melihat semua.
+  const [allOutlets, allowedOutlets] = tenantId
+    ? await Promise.all([getOutlets(tenantId), getAllowedOutlets(tenantId)])
     : [[], []];
+  const outletList = isOwner ? allOutlets : allowedOutlets;
+  const outletScope = isOwner ? undefined : allowedOutlets.map((o) => o.id);
+
+  const list = tenantId
+    ? await searchTransactions(tenantId, {
+        q,
+        kerja,
+        bayar,
+        outlet,
+        outletScope,
+      })
+    : [];
 
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-6">

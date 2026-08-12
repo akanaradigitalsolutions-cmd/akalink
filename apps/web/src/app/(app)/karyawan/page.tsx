@@ -6,6 +6,7 @@ import {
   getRoleFromUser,
 } from "@/lib/auth";
 import { getEmployees } from "@/lib/employees";
+import { getOutlets, seedDefaultOutletIfEmpty } from "@/lib/outlets";
 import { KaryawanManager } from "./karyawan-manager";
 
 export const metadata: Metadata = { title: "Karyawan — AkaLink" };
@@ -18,7 +19,11 @@ export default async function KaryawanPage() {
   // Pengaman ganda selain middleware.
   if (getRoleFromUser(user) !== "owner") redirect("/dashboard");
 
-  const daftar = await getEmployees(tenantId);
+  await seedDefaultOutletIfEmpty(tenantId);
+  const [daftar, outletList] = await Promise.all([
+    getEmployees(tenantId),
+    getOutlets(tenantId),
+  ]);
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6">
@@ -34,6 +39,7 @@ export default async function KaryawanPage() {
       </div>
 
       <KaryawanManager
+        outlets={outletList.map((o) => ({ id: o.id, nama: o.nama }))}
         daftar={daftar.map((e) => ({
           id: e.id,
           nama: e.nama,
@@ -41,6 +47,7 @@ export default async function KaryawanPage() {
             e.email ?? (e.authUserId === user.id ? (user.email ?? null) : null),
           role: e.role,
           status: e.status,
+          outletIds: e.outletIds ?? [],
           isSelf: e.authUserId === user.id,
         }))}
       />

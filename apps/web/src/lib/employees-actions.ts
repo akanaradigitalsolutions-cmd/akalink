@@ -42,6 +42,7 @@ export async function createEmployee(input: {
   email: string;
   password: string;
   role: string;
+  outletIds?: string[];
 }): Promise<EmployeeResult> {
   const auth = await requireOwner();
   if (!auth.ok) return { ok: false, error: auth.error };
@@ -51,6 +52,9 @@ export async function createEmployee(input: {
   if (!parsed.success)
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Data tidak valid." };
   const { nama, email, password, role } = parsed.data;
+  // Owner mengakses semua outlet; scope outlet hanya berarti untuk kasir.
+  const outletIds =
+    role === "owner" ? [] : (input.outletIds ?? []).filter(Boolean);
 
   const admin = createSupabaseAdminClient();
 
@@ -85,6 +89,7 @@ export async function createEmployee(input: {
       nama,
       email,
       role,
+      outletIds,
       status: "active",
     });
   } catch {
@@ -119,6 +124,36 @@ export async function setEmployeeStatus(input: {
   await db
     .update(employees)
     .set({ status: input.status, updatedAt: new Date() })
+    .where(and(eq(employees.id, input.id), eq(employees.tenantId, tenantId)));
+
+  revalidatePath("/karyawan");
+  return { ok: true };
+}
+
+export async function setEmployeeOutlets(input: {
+  id: string;
+  outletIds: string[];
+}): Promise<EmployeeResult> {
+  const auth = await requireOwner();
+  if (!auth.ok) return { ok: false, error: auth.error };
+  const { tenantId } = auth;
+
+  const db = getDb();
+  const [emp] = await db
+    .select({ role: employees.role })
+    .from(employees)
+    .where(and(eq(employees.id, input.id), eq(employees.tenantId, tenantId)))
+    .limit(1);
+  if (!emp) return { ok: false, error: "Karyawan tidak ditemukan." };
+  if (emp.role === "owner")
+    return { ok: false, error: "Pemilik selalu mengakses semua outlet." };
+
+  await db
+    .update(employees)
+    .set({
+      outletIds: (input.outletIds ?? []).filter(Boolean),
+      updatedAt: new Date(),
+    })
     .where(and(eq(employees.id, input.id), eq(employees.tenantId, tenantId)));
 
   revalidatePath("/karyawan");

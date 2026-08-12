@@ -10,7 +10,7 @@ import {
   getTenantIdFromUser,
   getRoleFromUser,
 } from "@/lib/auth";
-import { OUTLET_COOKIE, outletBelongsToTenant } from "@/lib/outlets";
+import { OUTLET_COOKIE, getAllowedOutlets } from "@/lib/outlets";
 
 export type OutletResult = { ok: true } | { ok: false; error: string };
 
@@ -129,8 +129,10 @@ export async function setActiveOutlet(input: {
   const tenantId = getTenantIdFromUser(user);
   if (!user || !tenantId) return { ok: false, error: "Sesi tidak valid." };
 
-  if (!(await outletBelongsToTenant(tenantId, input.id)))
-    return { ok: false, error: "Outlet tidak ditemukan." };
+  // Hanya boleh memilih outlet yang diizinkan untuk pengguna ini.
+  const allowed = await getAllowedOutlets(tenantId);
+  if (!allowed.some((o) => o.id === input.id))
+    return { ok: false, error: "Outlet tidak tersedia untuk Anda." };
 
   const jar = await cookies();
   jar.set(OUTLET_COOKIE, input.id, {
