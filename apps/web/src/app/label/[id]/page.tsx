@@ -4,7 +4,7 @@ import { getSessionUser, getTenantIdFromUser } from "@/lib/auth";
 import { getTenantContext } from "@/lib/tenant";
 import { getTransactionWithItems } from "@/lib/transactions";
 import { getBaseUrl, qrSvg } from "@/lib/nota";
-import { AutoPrint, PrintButton } from "@/components/nota/client";
+import { ThermalPrint } from "@/components/nota/client";
 import { formatDateTime, formatRupiah, SATUAN_SINGKAT } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -90,10 +90,9 @@ export default async function LabelPage({
         </div>
       </div>
 
-      <div className="no-print mx-auto mt-4 flex w-64 justify-center">
-        <PrintButton label="🖨️ Cetak Label" />
+      <div className="no-print mx-auto mt-4 w-64">
+        <ThermalPrint auto={sp.print === "1"} label="🏷️ Cetak Label" />
       </div>
-      {sp.print === "1" && <AutoPrint />}
     </main>
   );
 }

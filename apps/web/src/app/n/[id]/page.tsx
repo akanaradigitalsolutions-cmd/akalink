@@ -4,7 +4,7 @@ import { getPublicTransaction } from "@/lib/transactions";
 import { getBaseUrl, qrSvg, SYARAT_KETENTUAN_DEFAULT } from "@/lib/nota";
 import { formatRupiah, LABEL_STATUS_BAYAR } from "@/lib/format";
 import { NotaView } from "@/components/nota/nota-view";
-import { AutoPrint, PrintButton } from "@/components/nota/client";
+import { ThermalPrint } from "@/components/nota/client";
 
 export const dynamic = "force-dynamic";
 
@@ -68,10 +68,9 @@ export default async function PublicNotaPage({
         link={link}
         sk={data.tenant?.syaratKetentuan ?? SYARAT_KETENTUAN_DEFAULT}
       />
-      <div className="no-print mx-auto mt-4 flex max-w-sm justify-center">
-        <PrintButton label="🖨️ Cetak Nota" />
+      <div className="no-print mx-auto mt-4 max-w-sm">
+        <ThermalPrint auto={sp.print === "1"} label="🖨️ Cetak Nota" />
       </div>
-      {sp.print === "1" && <AutoPrint />}
     </main>
   );
 }
