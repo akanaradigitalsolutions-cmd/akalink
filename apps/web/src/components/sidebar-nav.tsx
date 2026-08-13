@@ -13,6 +13,7 @@ import {
   IconBadge,
   IconUser,
   IconStore,
+  IconBox,
 } from "./icons";
 
 type NavItem = {
@@ -28,6 +29,7 @@ const items: NavItem[] = [
   { label: "Layanan", href: "/layanan", icon: IconTag, ownerOnly: true },
   { label: "Transaksi", href: "/transaksi", icon: IconReceipt },
   { label: "Konsumen", href: "/konsumen", icon: IconUsers },
+  { label: "Inventori", href: "/inventori", icon: IconBox },
   { label: "Keuangan", href: "/keuangan", icon: IconWallet, ownerOnly: true },
   { label: "Laporan", href: "/laporan", icon: IconChart, ownerOnly: true },
   { label: "Outlet", href: "/outlet", icon: IconStore, ownerOnly: true },

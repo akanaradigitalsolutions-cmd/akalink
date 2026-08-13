@@ -554,6 +554,102 @@ export const journalLinesRelations = relations(journalLines, ({ one }) => ({
   }),
 }));
 
+// --- inventory: bahan/perlengkapan per outlet (Phase 5) -------------------
+export const inventoryMovementTypeEnum = pgEnum("inventory_movement_type", [
+  "pembelian",
+  "pemakaian",
+  "penyesuaian",
+]);
+
+export const inventoryItems = pgTable(
+  "inventory_items",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    outletId: uuid("outlet_id").references(() => outlets.id, {
+      onDelete: "cascade",
+    }),
+    nama: text("nama").notNull(),
+    satuan: text("satuan").notNull().default("pcs"),
+    stok: numeric("stok", { precision: 14, scale: 2 }).notNull().default("0"),
+    harga: numeric("harga", { precision: 14, scale: 2 })
+      .notNull()
+      .default("0"),
+    minStok: numeric("min_stok", { precision: 14, scale: 2 })
+      .notNull()
+      .default("0"),
+    aktif: boolean("aktif").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("inv_items_tenant_id_idx").on(t.tenantId),
+    index("inv_items_outlet_id_idx").on(t.outletId),
+  ],
+);
+
+// Riwayat pergerakan stok (append-only). Saldo item = dihitung + disimpan.
+export const inventoryMovements = pgTable(
+  "inventory_movements",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    outletId: uuid("outlet_id").references(() => outlets.id, {
+      onDelete: "set null",
+    }),
+    itemId: uuid("item_id")
+      .notNull()
+      .references(() => inventoryItems.id, { onDelete: "cascade" }),
+    tipe: inventoryMovementTypeEnum("tipe").notNull(),
+    // Delta bertanda: + menambah stok, − mengurangi.
+    qtyDelta: numeric("qty_delta", { precision: 14, scale: 2 }).notNull(),
+    hargaSatuan: numeric("harga_satuan", { precision: 14, scale: 2 })
+      .notNull()
+      .default("0"),
+    saldoSesudah: numeric("saldo_sesudah", { precision: 14, scale: 2 })
+      .notNull()
+      .default("0"),
+    keterangan: text("keterangan"),
+    createdBy: uuid("created_by"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("inv_mov_tenant_id_idx").on(t.tenantId),
+    index("inv_mov_item_id_idx").on(t.itemId),
+  ],
+);
+
+export const inventoryItemsRelations = relations(inventoryItems, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [inventoryItems.tenantId],
+    references: [tenants.id],
+  }),
+  outlet: one(outlets, {
+    fields: [inventoryItems.outletId],
+    references: [outlets.id],
+  }),
+}));
+
+export const inventoryMovementsRelations = relations(
+  inventoryMovements,
+  ({ one }) => ({
+    item: one(inventoryItems, {
+      fields: [inventoryMovements.itemId],
+      references: [inventoryItems.id],
+    }),
+  }),
+);
+
 /*
  * ---- Tipe bantu -----------------------------------------------------------
  * Ekspor tipe TypeScript agar aman dipakai di seluruh aplikasi.
@@ -582,3 +678,7 @@ export type JournalEntry = typeof journalEntries.$inferSelect;
 export type NewJournalEntry = typeof journalEntries.$inferInsert;
 export type JournalLine = typeof journalLines.$inferSelect;
 export type NewJournalLine = typeof journalLines.$inferInsert;
+export type InventoryItem = typeof inventoryItems.$inferSelect;
+export type NewInventoryItem = typeof inventoryItems.$inferInsert;
+export type InventoryMovement = typeof inventoryMovements.$inferSelect;
+export type NewInventoryMovement = typeof inventoryMovements.$inferInsert;

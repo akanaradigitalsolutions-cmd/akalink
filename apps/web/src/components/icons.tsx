@@ -84,6 +84,15 @@ export function IconSettings(p: IconProps) {
   );
 }
 
+export function IconBox(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <path d="M3.5 7.5 12 3l8.5 4.5v9L12 21l-8.5-4.5v-9Z" />
+      <path d="M3.5 7.5 12 12l8.5-4.5M12 12v9" />
+    </Svg>
+  );
+}
+
 export function IconMenu(p: IconProps) {
   return (
     <Svg {...p}>
