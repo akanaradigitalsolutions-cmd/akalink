@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { getSessionUser, getTenantIdFromUser } from "@/lib/auth";
 import { getTenantContext } from "@/lib/tenant";
 import { getDashboardStats } from "@/lib/dashboard";
+import { getCoinConfig } from "@/lib/app-coin";
 import { searchTransactions } from "@/lib/transactions";
 import {
   getOutlets,
@@ -21,6 +22,7 @@ import {
   IconWallet,
   IconChart,
   IconPlus,
+  IconCoin,
 } from "@/components/icons";
 
 export const metadata: Metadata = {
@@ -38,14 +40,17 @@ export default async function DashboardPage() {
   let loadError: string | undefined;
   let outletNama: string | null = null;
   let outletCount = 0;
+  let coin: Awaited<ReturnType<typeof getCoinConfig>> | undefined;
   try {
     if (tenantId) {
-      const [ctx, active, outletList] = await Promise.all([
+      const [ctx, active, outletList, coinConfig] = await Promise.all([
         getTenantContext(user.id, tenantId),
         getActiveOutlet(tenantId),
         getOutlets(tenantId),
+        getCoinConfig(tenantId),
       ]);
       me = ctx.me;
+      coin = coinConfig;
       outletNama = active?.nama ?? null;
       outletCount = outletList.length;
       // Tautkan transaksi lama tanpa outlet ke outlet pertama (sekali saja).
@@ -77,6 +82,12 @@ export default async function DashboardPage() {
   }
 
   const s = stats!;
+  const isOwner = me?.role === "owner";
+  const saldo = coin?.saldoKoin ?? 0;
+  const biayaNota = coin?.biayaPerNota ?? 50;
+  const notaTersisa = biayaNota > 0 ? Math.floor(Math.max(0, saldo) / biayaNota) : 0;
+  const saldoHabis = saldo <= 0;
+  const saldoMenipis = saldo > 0 && saldo <= biayaNota * 20;
 
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-6">
@@ -99,6 +110,54 @@ export default async function DashboardPage() {
           Transaksi Baru
         </Link>
       </section>
+
+      {/* Saldo AkaLink (khusus pemilik) */}
+      {isOwner && (
+        <Link
+          href="/tagihan"
+          className={`flex items-center justify-between gap-4 rounded-2xl border p-5 transition ${
+            saldoHabis
+              ? "border-red-300 bg-red-50 hover:bg-red-100 dark:border-red-900 dark:bg-red-950/40 dark:hover:bg-red-950/60"
+              : saldoMenipis
+                ? "border-amber-300 bg-amber-50 hover:bg-amber-100 dark:border-amber-900 dark:bg-amber-950/40 dark:hover:bg-amber-950/60"
+                : "border-slate-200 bg-white hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:hover:bg-slate-800/50"
+          }`}
+        >
+          <div className="flex min-w-0 items-center gap-4">
+            <div
+              className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${
+                saldoHabis
+                  ? "bg-red-100 text-red-600 dark:bg-red-950/60 dark:text-red-400"
+                  : "bg-brand-50 text-brand-600 dark:bg-brand-950/50 dark:text-brand-400"
+              }`}
+            >
+              <IconCoin className="h-6 w-6" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                Saldo AkaLink
+              </p>
+              <p
+                className={`text-xl font-bold ${
+                  saldoHabis
+                    ? "text-red-600 dark:text-red-400"
+                    : "text-slate-900 dark:text-white"
+                }`}
+              >
+                {formatRupiah(saldo)}
+              </p>
+              <p className="text-xs text-slate-400">
+                {saldoHabis
+                  ? "Saldo habis — segera isi ulang"
+                  : `± ${notaTersisa.toLocaleString("id-ID")} nota lagi`}
+              </p>
+            </div>
+          </div>
+          <span className="shrink-0 rounded-lg bg-brand-600 px-3 py-2 text-xs font-semibold text-white">
+            Isi Ulang
+          </span>
+        </Link>
+      )}
 
       {/* Statistik hari ini */}
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

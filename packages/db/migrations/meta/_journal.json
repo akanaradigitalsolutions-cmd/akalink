@@ -197,6 +197,20 @@
       "when": 1786698326874,
       "tag": "0027_app_coin_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1786709592771,
+      "tag": "0028_cute_puck",
+      "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1786709593771,
+      "tag": "0029_coin_topup_rls",
+      "breakpoints": true
     }
   ]
 }

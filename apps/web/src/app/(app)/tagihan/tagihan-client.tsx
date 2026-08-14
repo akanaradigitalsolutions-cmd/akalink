@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { formatRupiah, formatDateTime } from "@/lib/format";
-import { topupManual } from "@/lib/app-coin-actions";
+import { topupManual, createDokuTopup } from "@/lib/app-coin-actions";
 import type { CoinConfig, CoinLedgerRow } from "@/lib/app-coin";
 
 const NOMINAL = [25_000, 50_000, 100_000, 250_000];
@@ -25,14 +25,36 @@ const REF_LABEL: Record<string, string> = {
 export function TagihanClient({
   config,
   ledger,
+  dokuAktif,
+  kembaliDariDoku,
 }: {
   config: CoinConfig;
   ledger: CoinLedgerRow[];
+  dokuAktif: boolean;
+  kembaliDariDoku: boolean;
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
+  const [dokuPending, startDoku] = useTransition();
   const [amount, setAmount] = useState<string>("50000");
   const [msg, setMsg] = useState<{ ok?: boolean; text: string }>();
+
+  function bayarDoku() {
+    setMsg(undefined);
+    const n = Number(amount) || 0;
+    if (n < 10000) {
+      setMsg({ text: "Minimal isi ulang via DOKU Rp10.000." });
+      return;
+    }
+    startDoku(async () => {
+      const res = await createDokuTopup({ amount: n });
+      if (res.ok) {
+        window.location.href = res.url;
+      } else {
+        setMsg({ text: res.error });
+      }
+    });
+  }
 
   const saldo = config.saldoKoin;
   const habis = saldo <= 0;
@@ -61,6 +83,14 @@ export function TagihanClient({
 
   return (
     <div className="flex flex-col gap-6">
+      {kembaliDariDoku && (
+        <div className="rounded-xl border border-blue-300 bg-blue-50 px-4 py-3 text-sm text-blue-800 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-300">
+          Terima kasih! Jika pembayaran DOKU sudah berhasil, saldo akan
+          bertambah otomatis dalam beberapa saat. Muat ulang halaman ini untuk
+          memeriksa.
+        </div>
+      )}
+
       {/* Kartu saldo */}
       <div
         className={`rounded-2xl border p-5 ${
@@ -109,8 +139,9 @@ export function TagihanClient({
           Isi Ulang Saldo
         </h2>
         <p className="mb-4 text-xs text-slate-500 dark:text-slate-400">
-          Pilih nominal lalu tambahkan ke saldo. (Sementara top-up manual —
-          pembayaran otomatis via DOKU menyusul.)
+          {dokuAktif
+            ? "Pilih nominal, lalu bayar via DOKU (QRIS / e-wallet / VA). Saldo bertambah otomatis setelah pembayaran berhasil."
+            : "Pilih nominal lalu tambahkan ke saldo. (Pembayaran otomatis via DOKU belum aktif.)"}
         </p>
 
         <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -140,13 +171,33 @@ export function TagihanClient({
               className="w-40 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-200 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
             />
           </div>
-          <button
-            onClick={isiUlang}
-            disabled={pending}
-            className="rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-700 disabled:opacity-60"
-          >
-            {pending ? "Memproses…" : "Isi Ulang"}
-          </button>
+          {dokuAktif ? (
+            <button
+              onClick={bayarDoku}
+              disabled={dokuPending}
+              className="rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-700 disabled:opacity-60"
+            >
+              {dokuPending ? "Mengalihkan…" : "Bayar via DOKU"}
+            </button>
+          ) : (
+            <button
+              onClick={isiUlang}
+              disabled={pending}
+              className="rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-700 disabled:opacity-60"
+            >
+              {pending ? "Memproses…" : "Isi Ulang"}
+            </button>
+          )}
+          {dokuAktif && (
+            <button
+              onClick={isiUlang}
+              disabled={pending}
+              className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:opacity-60 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+              title="Catat manual tanpa DOKU"
+            >
+              {pending ? "…" : "Catat Manual"}
+            </button>
+          )}
           {msg && (
             <span
               className={

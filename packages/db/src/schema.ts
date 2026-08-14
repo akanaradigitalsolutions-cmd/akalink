@@ -792,6 +792,38 @@ export const appCoinLedger = pgTable(
   ],
 );
 
+// --- coin_topup_orders: pesanan isi ulang Saldo Koin via DOKU (Phase 6) --
+export const coinTopupStatusEnum = pgEnum("coin_topup_status", [
+  "pending",
+  "success",
+  "failed",
+  "expired",
+]);
+
+export const coinTopupOrders = pgTable(
+  "coin_topup_orders",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    // Nomor invoice unik yang dikirim ke DOKU (dipakai mencocokkan notifikasi).
+    invoiceNumber: text("invoice_number").notNull().unique(),
+    amount: integer("amount").notNull(),
+    status: coinTopupStatusEnum("status").notNull().default("pending"),
+    // Metode & referensi dari DOKU.
+    channel: text("channel"),
+    dokuTokenId: text("doku_token_id"),
+    paymentUrl: text("payment_url"),
+    createdBy: uuid("created_by"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    paidAt: timestamp("paid_at", { withTimezone: true }),
+  },
+  (t) => [index("coin_topup_tenant_id_idx").on(t.tenantId)],
+);
+
 export const inventoryItemsRelations = relations(inventoryItems, ({ one }) => ({
   tenant: one(tenants, {
     fields: [inventoryItems.tenantId],
@@ -855,3 +887,5 @@ export type Supplier = typeof suppliers.$inferSelect;
 export type NewSupplier = typeof suppliers.$inferInsert;
 export type AppCoinLedger = typeof appCoinLedger.$inferSelect;
 export type NewAppCoinLedger = typeof appCoinLedger.$inferInsert;
+export type CoinTopupOrder = typeof coinTopupOrders.$inferSelect;
+export type NewCoinTopupOrder = typeof coinTopupOrders.$inferInsert;

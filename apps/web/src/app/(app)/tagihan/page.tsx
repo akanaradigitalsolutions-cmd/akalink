@@ -6,11 +6,16 @@ import {
   getRoleFromUser,
 } from "@/lib/auth";
 import { getCoinConfig, getCoinLedger } from "@/lib/app-coin";
+import { isDokuConfigured } from "@/lib/doku";
 import { TagihanClient } from "./tagihan-client";
 
 export const metadata: Metadata = { title: "Saldo AkaLink — AkaLink" };
 
-export default async function TagihanPage() {
+export default async function TagihanPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ doku?: string }>;
+}) {
   const user = await getSessionUser();
   if (!user) redirect("/masuk");
   const tenantId = getTenantIdFromUser(user);
@@ -18,10 +23,12 @@ export default async function TagihanPage() {
   // Halaman billing khusus pemilik.
   if (getRoleFromUser(user) !== "owner") redirect("/dashboard");
 
+  const sp = await searchParams;
   const [config, ledger] = await Promise.all([
     getCoinConfig(tenantId),
     getCoinLedger(tenantId, 60),
   ]);
+  const dokuAktif = isDokuConfigured();
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6">
@@ -35,7 +42,12 @@ export default async function TagihanPage() {
         </p>
       </div>
 
-      <TagihanClient config={config} ledger={ledger} />
+      <TagihanClient
+        config={config}
+        ledger={ledger}
+        dokuAktif={dokuAktif}
+        kembaliDariDoku={sp.doku === "selesai"}
+      />
     </div>
   );
 }
