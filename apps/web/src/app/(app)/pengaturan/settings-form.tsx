@@ -12,6 +12,7 @@ type Initial = {
   kota: string;
   telepon: string;
   alamat: string;
+  poinRupiah: number;
   syaratKetentuan: string[];
 };
 
@@ -30,6 +31,7 @@ export function SettingsForm({
   const [kota, setKota] = useState(initial.kota);
   const [telepon, setTelepon] = useState(initial.telepon);
   const [alamat, setAlamat] = useState(initial.alamat);
+  const [poinRupiah, setPoinRupiah] = useState(String(initial.poinRupiah || ""));
   const [sk, setSk] = useState<string[]>(
     initial.syaratKetentuan.length ? initial.syaratKetentuan : [""],
   );
@@ -56,6 +58,7 @@ export function SettingsForm({
         kota,
         telepon,
         alamat,
+        poinRupiah: Number(poinRupiah) || 0,
         syaratKetentuan: sk,
       });
       if (res.ok) {
@@ -112,6 +115,31 @@ export function SettingsForm({
             />
           </Field>
         </div>
+      </section>
+
+      {/* Poin loyalitas */}
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
+        <h2 className="mb-1 text-sm font-semibold text-slate-900 dark:text-white">
+          Poin Loyalitas
+        </h2>
+        <p className="mb-4 text-xs text-slate-500 dark:text-slate-400">
+          Setiap kelipatan rupiah ini memberi 1 poin ke konsumen saat transaksi
+          <b> lunas</b>. Kosongkan / 0 untuk menonaktifkan poin.
+        </p>
+        <Field label="Rupiah untuk 1 poin">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-slate-400">Rp</span>
+            <input
+              value={poinRupiah}
+              onChange={(e) =>
+                setPoinRupiah(e.target.value.replace(/[^0-9]/g, ""))
+              }
+              inputMode="numeric"
+              placeholder="mis. 10000 (Rp10.000 = 1 poin)"
+              className={`${inputBase} w-full`}
+            />
+          </div>
+        </Field>
       </section>
 
       {/* Syarat & Ketentuan */}

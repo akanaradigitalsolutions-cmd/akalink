@@ -10,6 +10,7 @@ import {
   services,
   employees,
   journalEntries,
+  tenants,
 } from "@akalink/db";
 import {
   getSessionUser,
@@ -19,6 +20,7 @@ import {
 import { seedDefaultCoaIfEmpty } from "@/lib/coa";
 import { getActiveOutlet, seedDefaultOutletIfEmpty } from "@/lib/outlets";
 import { postJournal, hasJournal } from "@/lib/journal";
+import { awardPointsOnPayment } from "@/lib/loyalty";
 
 const WORK_STATUSES = ["belum_dikerjakan", "proses", "selesai", "diambil"] as const;
 const PAY_STATUSES = ["belum_dibayar", "dp", "lunas"] as const;
@@ -376,6 +378,7 @@ export async function updateStatuses(input: {
       biayaExpress: transactions.biayaExpress,
       grandTotal: transactions.grandTotal,
       noNota: transactions.noNota,
+      consumerId: transactions.consumerId,
     })
     .from(transactions)
     .where(and(eq(transactions.id, input.id), eq(transactions.tenantId, tenantId)))
@@ -434,6 +437,28 @@ export async function updateStatuses(input: {
         ],
       });
     });
+  }
+
+  // Poin loyalitas saat lunas (idempoten via ledger).
+  if (pay === "lunas" && grand > 0 && txRow.consumerId) {
+    const [t] = await db
+      .select({ poinRupiah: tenants.poinRupiah })
+      .from(tenants)
+      .where(eq(tenants.id, tenantId))
+      .limit(1);
+    const poinRupiah = t?.poinRupiah ?? 0;
+    if (poinRupiah > 0) {
+      await db.transaction(async (tx) => {
+        await awardPointsOnPayment(
+          tx,
+          tenantId,
+          txRow.consumerId,
+          input.id,
+          grand,
+          poinRupiah,
+        );
+      });
+    }
   }
 
   revalidatePath(`/transaksi/${input.id}`);

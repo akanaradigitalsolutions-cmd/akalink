@@ -4,7 +4,9 @@ import { notFound, redirect } from "next/navigation";
 import { getSessionUser, getTenantIdFromUser } from "@/lib/auth";
 import { getConsumerDetail } from "@/lib/consumers";
 import { getMemberTypes } from "@/lib/members";
+import { getPointHistory } from "@/lib/loyalty";
 import { MemberControl } from "./member-control";
+import { PointControl } from "./point-control";
 import {
   formatRupiah,
   formatHp,
@@ -45,6 +47,8 @@ export default async function KonsumenDetailPage({
 
   const memberTypes = await getMemberTypes(tenantId);
   const memberNow = memberTypes.find((m) => m.id === c.memberTypeId);
+  const poin = Number(c.poin);
+  const pointHistory = poin > 0 ? await getPointHistory(tenantId, c.id, 10) : [];
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6">
@@ -114,6 +118,50 @@ export default async function KonsumenDetailPage({
               diskonPersen: m.diskonPersen,
             }))}
         />
+
+        {/* Poin loyalitas */}
+        <div className="mt-4 border-t border-slate-100 pt-4 dark:border-slate-800">
+          <div className="mb-2 flex items-center justify-between">
+            <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
+              Saldo Poin:{" "}
+              <span className="font-bold text-brand-700 dark:text-brand-300">
+                {poin}
+              </span>
+            </span>
+          </div>
+          <PointControl consumerId={c.id} poin={poin} />
+          {pointHistory.length > 0 && (
+            <ul className="mt-3 flex flex-col gap-1.5 text-xs">
+              {pointHistory.map((p) => {
+                const plus = Number(p.delta) >= 0;
+                return (
+                  <li
+                    key={p.id}
+                    className="flex items-center justify-between gap-2 text-slate-500"
+                  >
+                    <span className="truncate">
+                      {p.keterangan ?? p.tipe} ·{" "}
+                      {new Date(p.createdAt).toLocaleDateString("id-ID", {
+                        day: "numeric",
+                        month: "short",
+                      })}
+                    </span>
+                    <span
+                      className={
+                        plus
+                          ? "shrink-0 font-semibold text-green-600"
+                          : "shrink-0 font-semibold text-red-600"
+                      }
+                    >
+                      {plus ? "+" : ""}
+                      {Number(p.delta)} poin
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
       </section>
 
       {/* Ringkasan */}

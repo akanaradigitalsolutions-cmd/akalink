@@ -13,6 +13,7 @@ export type SettingsInput = {
   telepon?: string;
   alamat?: string;
   syaratKetentuan?: string[];
+  poinRupiah?: number | string;
 };
 
 export async function updateSettings(
@@ -47,6 +48,7 @@ export async function updateSettings(
         telepon: clean(input.telepon),
         alamat: clean(input.alamat),
         syaratKetentuan: sk.length ? sk : null,
+        poinRupiah: Math.max(0, Math.floor(Number(input.poinRupiah) || 0)),
         updatedAt: new Date(),
       })
       .where(eq(tenants.id, tenantId));

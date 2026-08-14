@@ -34,6 +34,7 @@ export default async function PengaturanPage() {
           kota: s.kota ?? "",
           telepon: s.telepon ?? "",
           alamat: s.alamat ?? "",
+          poinRupiah: s.poinRupiah ?? 0,
           syaratKetentuan:
             s.syaratKetentuan && s.syaratKetentuan.length
               ? s.syaratKetentuan

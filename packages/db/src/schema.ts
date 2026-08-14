@@ -55,6 +55,8 @@ export const tenants = pgTable("tenants", {
   alamat: text("alamat"),
   // Daftar poin syarat & ketentuan yang tampil di nota (array string).
   syaratKetentuan: jsonb("syarat_ketentuan").$type<string[]>(),
+  // Loyalitas: rupiah untuk 1 poin (0 = poin nonaktif).
+  poinRupiah: integer("poin_rupiah").notNull().default(0),
   tier: tenantTierEnum("tier").notNull().default("basic"),
   status: tenantStatusEnum("status").notNull().default("trial"),
   createdAt: timestamp("created_at", { withTimezone: true })
@@ -654,6 +656,40 @@ export const inventoryMovements = pgTable(
   ],
 );
 
+// --- point_transactions: ledger poin loyalitas (Phase 4) -----------------
+export const pointTxTypeEnum = pgEnum("point_tx_type", [
+  "perolehan",
+  "penukaran",
+  "penyesuaian",
+]);
+
+export const pointTransactions = pgTable(
+  "point_transactions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    consumerId: uuid("consumer_id")
+      .notNull()
+      .references(() => consumers.id, { onDelete: "cascade" }),
+    tipe: pointTxTypeEnum("tipe").notNull(),
+    // Delta bertanda: + perolehan, − penukaran.
+    delta: numeric("delta", { precision: 14, scale: 2 }).notNull(),
+    keterangan: text("keterangan"),
+    refType: text("ref_type"),
+    refId: uuid("ref_id"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("point_tx_tenant_id_idx").on(t.tenantId),
+    index("point_tx_consumer_id_idx").on(t.consumerId),
+    index("point_tx_ref_idx").on(t.refType, t.refId),
+  ],
+);
+
 export const inventoryItemsRelations = relations(inventoryItems, ({ one }) => ({
   tenant: one(tenants, {
     fields: [inventoryItems.tenantId],
@@ -709,3 +745,5 @@ export type InventoryMovement = typeof inventoryMovements.$inferSelect;
 export type NewInventoryMovement = typeof inventoryMovements.$inferInsert;
 export type MemberType = typeof memberTypes.$inferSelect;
 export type NewMemberType = typeof memberTypes.$inferInsert;
+export type PointTransaction = typeof pointTransactions.$inferSelect;
+export type NewPointTransaction = typeof pointTransactions.$inferInsert;

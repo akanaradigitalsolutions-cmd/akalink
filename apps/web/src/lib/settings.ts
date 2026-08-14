@@ -11,6 +11,7 @@ export type TenantSettings = {
   telepon: string | null;
   alamat: string | null;
   syaratKetentuan: string[] | null;
+  poinRupiah: number;
 };
 
 /** Ambil profil usaha (tenant) untuk halaman Pengaturan. */
@@ -25,6 +26,7 @@ export const getTenantSettings = cache(
         telepon: tenants.telepon,
         alamat: tenants.alamat,
         syaratKetentuan: tenants.syaratKetentuan,
+        poinRupiah: tenants.poinRupiah,
       })
       .from(tenants)
       .where(eq(tenants.id, tenantId))
