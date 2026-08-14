@@ -28,12 +28,14 @@ export default async function AppLayout({
   let outlets: { id: string; nama: string }[] = [];
   let activeOutletId: string | null = null;
   let showMember = false;
+  let showPromo = false;
   try {
     const { me, tenant } = await getTenantContext(user.id, tenantId);
     tenantName = tenant?.nama ?? tenantName;
     userName = me?.nama ?? userName;
     role = me?.role ?? role;
     showMember = tenant?.fiturMember ?? false;
+    showPromo = tenant?.fiturPromo ?? false;
 
     if (tenantId) {
       await seedDefaultOutletIfEmpty(tenantId);
@@ -56,6 +58,7 @@ export default async function AppLayout({
       outlets={outlets}
       activeOutletId={activeOutletId}
       showMember={showMember}
+      showPromo={showPromo}
     >
       {children}
     </AppShell>

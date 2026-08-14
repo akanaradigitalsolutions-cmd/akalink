@@ -37,6 +37,7 @@ export default async function PengaturanPage() {
           poinRupiah: s.poinRupiah ?? 0,
           fiturMember: s.fiturMember,
           fiturPoin: s.fiturPoin,
+          fiturPromo: s.fiturPromo,
           syaratKetentuan:
             s.syaratKetentuan && s.syaratKetentuan.length
               ? s.syaratKetentuan

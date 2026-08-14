@@ -12,10 +12,12 @@ export function MobileNav({
   role,
   userName,
   showMember = false,
+  showPromo = false,
 }: {
   role: string;
   userName: string;
   showMember?: boolean;
+  showPromo?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -59,7 +61,11 @@ export function MobileNav({
           </button>
         </div>
 
-        <SidebarNav role={role} showMember={showMember} />
+        <SidebarNav
+          role={role}
+          showMember={showMember}
+          showPromo={showPromo}
+        />
 
         <div className="mt-2 border-t border-slate-100 pt-3 dark:border-slate-800">
           <p className="px-3 pb-2 text-xs text-slate-400">

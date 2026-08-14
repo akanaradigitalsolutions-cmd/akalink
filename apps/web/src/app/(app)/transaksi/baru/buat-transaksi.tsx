@@ -7,6 +7,7 @@ import {
   updateTransaction,
 } from "@/lib/transactions-actions";
 import { quickCreateConsumer } from "@/lib/consumers-actions";
+import { validatePromo } from "@/lib/promos-actions";
 import { formatRupiah, SATUAN_SINGKAT } from "@/lib/format";
 import { IconPlus, IconTrash } from "@/components/icons";
 
@@ -56,12 +57,14 @@ export function BuatTransaksi({
   mode = "create",
   txId,
   initial,
+  promoEnabled = false,
 }: {
   services: Service[];
   consumers: Consumer[];
   mode?: "create" | "edit";
   txId?: string;
   initial?: InitialTx;
+  promoEnabled?: boolean;
 }) {
   const router = useRouter();
   const isEdit = mode === "edit";
@@ -116,6 +119,12 @@ export function BuatTransaksi({
   const [diskon, setDiskon] = useState(initial?.diskon ?? 0);
   const [catatan, setCatatan] = useState(initial?.catatan ?? "");
 
+  // Promo/voucher
+  const [promoKode, setPromoKode] = useState("");
+  const [promoApplied, setPromoApplied] = useState<string | null>(null);
+  const [promoErr, setPromoErr] = useState<string>();
+  const [promoPending, startPromo] = useTransition();
+
   const selectedConsumer = consumers.find((c) => c.id === consumerId);
   const filteredConsumers = useMemo(() => {
     const q = consumerQuery.trim().toLowerCase();
@@ -164,6 +173,22 @@ export function BuatTransaksi({
   }
   function removeItem(serviceId: string) {
     setItems((prev) => prev.filter((i) => i.serviceId !== serviceId));
+  }
+
+  function applyPromo() {
+    setPromoErr(undefined);
+    const kode = promoKode.trim();
+    if (!kode) return;
+    startPromo(async () => {
+      const res = await validatePromo({ kode, subtotal });
+      if (res.ok) {
+        setDiskon(res.potongan);
+        setPromoApplied(`${res.kode} — ${res.nama}`);
+      } else {
+        setPromoApplied(null);
+        setPromoErr(res.error);
+      }
+    });
   }
 
   function submit() {
@@ -462,6 +487,39 @@ export function BuatTransaksi({
               />
             )}
 
+            {/* Promo / voucher */}
+            {promoEnabled && (
+              <div className="mt-3">
+                <label className="block text-sm text-slate-700 dark:text-slate-200">
+                  Kode Promo
+                </label>
+                <div className="mt-1 flex gap-2">
+                  <input
+                    value={promoKode}
+                    onChange={(e) => setPromoKode(e.target.value.toUpperCase())}
+                    placeholder="mis. HEMAT10"
+                    className={`${inputBase} min-w-0 flex-1 font-mono`}
+                  />
+                  <button
+                    type="button"
+                    onClick={applyPromo}
+                    disabled={promoPending || !promoKode.trim() || subtotal <= 0}
+                    className="shrink-0 rounded-lg bg-slate-800 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-900 disabled:opacity-50 dark:bg-slate-200 dark:text-slate-900"
+                  >
+                    {promoPending ? "…" : "Terapkan"}
+                  </button>
+                </div>
+                {promoApplied && (
+                  <p className="mt-1 text-xs text-green-600">
+                    ✓ Promo {promoApplied} diterapkan.
+                  </p>
+                )}
+                {promoErr && (
+                  <p className="mt-1 text-xs text-red-600">{promoErr}</p>
+                )}
+              </div>
+            )}
+
             {/* Diskon */}
             <label className="mt-3 block text-sm text-slate-700 dark:text-slate-200">
               Diskon (Rp)
@@ -471,7 +529,10 @@ export function BuatTransaksi({
               min="0"
               step="1000"
               value={diskon}
-              onChange={(e) => setDiskon(Number(e.target.value) || 0)}
+              onChange={(e) => {
+                setDiskon(Number(e.target.value) || 0);
+                setPromoApplied(null);
+              }}
               className={`${inputBase} mt-1 w-full`}
             />
 

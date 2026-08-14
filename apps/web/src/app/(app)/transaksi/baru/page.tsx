@@ -54,6 +54,7 @@ export default async function TransaksiBaruPage() {
           harga: s.harga,
           kategori: s.kategori,
         }))}
+        promoEnabled={settings?.fiturPromo ?? false}
         consumers={consumers.map((c) => {
           const m = c.memberTypeId ? memberMap.get(c.memberTypeId) : undefined;
           return {

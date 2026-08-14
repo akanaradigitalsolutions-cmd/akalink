@@ -16,6 +16,7 @@ export type SettingsInput = {
   poinRupiah?: number | string;
   fiturMember?: boolean;
   fiturPoin?: boolean;
+  fiturPromo?: boolean;
 };
 
 export async function updateSettings(
@@ -53,6 +54,7 @@ export async function updateSettings(
         poinRupiah: Math.max(0, Math.floor(Number(input.poinRupiah) || 0)),
         fiturMember: !!input.fiturMember,
         fiturPoin: !!input.fiturPoin,
+        fiturPromo: !!input.fiturPromo,
         updatedAt: new Date(),
       })
       .where(eq(tenants.id, tenantId));

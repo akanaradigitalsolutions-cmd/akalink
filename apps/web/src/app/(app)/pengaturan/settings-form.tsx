@@ -15,6 +15,7 @@ type Initial = {
   poinRupiah: number;
   fiturMember: boolean;
   fiturPoin: boolean;
+  fiturPromo: boolean;
   syaratKetentuan: string[];
 };
 
@@ -36,6 +37,7 @@ export function SettingsForm({
   const [poinRupiah, setPoinRupiah] = useState(String(initial.poinRupiah || ""));
   const [fiturMember, setFiturMember] = useState(initial.fiturMember);
   const [fiturPoin, setFiturPoin] = useState(initial.fiturPoin);
+  const [fiturPromo, setFiturPromo] = useState(initial.fiturPromo);
   const [sk, setSk] = useState<string[]>(
     initial.syaratKetentuan.length ? initial.syaratKetentuan : [""],
   );
@@ -65,6 +67,7 @@ export function SettingsForm({
         poinRupiah: Number(poinRupiah) || 0,
         fiturMember,
         fiturPoin,
+        fiturPromo,
         syaratKetentuan: sk,
       });
       if (res.ok) {
@@ -145,6 +148,12 @@ export function SettingsForm({
             desc="Konsumen dapat poin dari transaksi lunas & bisa ditukar."
             on={fiturPoin}
             onChange={setFiturPoin}
+          />
+          <Toggle
+            label="Promo / Voucher"
+            desc="Kode promo (diskon %/nominal) yang bisa dipakai di kasir."
+            on={fiturPromo}
+            onChange={setFiturPromo}
           />
 
           {fiturPoin && (

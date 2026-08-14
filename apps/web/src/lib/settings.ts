@@ -14,6 +14,7 @@ export type TenantSettings = {
   poinRupiah: number;
   fiturMember: boolean;
   fiturPoin: boolean;
+  fiturPromo: boolean;
 };
 
 /** Ambil profil usaha (tenant) untuk halaman Pengaturan. */
@@ -31,6 +32,7 @@ export const getTenantSettings = cache(
         poinRupiah: tenants.poinRupiah,
         fiturMember: tenants.fiturMember,
         fiturPoin: tenants.fiturPoin,
+        fiturPromo: tenants.fiturPromo,
       })
       .from(tenants)
       .where(eq(tenants.id, tenantId))

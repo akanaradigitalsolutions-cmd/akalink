@@ -60,6 +60,7 @@ export const tenants = pgTable("tenants", {
   // Aktivasi fitur (per laundry).
   fiturMember: boolean("fitur_member").notNull().default(false),
   fiturPoin: boolean("fitur_poin").notNull().default(false),
+  fiturPromo: boolean("fitur_promo").notNull().default(false),
   tier: tenantTierEnum("tier").notNull().default("basic"),
   status: tenantStatusEnum("status").notNull().default("trial"),
   createdAt: timestamp("created_at", { withTimezone: true })
@@ -278,6 +279,39 @@ export const memberTypes = pgTable(
       .defaultNow(),
   },
   (t) => [index("member_types_tenant_id_idx").on(t.tenantId)],
+);
+
+// --- promos: kode promo/voucher (Phase 4) ---------------------------------
+export const promoTypeEnum = pgEnum("promo_type", ["persen", "nominal"]);
+
+export const promos = pgTable(
+  "promos",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    kode: text("kode").notNull(),
+    nama: text("nama").notNull(),
+    tipe: promoTypeEnum("tipe").notNull().default("persen"),
+    nilai: numeric("nilai", { precision: 14, scale: 2 }).notNull().default("0"),
+    minBelanja: numeric("min_belanja", { precision: 14, scale: 2 })
+      .notNull()
+      .default("0"),
+    // Batas potongan untuk tipe persen (0 = tanpa batas).
+    maxPotongan: numeric("max_potongan", { precision: 14, scale: 2 })
+      .notNull()
+      .default("0"),
+    berlakuSampai: date("berlaku_sampai"),
+    aktif: boolean("aktif").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("promos_tenant_id_idx").on(t.tenantId),
+    unique("promos_tenant_kode_unique").on(t.tenantId, t.kode),
+  ],
 );
 
 // --- consumers: data konsumen laundry (Phase 1.2) -------------------------
@@ -750,3 +784,5 @@ export type MemberType = typeof memberTypes.$inferSelect;
 export type NewMemberType = typeof memberTypes.$inferInsert;
 export type PointTransaction = typeof pointTransactions.$inferSelect;
 export type NewPointTransaction = typeof pointTransactions.$inferInsert;
+export type Promo = typeof promos.$inferSelect;
+export type NewPromo = typeof promos.$inferInsert;

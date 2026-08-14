@@ -155,6 +155,20 @@
       "when": 1786695730541,
       "tag": "0021_bent_nova",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1786696306487,
+      "tag": "0022_lumpy_lizard",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1786696307500,
+      "tag": "0023_promos_rls",
+      "breakpoints": true
     }
   ]
 }
