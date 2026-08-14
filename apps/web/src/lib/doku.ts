@@ -169,6 +169,54 @@ export async function createCheckoutPayment(input: {
   return { url, tokenId: payment?.token_id ?? null };
 }
 
+export type DokuStatus = "SUCCESS" | "PENDING" | "FAILED" | "EXPIRED" | "UNKNOWN";
+
+/**
+ * Cek status pembayaran sebuah invoice ke DOKU (Check Status API, metode GET —
+ * tanpa Digest). Dipakai sebagai cadangan bila notifikasi webhook belum aktif.
+ */
+export async function checkOrderStatus(
+  invoiceNumber: string,
+): Promise<DokuStatus> {
+  if (!isDokuConfigured()) return "UNKNOWN";
+
+  const requestTarget = `/orders/v1/status/${invoiceNumber}`;
+  const requestId = crypto.randomUUID();
+  const timestamp = nowTimestamp();
+  const signature = buildSignature({ requestId, timestamp, requestTarget });
+
+  const res = await fetch(`${dokuBaseUrl()}${requestTarget}`, {
+    method: "GET",
+    headers: {
+      "Client-Id": CLIENT_ID,
+      "Request-Id": requestId,
+      "Request-Timestamp": timestamp,
+      Signature: signature,
+    },
+    cache: "no-store",
+  });
+
+  const text = await res.text();
+  if (!res.ok) return "UNKNOWN";
+
+  let json: Record<string, unknown> = {};
+  try {
+    json = JSON.parse(text);
+  } catch {
+    return "UNKNOWN";
+  }
+  const inner = (json.response ?? json) as Record<string, unknown>;
+  const transaction = (inner.transaction ?? json.transaction) as
+    | { status?: string }
+    | undefined;
+  const raw = (transaction?.status ?? "").toUpperCase();
+  if (raw === "SUCCESS" || raw === "SETTLEMENT") return "SUCCESS";
+  if (raw === "PENDING") return "PENDING";
+  if (raw === "FAILED" || raw === "VOID") return "FAILED";
+  if (raw === "EXPIRED") return "EXPIRED";
+  return "UNKNOWN";
+}
+
 function extractDokuError(json: unknown): string | null {
   if (!json || typeof json !== "object") return null;
   const j = json as { message?: unknown; error?: { message?: unknown } };

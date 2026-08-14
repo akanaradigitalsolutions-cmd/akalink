@@ -1,9 +1,13 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useEffect, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { formatRupiah, formatDateTime } from "@/lib/format";
-import { topupManual, createDokuTopup } from "@/lib/app-coin-actions";
+import {
+  topupManual,
+  createDokuTopup,
+  syncPendingTopups,
+} from "@/lib/app-coin-actions";
 import type { CoinConfig, CoinLedgerRow } from "@/lib/app-coin";
 
 const NOMINAL = [25_000, 50_000, 100_000, 250_000];
@@ -36,8 +40,37 @@ export function TagihanClient({
   const router = useRouter();
   const [pending, start] = useTransition();
   const [dokuPending, startDoku] = useTransition();
+  const [syncing, startSync] = useTransition();
   const [amount, setAmount] = useState<string>("50000");
   const [msg, setMsg] = useState<{ ok?: boolean; text: string }>();
+  const [syncMsg, setSyncMsg] = useState<string>();
+
+  function cekStatus(auto = false) {
+    setSyncMsg(undefined);
+    startSync(async () => {
+      const res = await syncPendingTopups();
+      if (!res.ok) {
+        if (!auto) setSyncMsg(res.error);
+        return;
+      }
+      if (res.credited > 0) {
+        setSyncMsg(`✓ ${res.credited} pembayaran berhasil ditambahkan ke saldo.`);
+        router.refresh();
+      } else if (!auto) {
+        setSyncMsg(
+          res.pending > 0
+            ? "Belum ada pembayaran yang lunas. Coba lagi beberapa saat setelah bayar."
+            : "Tidak ada pembayaran tertunda.",
+        );
+      }
+    });
+  }
+
+  // Auto cek status begitu kembali dari halaman DOKU.
+  useEffect(() => {
+    if (dokuAktif && kembaliDariDoku) cekStatus(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function bayarDoku() {
     setMsg(undefined);
@@ -84,10 +117,21 @@ export function TagihanClient({
   return (
     <div className="flex flex-col gap-6">
       {kembaliDariDoku && (
-        <div className="rounded-xl border border-blue-300 bg-blue-50 px-4 py-3 text-sm text-blue-800 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-300">
-          Terima kasih! Jika pembayaran DOKU sudah berhasil, saldo akan
-          bertambah otomatis dalam beberapa saat. Muat ulang halaman ini untuk
-          memeriksa.
+        <div className="flex flex-col gap-2 rounded-xl border border-blue-300 bg-blue-50 px-4 py-3 text-sm text-blue-800 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-300">
+          <span>
+            Terima kasih! Kami sedang memeriksa status pembayaran Anda ke
+            DOKU. Jika sudah lunas, saldo akan bertambah otomatis.
+          </span>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => cekStatus(false)}
+              disabled={syncing}
+              className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-blue-700 disabled:opacity-60"
+            >
+              {syncing ? "Memeriksa…" : "Cek Status Pembayaran"}
+            </button>
+            {syncMsg && <span className="text-xs">{syncMsg}</span>}
+          </div>
         </div>
       )}
 
@@ -208,6 +252,23 @@ export function TagihanClient({
             </span>
           )}
         </div>
+
+        {dokuAktif && (
+          <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-slate-100 pt-3 dark:border-slate-800">
+            <button
+              onClick={() => cekStatus(false)}
+              disabled={syncing}
+              className="text-xs font-medium text-brand-600 hover:underline disabled:opacity-60"
+            >
+              {syncing ? "Memeriksa…" : "Sudah bayar? Cek status pembayaran"}
+            </button>
+            {syncMsg && (
+              <span className="text-xs text-slate-500 dark:text-slate-400">
+                {syncMsg}
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Riwayat mutasi */}

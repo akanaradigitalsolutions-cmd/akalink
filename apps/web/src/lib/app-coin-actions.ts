@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
-import { and, eq } from "drizzle-orm";
+import { and, eq, desc } from "drizzle-orm";
 import { getDb, employees, coinTopupOrders } from "@akalink/db";
 import {
   getSessionUser,
@@ -10,7 +10,11 @@ import {
   getRoleFromUser,
 } from "@/lib/auth";
 import { topupAppCoin } from "@/lib/app-coin";
-import { isDokuConfigured, createCheckoutPayment } from "@/lib/doku";
+import {
+  isDokuConfigured,
+  createCheckoutPayment,
+  checkOrderStatus,
+} from "@/lib/doku";
 
 async function baseUrl(): Promise<string> {
   const h = await headers();
@@ -165,4 +169,90 @@ export async function createDokuTopup(input: {
       error: e instanceof Error ? e.message : "Gagal membuat pembayaran DOKU.",
     };
   }
+}
+
+export type SyncTopupResult =
+  | { ok: true; credited: number; saldoSesudah: number | null; pending: number }
+  | { ok: false; error: string };
+
+/**
+ * Sinkronkan pesanan isi ulang yang masih "pending" dengan menanyakan status
+ * langsung ke DOKU (Check Status). Bila sudah SUKSES, saldo ditambahkan
+ * (idempoten). Berguna sebagai cadangan bila webhook DOKU belum aktif.
+ */
+export async function syncPendingTopups(): Promise<SyncTopupResult> {
+  const user = await getSessionUser();
+  const tenantId = getTenantIdFromUser(user);
+  if (!user || !tenantId)
+    return { ok: false, error: "Sesi tidak valid. Silakan masuk lagi." };
+  if (getRoleFromUser(user) !== "owner")
+    return { ok: false, error: "Hanya pemilik yang dapat memeriksa." };
+  if (!isDokuConfigured())
+    return { ok: false, error: "DOKU belum dikonfigurasi." };
+
+  const db = getDb();
+  const pending = await db
+    .select({
+      id: coinTopupOrders.id,
+      invoiceNumber: coinTopupOrders.invoiceNumber,
+      amount: coinTopupOrders.amount,
+      createdBy: coinTopupOrders.createdBy,
+    })
+    .from(coinTopupOrders)
+    .where(
+      and(
+        eq(coinTopupOrders.tenantId, tenantId),
+        eq(coinTopupOrders.status, "pending"),
+      ),
+    )
+    .orderBy(desc(coinTopupOrders.createdAt))
+    .limit(20);
+
+  let credited = 0;
+  let saldoSesudah: number | null = null;
+
+  for (const order of pending) {
+    let status;
+    try {
+      status = await checkOrderStatus(order.invoiceNumber);
+    } catch {
+      continue;
+    }
+    if (status === "SUCCESS") {
+      const res = await db.transaction(async (tx) => {
+        const r = await topupAppCoin(tx, tenantId, {
+          amount: order.amount,
+          keterangan: `Isi ulang via DOKU (${order.invoiceNumber})`,
+          refType: "doku",
+          refId: order.id,
+          tipe: "topup",
+          createdBy: order.createdBy ?? null,
+        });
+        await tx
+          .update(coinTopupOrders)
+          .set({ status: "success", paidAt: new Date() })
+          .where(eq(coinTopupOrders.id, order.id));
+        return r;
+      });
+      if (res.applied) credited += 1;
+      saldoSesudah = res.saldoSesudah;
+    } else if (status === "FAILED" || status === "EXPIRED") {
+      await db
+        .update(coinTopupOrders)
+        .set({ status: status === "EXPIRED" ? "expired" : "failed" })
+        .where(eq(coinTopupOrders.id, order.id));
+    }
+  }
+
+  if (credited > 0) {
+    revalidatePath("/tagihan");
+    revalidatePath("/dashboard");
+  }
+
+  return {
+    ok: true,
+    credited,
+    saldoSesudah,
+    pending: pending.length,
+  };
 }
