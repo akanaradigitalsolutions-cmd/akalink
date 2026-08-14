@@ -147,12 +147,26 @@ export async function createCheckoutPayment(input: {
     throw new Error(msg);
   }
 
-  const payment = (json as { payment?: { url?: string; token_id?: string } })
-    ?.payment;
-  if (!payment?.url)
-    throw new Error("DOKU tidak mengembalikan URL pembayaran.");
+  // DOKU dapat membungkus hasil di dalam "response" atau langsung di root.
+  const root = (json ?? {}) as Record<string, unknown>;
+  const inner = (root.response ?? root) as Record<string, unknown>;
+  const payment = (inner.payment ?? root.payment) as
+    | { url?: string; href?: string; token_id?: string; redirect_url?: string }
+    | undefined;
 
-  return { url: payment.url, tokenId: payment.token_id ?? null };
+  const url =
+    payment?.url ??
+    payment?.href ??
+    payment?.redirect_url ??
+    (typeof root.redirect_url === "string" ? root.redirect_url : undefined);
+
+  if (!url) {
+    // Sertakan cuplikan respons agar mudah didiagnosa bila format berbeda.
+    const snippet = text.slice(0, 600);
+    throw new Error(`DOKU tidak mengembalikan URL pembayaran. Respons: ${snippet}`);
+  }
+
+  return { url, tokenId: payment?.token_id ?? null };
 }
 
 function extractDokuError(json: unknown): string | null {
