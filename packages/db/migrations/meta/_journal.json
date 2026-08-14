@@ -120,6 +120,20 @@
       "when": 1786587065663,
       "tag": "0016_inventory_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1786693089603,
+      "tag": "0017_rich_james_howlett",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1786693095129,
+      "tag": "0018_member_types_rls",
+      "breakpoints": true
     }
   ]
 }

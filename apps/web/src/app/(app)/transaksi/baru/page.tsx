@@ -5,6 +5,7 @@ import { getSessionUser, getTenantIdFromUser } from "@/lib/auth";
 import { getActiveServices } from "@/lib/transactions";
 import { getRecentConsumers } from "@/lib/consumers";
 import { getActiveOutlet, seedDefaultOutletIfEmpty } from "@/lib/outlets";
+import { getMemberTypes } from "@/lib/members";
 import { BuatTransaksi } from "./buat-transaksi";
 
 export const metadata: Metadata = {
@@ -19,10 +20,14 @@ export default async function TransaksiBaruPage() {
 
   await seedDefaultOutletIfEmpty(tenantId);
   const activeOutlet = await getActiveOutlet(tenantId);
-  const [services, consumers] = await Promise.all([
+  const [services, consumers, memberTypes] = await Promise.all([
     getActiveServices(tenantId, activeOutlet?.id),
     getRecentConsumers(tenantId, 100),
+    getMemberTypes(tenantId),
   ]);
+  const memberMap = new Map(
+    memberTypes.map((m) => [m.id, { nama: m.nama, pct: Number(m.diskonPersen) }]),
+  );
 
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-6">
@@ -46,11 +51,16 @@ export default async function TransaksiBaruPage() {
           harga: s.harga,
           kategori: s.kategori,
         }))}
-        consumers={consumers.map((c) => ({
-          id: c.id,
-          nama: c.nama,
-          hp: c.hp,
-        }))}
+        consumers={consumers.map((c) => {
+          const m = c.memberTypeId ? memberMap.get(c.memberTypeId) : undefined;
+          return {
+            id: c.id,
+            nama: c.nama,
+            hp: c.hp,
+            memberNama: m?.nama ?? null,
+            diskonPersen: m?.pct ?? 0,
+          };
+        })}
       />
     </div>
   );

@@ -255,6 +255,26 @@ export const servicesRelations = relations(services, ({ one }) => ({
   }),
 }));
 
+// --- member_types: jenis keanggotaan + diskon otomatis (Phase 4) ----------
+export const memberTypes = pgTable(
+  "member_types",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    nama: text("nama").notNull(),
+    diskonPersen: numeric("diskon_persen", { precision: 5, scale: 2 })
+      .notNull()
+      .default("0"),
+    aktif: boolean("aktif").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("member_types_tenant_id_idx").on(t.tenantId)],
+);
+
 // --- consumers: data konsumen laundry (Phase 1.2) -------------------------
 // Privasi: daftar tidak ditampilkan bebas — akses lewat pencarian.
 export const consumerGenderEnum = pgEnum("consumer_gender", ["pria", "wanita"]);
@@ -269,6 +289,11 @@ export const consumers = pgTable(
     nama: text("nama").notNull(),
     hp: text("hp"),
     gender: consumerGenderEnum("gender"),
+    // Keanggotaan & loyalitas (Phase 4)
+    memberTypeId: uuid("member_type_id").references(() => memberTypes.id, {
+      onDelete: "set null",
+    }),
+    poin: numeric("poin", { precision: 14, scale: 2 }).notNull().default("0"),
     // Data opsional
     instansi: text("instansi"),
     email: text("email"),
@@ -682,3 +707,5 @@ export type InventoryItem = typeof inventoryItems.$inferSelect;
 export type NewInventoryItem = typeof inventoryItems.$inferInsert;
 export type InventoryMovement = typeof inventoryMovements.$inferSelect;
 export type NewInventoryMovement = typeof inventoryMovements.$inferInsert;
+export type MemberType = typeof memberTypes.$inferSelect;
+export type NewMemberType = typeof memberTypes.$inferInsert;

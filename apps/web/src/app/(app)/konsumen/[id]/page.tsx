@@ -3,6 +3,8 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getSessionUser, getTenantIdFromUser } from "@/lib/auth";
 import { getConsumerDetail } from "@/lib/consumers";
+import { getMemberTypes } from "@/lib/members";
+import { MemberControl } from "./member-control";
 import {
   formatRupiah,
   formatHp,
@@ -41,6 +43,9 @@ export default async function KonsumenDetailPage({
   if (!data) notFound();
   const { consumer: c, jumlah, belanja, piutang, txs } = data;
 
+  const memberTypes = await getMemberTypes(tenantId);
+  const memberNow = memberTypes.find((m) => m.id === c.memberTypeId);
+
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6">
       <div className="flex items-center gap-3">
@@ -75,6 +80,40 @@ export default async function KonsumenDetailPage({
             {c.agama && <Info label="Agama" value={c.agama} />}
           </dl>
         )}
+      </section>
+
+      {/* Keanggotaan */}
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-400">
+            Keanggotaan
+          </h2>
+          <div className="flex items-center gap-2">
+            {memberNow ? (
+              <span className="rounded-full bg-brand-100 px-2.5 py-1 text-[11px] font-semibold text-brand-700 dark:bg-brand-950 dark:text-brand-300">
+                ★ {memberNow.nama} · diskon {Number(memberNow.diskonPersen)}%
+              </span>
+            ) : (
+              <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-slate-500 dark:bg-slate-800">
+                Bukan member
+              </span>
+            )}
+            <span className="text-xs text-slate-400">
+              Poin: {Number(c.poin)}
+            </span>
+          </div>
+        </div>
+        <MemberControl
+          consumerId={c.id}
+          current={c.memberTypeId}
+          types={memberTypes
+            .filter((m) => m.aktif || m.id === c.memberTypeId)
+            .map((m) => ({
+              id: m.id,
+              nama: m.nama,
+              diskonPersen: m.diskonPersen,
+            }))}
+        />
       </section>
 
       {/* Ringkasan */}

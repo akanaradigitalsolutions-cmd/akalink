@@ -17,7 +17,13 @@ type Service = {
   harga: string;
   kategori: string | null;
 };
-type Consumer = { id: string; nama: string; hp: string | null };
+type Consumer = {
+  id: string;
+  nama: string;
+  hp: string | null;
+  memberNama?: string | null;
+  diskonPersen?: number;
+};
 type Item = {
   serviceId: string;
   nama: string;
@@ -201,21 +207,49 @@ export function BuatTransaksi({
             1. Konsumen
           </h3>
           {selectedConsumer ? (
-            <div className="mt-3 flex items-center justify-between rounded-lg bg-brand-50 px-4 py-3 dark:bg-brand-950/40">
-              <div>
-                <p className="font-semibold text-brand-800 dark:text-brand-200">
-                  {selectedConsumer.nama}
-                </p>
-                <p className="text-sm text-brand-600 dark:text-brand-300">
-                  {selectedConsumer.hp ?? "—"}
-                </p>
+            <div className="mt-3 flex flex-col gap-2 rounded-lg bg-brand-50 px-4 py-3 dark:bg-brand-950/40">
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="flex items-center gap-2 font-semibold text-brand-800 dark:text-brand-200">
+                    {selectedConsumer.nama}
+                    {selectedConsumer.memberNama && (
+                      <span className="rounded-full bg-brand-600 px-2 py-0.5 text-[10px] font-semibold text-white">
+                        ★ {selectedConsumer.memberNama}
+                      </span>
+                    )}
+                  </p>
+                  <p className="text-sm text-brand-600 dark:text-brand-300">
+                    {selectedConsumer.hp ?? "—"}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setConsumerId(null)}
+                  className="shrink-0 text-sm text-brand-600 hover:underline"
+                >
+                  Ganti
+                </button>
               </div>
-              <button
-                onClick={() => setConsumerId(null)}
-                className="text-sm text-brand-600 hover:underline"
-              >
-                Ganti
-              </button>
+              {(selectedConsumer.diskonPersen ?? 0) > 0 && subtotal > 0 && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    setDiskon(
+                      Math.round(
+                        (subtotal * (selectedConsumer.diskonPersen ?? 0)) / 100,
+                      ),
+                    )
+                  }
+                  className="w-fit rounded-lg border border-brand-400 bg-white px-3 py-1.5 text-xs font-semibold text-brand-700 transition hover:bg-brand-100 dark:bg-transparent dark:text-brand-300"
+                >
+                  Terapkan diskon member {selectedConsumer.diskonPersen}% (
+                  {formatRupiah(
+                    Math.round(
+                      (subtotal * (selectedConsumer.diskonPersen ?? 0)) / 100,
+                    ),
+                  )}
+                  )
+                </button>
+              )}
             </div>
           ) : (
             <div className="mt-3">
