@@ -22,6 +22,7 @@ type NavItem = {
   icon: (p: { className?: string }) => React.ReactNode;
   soon?: boolean;
   ownerOnly?: boolean;
+  feature?: "member";
 };
 
 const items: NavItem[] = [
@@ -29,7 +30,13 @@ const items: NavItem[] = [
   { label: "Layanan", href: "/layanan", icon: IconTag, ownerOnly: true },
   { label: "Transaksi", href: "/transaksi", icon: IconReceipt },
   { label: "Konsumen", href: "/konsumen", icon: IconUsers },
-  { label: "Member", href: "/member", icon: IconBadge, ownerOnly: true },
+  {
+    label: "Member",
+    href: "/member",
+    icon: IconBadge,
+    ownerOnly: true,
+    feature: "member",
+  },
   { label: "Inventori", href: "/inventori", icon: IconBox },
   { label: "Keuangan", href: "/keuangan", icon: IconWallet, ownerOnly: true },
   { label: "Laporan", href: "/laporan", icon: IconChart, ownerOnly: true },
@@ -44,7 +51,13 @@ const items: NavItem[] = [
   { label: "Akun Saya", href: "/akun", icon: IconUser },
 ];
 
-export function SidebarNav({ role }: { role?: string }) {
+export function SidebarNav({
+  role,
+  showMember = false,
+}: {
+  role?: string;
+  showMember?: boolean;
+}) {
   const pathname = usePathname();
   const isOwner = role === "owner";
 
@@ -52,6 +65,7 @@ export function SidebarNav({ role }: { role?: string }) {
     <nav className="mt-8 flex flex-1 flex-col gap-1">
       {items
         .filter((item) => !item.ownerOnly || isOwner)
+        .filter((item) => item.feature !== "member" || showMember)
         .map((item) => {
         if (item.soon) {
           return (

@@ -442,12 +442,15 @@ export async function updateStatuses(input: {
   // Poin loyalitas saat lunas (idempoten via ledger).
   if (pay === "lunas" && grand > 0 && txRow.consumerId) {
     const [t] = await db
-      .select({ poinRupiah: tenants.poinRupiah })
+      .select({
+        poinRupiah: tenants.poinRupiah,
+        fiturPoin: tenants.fiturPoin,
+      })
       .from(tenants)
       .where(eq(tenants.id, tenantId))
       .limit(1);
     const poinRupiah = t?.poinRupiah ?? 0;
-    if (poinRupiah > 0) {
+    if (t?.fiturPoin && poinRupiah > 0) {
       await db.transaction(async (tx) => {
         await awardPointsOnPayment(
           tx,

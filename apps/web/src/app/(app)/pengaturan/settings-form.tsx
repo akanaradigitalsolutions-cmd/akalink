@@ -13,6 +13,8 @@ type Initial = {
   telepon: string;
   alamat: string;
   poinRupiah: number;
+  fiturMember: boolean;
+  fiturPoin: boolean;
   syaratKetentuan: string[];
 };
 
@@ -32,6 +34,8 @@ export function SettingsForm({
   const [telepon, setTelepon] = useState(initial.telepon);
   const [alamat, setAlamat] = useState(initial.alamat);
   const [poinRupiah, setPoinRupiah] = useState(String(initial.poinRupiah || ""));
+  const [fiturMember, setFiturMember] = useState(initial.fiturMember);
+  const [fiturPoin, setFiturPoin] = useState(initial.fiturPoin);
   const [sk, setSk] = useState<string[]>(
     initial.syaratKetentuan.length ? initial.syaratKetentuan : [""],
   );
@@ -59,6 +63,8 @@ export function SettingsForm({
         telepon,
         alamat,
         poinRupiah: Number(poinRupiah) || 0,
+        fiturMember,
+        fiturPoin,
         syaratKetentuan: sk,
       });
       if (res.ok) {
@@ -117,29 +123,49 @@ export function SettingsForm({
         </div>
       </section>
 
-      {/* Poin loyalitas */}
+      {/* Fitur Loyalitas */}
       <section className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
         <h2 className="mb-1 text-sm font-semibold text-slate-900 dark:text-white">
-          Poin Loyalitas
+          Fitur Loyalitas
         </h2>
         <p className="mb-4 text-xs text-slate-500 dark:text-slate-400">
-          Setiap kelipatan rupiah ini memberi 1 poin ke konsumen saat transaksi
-          <b> lunas</b>. Kosongkan / 0 untuk menonaktifkan poin.
+          Aktifkan hanya bila laundry Anda memakainya. Saat nonaktif, menu &amp;
+          kontrol terkait disembunyikan.
         </p>
-        <Field label="Rupiah untuk 1 poin">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-slate-400">Rp</span>
-            <input
-              value={poinRupiah}
-              onChange={(e) =>
-                setPoinRupiah(e.target.value.replace(/[^0-9]/g, ""))
-              }
-              inputMode="numeric"
-              placeholder="mis. 10000 (Rp10.000 = 1 poin)"
-              className={`${inputBase} w-full`}
-            />
-          </div>
-        </Field>
+
+        <div className="flex flex-col gap-3">
+          <Toggle
+            label="Membership"
+            desc="Tingkatan member + diskon otomatis di POS."
+            on={fiturMember}
+            onChange={setFiturMember}
+          />
+          <Toggle
+            label="Poin Loyalitas"
+            desc="Konsumen dapat poin dari transaksi lunas & bisa ditukar."
+            on={fiturPoin}
+            onChange={setFiturPoin}
+          />
+
+          {fiturPoin && (
+            <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800/50">
+              <Field label="Rupiah untuk 1 poin">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-slate-400">Rp</span>
+                  <input
+                    value={poinRupiah}
+                    onChange={(e) =>
+                      setPoinRupiah(e.target.value.replace(/[^0-9]/g, ""))
+                    }
+                    inputMode="numeric"
+                    placeholder="mis. 10000 (Rp10.000 = 1 poin)"
+                    className={`${inputBase} w-full`}
+                  />
+                </div>
+              </Field>
+            </div>
+          )}
+        </div>
       </section>
 
       {/* Syarat & Ketentuan */}
@@ -210,6 +236,44 @@ export function SettingsForm({
           </span>
         )}
       </div>
+    </div>
+  );
+}
+
+function Toggle({
+  label,
+  desc,
+  on,
+  onChange,
+}: {
+  label: string;
+  desc: string;
+  on: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 p-3 dark:border-slate-800">
+      <div className="min-w-0">
+        <p className="text-sm font-medium text-slate-800 dark:text-slate-100">
+          {label}
+        </p>
+        <p className="text-xs text-slate-500 dark:text-slate-400">{desc}</p>
+      </div>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={on}
+        onClick={() => onChange(!on)}
+        className={`relative h-6 w-11 shrink-0 rounded-full transition ${
+          on ? "bg-brand-600" : "bg-slate-300 dark:bg-slate-700"
+        }`}
+      >
+        <span
+          className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition ${
+            on ? "left-[1.375rem]" : "left-0.5"
+          }`}
+        />
+      </button>
     </div>
   );
 }

@@ -6,6 +6,7 @@ import { getActiveServices } from "@/lib/transactions";
 import { getRecentConsumers } from "@/lib/consumers";
 import { getActiveOutlet, seedDefaultOutletIfEmpty } from "@/lib/outlets";
 import { getMemberTypes } from "@/lib/members";
+import { getTenantSettings } from "@/lib/settings";
 import { BuatTransaksi } from "./buat-transaksi";
 
 export const metadata: Metadata = {
@@ -20,10 +21,12 @@ export default async function TransaksiBaruPage() {
 
   await seedDefaultOutletIfEmpty(tenantId);
   const activeOutlet = await getActiveOutlet(tenantId);
+  const settings = await getTenantSettings(tenantId);
+  const fiturMember = settings?.fiturMember ?? false;
   const [services, consumers, memberTypes] = await Promise.all([
     getActiveServices(tenantId, activeOutlet?.id),
     getRecentConsumers(tenantId, 100),
-    getMemberTypes(tenantId),
+    fiturMember ? getMemberTypes(tenantId) : Promise.resolve([]),
   ]);
   const memberMap = new Map(
     memberTypes.map((m) => [m.id, { nama: m.nama, pct: Number(m.diskonPersen) }]),

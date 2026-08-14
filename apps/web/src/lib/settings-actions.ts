@@ -14,6 +14,8 @@ export type SettingsInput = {
   alamat?: string;
   syaratKetentuan?: string[];
   poinRupiah?: number | string;
+  fiturMember?: boolean;
+  fiturPoin?: boolean;
 };
 
 export async function updateSettings(
@@ -49,6 +51,8 @@ export async function updateSettings(
         alamat: clean(input.alamat),
         syaratKetentuan: sk.length ? sk : null,
         poinRupiah: Math.max(0, Math.floor(Number(input.poinRupiah) || 0)),
+        fiturMember: !!input.fiturMember,
+        fiturPoin: !!input.fiturPoin,
         updatedAt: new Date(),
       })
       .where(eq(tenants.id, tenantId));

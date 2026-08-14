@@ -35,6 +35,8 @@ export default async function PengaturanPage() {
           telepon: s.telepon ?? "",
           alamat: s.alamat ?? "",
           poinRupiah: s.poinRupiah ?? 0,
+          fiturMember: s.fiturMember,
+          fiturPoin: s.fiturPoin,
           syaratKetentuan:
             s.syaratKetentuan && s.syaratKetentuan.length
               ? s.syaratKetentuan

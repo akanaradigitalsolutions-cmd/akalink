@@ -5,6 +5,7 @@ import { getSessionUser, getTenantIdFromUser } from "@/lib/auth";
 import { getConsumerDetail } from "@/lib/consumers";
 import { getMemberTypes } from "@/lib/members";
 import { getPointHistory } from "@/lib/loyalty";
+import { getTenantSettings } from "@/lib/settings";
 import { MemberControl } from "./member-control";
 import { PointControl } from "./point-control";
 import {
@@ -45,10 +46,14 @@ export default async function KonsumenDetailPage({
   if (!data) notFound();
   const { consumer: c, jumlah, belanja, piutang, txs } = data;
 
-  const memberTypes = await getMemberTypes(tenantId);
+  const settings = await getTenantSettings(tenantId);
+  const fiturMember = settings?.fiturMember ?? false;
+  const fiturPoin = settings?.fiturPoin ?? false;
+  const memberTypes = fiturMember ? await getMemberTypes(tenantId) : [];
   const memberNow = memberTypes.find((m) => m.id === c.memberTypeId);
   const poin = Number(c.poin);
-  const pointHistory = poin > 0 ? await getPointHistory(tenantId, c.id, 10) : [];
+  const pointHistory =
+    fiturPoin && poin > 0 ? await getPointHistory(tenantId, c.id, 10) : [];
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6">
@@ -86,40 +91,43 @@ export default async function KonsumenDetailPage({
         )}
       </section>
 
-      {/* Keanggotaan */}
+      {/* Keanggotaan & Poin (hanya bila fiturnya aktif) */}
+      {(fiturMember || fiturPoin) && (
       <section className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-400">
             Keanggotaan
           </h2>
-          <div className="flex items-center gap-2">
-            {memberNow ? (
-              <span className="rounded-full bg-brand-100 px-2.5 py-1 text-[11px] font-semibold text-brand-700 dark:bg-brand-950 dark:text-brand-300">
-                ★ {memberNow.nama} · diskon {Number(memberNow.diskonPersen)}%
-              </span>
-            ) : (
-              <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-slate-500 dark:bg-slate-800">
-                Bukan member
-              </span>
-            )}
-            <span className="text-xs text-slate-400">
-              Poin: {Number(c.poin)}
-            </span>
-          </div>
+          {fiturMember && (
+            <div className="flex items-center gap-2">
+              {memberNow ? (
+                <span className="rounded-full bg-brand-100 px-2.5 py-1 text-[11px] font-semibold text-brand-700 dark:bg-brand-950 dark:text-brand-300">
+                  ★ {memberNow.nama} · diskon {Number(memberNow.diskonPersen)}%
+                </span>
+              ) : (
+                <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-slate-500 dark:bg-slate-800">
+                  Bukan member
+                </span>
+              )}
+            </div>
+          )}
         </div>
-        <MemberControl
-          consumerId={c.id}
-          current={c.memberTypeId}
-          types={memberTypes
-            .filter((m) => m.aktif || m.id === c.memberTypeId)
-            .map((m) => ({
-              id: m.id,
-              nama: m.nama,
-              diskonPersen: m.diskonPersen,
-            }))}
-        />
+        {fiturMember && (
+          <MemberControl
+            consumerId={c.id}
+            current={c.memberTypeId}
+            types={memberTypes
+              .filter((m) => m.aktif || m.id === c.memberTypeId)
+              .map((m) => ({
+                id: m.id,
+                nama: m.nama,
+                diskonPersen: m.diskonPersen,
+              }))}
+          />
+        )}
 
         {/* Poin loyalitas */}
+        {fiturPoin && (
         <div className="mt-4 border-t border-slate-100 pt-4 dark:border-slate-800">
           <div className="mb-2 flex items-center justify-between">
             <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
@@ -162,7 +170,9 @@ export default async function KonsumenDetailPage({
             </ul>
           )}
         </div>
+        )}
       </section>
+      )}
 
       {/* Ringkasan */}
       <section className="grid gap-4 sm:grid-cols-3">

@@ -6,6 +6,7 @@ import {
   getRoleFromUser,
 } from "@/lib/auth";
 import { getMemberTypes } from "@/lib/members";
+import { getTenantSettings } from "@/lib/settings";
 import { MemberManager } from "./member-manager";
 
 export const metadata: Metadata = { title: "Member — AkaLink" };
@@ -16,6 +17,9 @@ export default async function MemberPage() {
   const tenantId = getTenantIdFromUser(user);
   if (!tenantId) redirect("/masuk");
   if (getRoleFromUser(user) !== "owner") redirect("/dashboard");
+
+  const s = await getTenantSettings(tenantId);
+  if (!s?.fiturMember) redirect("/pengaturan");
 
   const types = await getMemberTypes(tenantId);
 

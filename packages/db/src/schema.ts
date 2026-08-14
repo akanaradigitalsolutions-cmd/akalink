@@ -57,6 +57,9 @@ export const tenants = pgTable("tenants", {
   syaratKetentuan: jsonb("syarat_ketentuan").$type<string[]>(),
   // Loyalitas: rupiah untuk 1 poin (0 = poin nonaktif).
   poinRupiah: integer("poin_rupiah").notNull().default(0),
+  // Aktivasi fitur (per laundry).
+  fiturMember: boolean("fitur_member").notNull().default(false),
+  fiturPoin: boolean("fitur_poin").notNull().default(false),
   tier: tenantTierEnum("tier").notNull().default("basic"),
   status: tenantStatusEnum("status").notNull().default("trial"),
   createdAt: timestamp("created_at", { withTimezone: true })

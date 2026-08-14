@@ -21,6 +21,7 @@ export function AppShell({
   role,
   outlets = [],
   activeOutletId = null,
+  showMember = false,
   children,
 }: {
   tenantName: string;
@@ -28,6 +29,7 @@ export function AppShell({
   role: string;
   outlets?: { id: string; nama: string }[];
   activeOutletId?: string | null;
+  showMember?: boolean;
   children: React.ReactNode;
 }) {
   const initials = initialsOf(userName || "?");
@@ -39,7 +41,7 @@ export function AppShell({
         <div className="px-2">
           <Logo size={36} subtitle={null} />
         </div>
-        <SidebarNav role={role} />
+        <SidebarNav role={role} showMember={showMember} />
         <form action={keluar}>
           <button
             type="submit"
@@ -56,7 +58,11 @@ export function AppShell({
         {/* Topbar */}
         <header className="sticky top-0 z-10 flex h-16 items-center gap-2 border-b border-slate-200 bg-white/80 px-3 backdrop-blur dark:border-slate-800 dark:bg-slate-900/80 sm:gap-3 sm:px-6">
           <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
-            <MobileNav role={role} userName={userName} />
+            <MobileNav
+              role={role}
+              userName={userName}
+              showMember={showMember}
+            />
             <div className="shrink-0 md:hidden">
               <Logo size={30} showText={false} />
             </div>
