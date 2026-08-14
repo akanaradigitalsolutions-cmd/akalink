@@ -60,6 +60,7 @@ export async function middleware(request: NextRequest) {
     "/member",
     "/promo",
     "/tagihan",
+    "/dana",
   ];
   if (user && OWNER_ONLY.some((p) => path === p || path.startsWith(p + "/"))) {
     const role = (user.app_metadata as { role?: string } | undefined)?.role;
@@ -85,6 +86,7 @@ export const config = {
     "/member/:path*",
     "/promo/:path*",
     "/tagihan/:path*",
+    "/dana/:path*",
     "/akun/:path*",
     "/masuk",
     "/daftar",

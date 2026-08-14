@@ -23,7 +23,7 @@ type NavItem = {
   icon: (p: { className?: string }) => React.ReactNode;
   soon?: boolean;
   ownerOnly?: boolean;
-  feature?: "member" | "promo";
+  feature?: "member" | "promo" | "bayar";
 };
 
 const items: NavItem[] = [
@@ -49,6 +49,13 @@ const items: NavItem[] = [
   { label: "Keuangan", href: "/keuangan", icon: IconWallet, ownerOnly: true },
   { label: "Laporan", href: "/laporan", icon: IconChart, ownerOnly: true },
   {
+    label: "Dana Masuk",
+    href: "/dana",
+    icon: IconWallet,
+    ownerOnly: true,
+    feature: "bayar",
+  },
+  {
     label: "Saldo AkaLink",
     href: "/tagihan",
     icon: IconCoin,
@@ -69,16 +76,19 @@ export function SidebarNav({
   role,
   showMember = false,
   showPromo = false,
+  showBayar = false,
 }: {
   role?: string;
   showMember?: boolean;
   showPromo?: boolean;
+  showBayar?: boolean;
 }) {
   const pathname = usePathname();
   const isOwner = role === "owner";
   const featureOn: Record<string, boolean> = {
     member: showMember,
     promo: showPromo,
+    bayar: showBayar,
   };
 
   return (

@@ -63,7 +63,13 @@ export const tenants = pgTable("tenants", {
   fiturPromo: boolean("fitur_promo").notNull().default(false),
   // Pembayaran digital konsumen (QRIS/e-wallet via DOKU).
   fiturBayarDigital: boolean("fitur_bayar_digital").notNull().default(false),
-  // Biaya penanganan pembayaran digital (ditanggung laundry).
+  // Waktu owner menyetujui syarat biaya pembayaran digital (null = belum).
+  bayarDigitalSetujuAt: timestamp("bayar_digital_setuju_at", {
+    withTimezone: true,
+  }),
+  // Saldo dana masuk dari pembayaran digital yang siap ditarik (Rupiah).
+  saldoPembayaran: integer("saldo_pembayaran").notNull().default(0),
+  // (Tidak dipakai lagi — biaya kini ketentuan platform; disimpan utk kompat.)
   biayaAdminPersen: numeric("biaya_admin_persen", { precision: 5, scale: 2 })
     .notNull()
     .default("3.5"),
@@ -867,6 +873,34 @@ export const paymentOrders = pgTable(
   ],
 );
 
+// --- withdrawals: penarikan dana pembayaran digital ke bank (Phase 6) ----
+export const withdrawals = pgTable(
+  "withdrawals",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    // Jumlah yang ditarik dari saldo pembayaran (kotor).
+    amount: integer("amount").notNull(),
+    // Biaya transfer (ketentuan platform / sesuai bank).
+    fee: integer("fee").notNull().default(0),
+    // Nominal bersih yang diterima ke rekening (amount − fee).
+    netAmount: integer("net_amount").notNull(),
+    bankNama: text("bank_nama").notNull(),
+    bankRekening: text("bank_rekening").notNull(),
+    bankAtasNama: text("bank_atas_nama").notNull(),
+    status: coinTopupStatusEnum("status").notNull().default("pending"),
+    catatan: text("catatan"),
+    createdBy: uuid("created_by"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    processedAt: timestamp("processed_at", { withTimezone: true }),
+  },
+  (t) => [index("withdrawals_tenant_id_idx").on(t.tenantId)],
+);
+
 export const inventoryItemsRelations = relations(inventoryItems, ({ one }) => ({
   tenant: one(tenants, {
     fields: [inventoryItems.tenantId],
@@ -934,3 +968,5 @@ export type CoinTopupOrder = typeof coinTopupOrders.$inferSelect;
 export type NewCoinTopupOrder = typeof coinTopupOrders.$inferInsert;
 export type PaymentOrder = typeof paymentOrders.$inferSelect;
 export type NewPaymentOrder = typeof paymentOrders.$inferInsert;
+export type Withdrawal = typeof withdrawals.$inferSelect;
+export type NewWithdrawal = typeof withdrawals.$inferInsert;

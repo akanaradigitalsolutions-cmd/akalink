@@ -90,7 +90,7 @@ export async function createTransactionPayment(input: {
     .limit(1);
   if (pending?.paymentUrl) return { ok: true, url: pending.paymentUrl };
 
-  const { feeAdmin, feeTransfer, net } = hitungFee(gross, fee.persen, fee.transfer);
+  const { feeAdmin, net } = hitungFee(gross);
 
   const [me] = await db
     .select({ id: employees.id })
@@ -121,7 +121,7 @@ export async function createTransactionPayment(input: {
       invoiceNumber,
       amount: gross,
       feeAdmin,
-      feeTransfer,
+      feeTransfer: 0,
       netAmount: net,
       status: "pending",
       createdBy: me?.id ?? null,

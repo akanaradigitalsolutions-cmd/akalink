@@ -56,7 +56,7 @@ export default async function DetailTransaksiPage({
   const feeCfg = await getPaymentFeeConfig(tenantId);
   const showDigital = feeCfg.aktif && tx.statusPembayaran !== "lunas";
   const grossTx = Math.round(Number(tx.grandTotal));
-  const feeParts = hitungFee(grossTx, feeCfg.persen, feeCfg.transfer);
+  const feeParts = hitungFee(grossTx);
   const lastOrder = showDigital
     ? await getLatestPaymentOrder(tenantId, tx.id)
     : null;
@@ -241,7 +241,6 @@ export default async function DetailTransaksiPage({
           txId={tx.id}
           gross={grossTx}
           feeAdmin={feeParts.feeAdmin}
-          feeTransfer={feeParts.feeTransfer}
           net={feeParts.net}
           persen={feeCfg.persen}
           existingUrl={existingUrl}

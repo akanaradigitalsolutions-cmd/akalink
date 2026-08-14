@@ -9,39 +9,36 @@ import {
   type PaymentOrder,
 } from "@akalink/db";
 import { postJournal, hasJournal } from "@/lib/journal";
-import { seedDefaultCoaIfEmpty, ensureCoaAccount, AKUN_BIAYA_PG } from "@/lib/coa";
+import {
+  seedDefaultCoaIfEmpty,
+  ensureCoaAccount,
+  AKUN_BIAYA_PG,
+  AKUN_DANA_DIGITAL,
+} from "@/lib/coa";
 import { awardPointsOnPayment } from "@/lib/loyalty";
+import { PG_ADMIN_PERSEN } from "@/lib/payment-fee";
 
 /**
  * ============================================================================
  *  Pembayaran nota konsumen via DOKU (QRIS / e-wallet / VA)
  * ----------------------------------------------------------------------------
- *  Biaya penanganan (ditanggung laundry): admin % + biaya transfer tetap.
- *  Konsumen membayar penuh (kotor); laundry menerima bersih; selisihnya
- *  dibukukan sebagai beban.
+ *  Biaya proses (MDR) = 3,5% (ketentuan platform), dipotong tiap transaksi.
+ *  Dana bersih masuk ke "Saldo Pembayaran Digital" laundry, dan bisa ditarik
+ *  ke rekening bank (biaya transfer dikenakan saat withdraw).
  *
  *  Jurnal pelunasan digital:
- *    Dr 1.1.04 Bank                          (bersih)
- *    Dr 5.3  Beban Biaya Pembayaran Digital  (biaya)
+ *    Dr 1.1.05 Dana Pembayaran Digital       (bersih)
+ *    Dr 5.3   Beban Biaya Pembayaran Digital (biaya 3,5%)
  *      Cr 1.2 Piutang Usaha                  (kotor)
  * ============================================================================
  */
 
-export type PaymentFeeConfig = {
-  aktif: boolean;
-  persen: number;
-  transfer: number;
-};
+export type PaymentFeeConfig = { aktif: boolean; persen: number };
 
-export function hitungFee(
-  gross: number,
-  persen: number,
-  transfer: number,
-): { feeAdmin: number; feeTransfer: number; net: number } {
-  const feeAdmin = Math.round((gross * persen) / 100);
-  const feeTransfer = Math.max(0, Math.floor(transfer));
-  const net = Math.max(0, gross - feeAdmin - feeTransfer);
-  return { feeAdmin, feeTransfer, net };
+export function hitungFee(gross: number): { feeAdmin: number; net: number } {
+  const feeAdmin = Math.round((gross * PG_ADMIN_PERSEN) / 100);
+  const net = Math.max(0, gross - feeAdmin);
+  return { feeAdmin, net };
 }
 
 export async function getPaymentFeeConfig(
@@ -49,19 +46,11 @@ export async function getPaymentFeeConfig(
 ): Promise<PaymentFeeConfig> {
   const db = getDb();
   const [t] = await db
-    .select({
-      aktif: tenants.fiturBayarDigital,
-      persen: tenants.biayaAdminPersen,
-      transfer: tenants.biayaTransfer,
-    })
+    .select({ aktif: tenants.fiturBayarDigital })
     .from(tenants)
     .where(eq(tenants.id, tenantId))
     .limit(1);
-  return {
-    aktif: t?.aktif ?? false,
-    persen: Number(t?.persen ?? 3.5),
-    transfer: t?.transfer ?? 2500,
-  };
+  return { aktif: t?.aktif ?? false, persen: PG_ADMIN_PERSEN };
 }
 
 /** Pesanan pembayaran terbaru untuk sebuah transaksi (untuk tampilan). */
@@ -85,16 +74,15 @@ export async function getLatestPaymentOrder(
 }
 
 /**
- * Selesaikan sebuah payment order yang SUKSES: tandai lunas, posting jurnal
- * pelunasan (idempoten), dan beri poin loyalitas bila aktif. Aman dipanggil
- * berulang (webhook / cek status manual).
+ * Selesaikan payment order yang SUKSES: tandai lunas, tambah saldo pembayaran,
+ * posting jurnal pelunasan (idempoten), beri poin loyalitas bila aktif.
+ * Aman dipanggil berulang (webhook / cek status manual).
  */
 export async function settlePaymentOrder(order: PaymentOrder): Promise<void> {
   if (order.status === "success") return;
   const db = getDb();
   const tenantId = order.tenantId;
 
-  // Ambil transaksi terkait (untuk poin & idempotensi).
   const [tx] = await db
     .select({
       id: transactions.id,
@@ -109,16 +97,20 @@ export async function settlePaymentOrder(order: PaymentOrder): Promise<void> {
 
   await seedDefaultCoaIfEmpty(tenantId);
   await ensureCoaAccount(tenantId, AKUN_BIAYA_PG);
+  await ensureCoaAccount(tenantId, AKUN_DANA_DIGITAL);
 
-  const fee = order.feeAdmin + order.feeTransfer;
+  const fee = order.feeAdmin;
   const gross = order.amount;
   const net = order.netAmount;
 
   const alreadyPelunasan = await hasJournal(tenantId, "pelunasan", tx.id);
 
-  // Konfigurasi poin.
   const [t] = await db
-    .select({ poinRupiah: tenants.poinRupiah, fiturPoin: tenants.fiturPoin })
+    .select({
+      poinRupiah: tenants.poinRupiah,
+      fiturPoin: tenants.fiturPoin,
+      saldoPembayaran: tenants.saldoPembayaran,
+    })
     .from(tenants)
     .where(eq(tenants.id, tenantId))
     .limit(1);
@@ -127,22 +119,31 @@ export async function settlePaymentOrder(order: PaymentOrder): Promise<void> {
     !!t?.fiturPoin && poinRupiah > 0 && !!tx.consumerId && Number(tx.grandTotal) > 0;
 
   await db.transaction(async (trx) => {
-    // Tandai order sukses.
     await trx
       .update(paymentOrders)
       .set({ status: "success", paidAt: new Date() })
       .where(eq(paymentOrders.id, order.id));
 
-    // Tandai transaksi lunas.
     await trx
       .update(transactions)
       .set({ statusPembayaran: "lunas", updatedAt: new Date() })
       .where(and(eq(transactions.id, tx.id), eq(transactions.tenantId, tenantId)));
 
-    // Jurnal pelunasan digital (sekali saja).
+    // Tambah saldo dana pembayaran digital (siap ditarik).
+    const [cur] = await trx
+      .select({ saldo: tenants.saldoPembayaran })
+      .from(tenants)
+      .where(eq(tenants.id, tenantId))
+      .for("update")
+      .limit(1);
+    await trx
+      .update(tenants)
+      .set({ saldoPembayaran: (cur?.saldo ?? 0) + net, updatedAt: new Date() })
+      .where(eq(tenants.id, tenantId));
+
     if (!alreadyPelunasan && gross > 0) {
       const lines: { kode: string; debit?: number; kredit?: number }[] = [
-        { kode: "1.1.04", debit: net }, // Dr Bank (bersih)
+        { kode: AKUN_DANA_DIGITAL, debit: net }, // Dr Dana Pembayaran Digital
       ];
       if (fee > 0) lines.push({ kode: AKUN_BIAYA_PG, debit: fee }); // Dr Beban PG
       lines.push({ kode: "1.2", kredit: gross }); // Cr Piutang (kotor)
@@ -154,7 +155,6 @@ export async function settlePaymentOrder(order: PaymentOrder): Promise<void> {
       });
     }
 
-    // Poin loyalitas (idempoten via ledger).
     if (berikanPoin && tx.consumerId) {
       await awardPointsOnPayment(
         trx,

@@ -17,10 +17,13 @@ type Initial = {
   fiturPoin: boolean;
   fiturPromo: boolean;
   fiturBayarDigital: boolean;
-  biayaAdminPersen: number;
-  biayaTransfer: number;
+  bayarDigitalSetuju: boolean;
   syaratKetentuan: string[];
 };
+
+// Ketentuan biaya pembayaran digital (platform AkaLink).
+const PG_ADMIN_PERSEN = 3.5;
+const WITHDRAW_FEE = 5000;
 
 export function SettingsForm({
   initial,
@@ -44,12 +47,7 @@ export function SettingsForm({
   const [fiturBayarDigital, setFiturBayarDigital] = useState(
     initial.fiturBayarDigital,
   );
-  const [biayaAdminPersen, setBiayaAdminPersen] = useState(
-    String(initial.biayaAdminPersen ?? 3.5),
-  );
-  const [biayaTransfer, setBiayaTransfer] = useState(
-    String(initial.biayaTransfer ?? 2500),
-  );
+  const [setujuBayar, setSetujuBayar] = useState(initial.bayarDigitalSetuju);
   const [sk, setSk] = useState<string[]>(
     initial.syaratKetentuan.length ? initial.syaratKetentuan : [""],
   );
@@ -70,6 +68,12 @@ export function SettingsForm({
       setMsg({ text: "Nama usaha wajib diisi." });
       return;
     }
+    if (fiturBayarDigital && !initial.bayarDigitalSetuju && !setujuBayar) {
+      setMsg({
+        text: "Centang persetujuan syarat biaya sebelum mengaktifkan pembayaran digital.",
+      });
+      return;
+    }
     start(async () => {
       const res = await updateSettings({
         nama,
@@ -81,8 +85,7 @@ export function SettingsForm({
         fiturPoin,
         fiturPromo,
         fiturBayarDigital,
-        biayaAdminPersen: Number(biayaAdminPersen) || 0,
-        biayaTransfer: Number(biayaTransfer) || 0,
+        setujuBayarDigital: setujuBayar,
         syaratKetentuan: sk,
       });
       if (res.ok) {
@@ -209,59 +212,56 @@ export function SettingsForm({
         />
 
         {fiturBayarDigital && (
-          <div className="mt-3 rounded-xl bg-slate-50 p-3 dark:bg-slate-800/50">
-            <p className="mb-3 text-xs text-slate-500 dark:text-slate-400">
-              Biaya penanganan pembayaran digital (ditanggung laundry, dipotong
-              dari dana yang Anda terima). Dicatat otomatis sebagai beban.
+          <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-900 dark:bg-amber-950/30">
+            <p className="mb-2 text-sm font-semibold text-amber-900 dark:text-amber-200">
+              Ketentuan Biaya (ditetapkan AkaLink)
             </p>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Field label="Biaya admin (%)">
-                <div className="flex items-center gap-2">
-                  <input
-                    value={biayaAdminPersen}
-                    onChange={(e) =>
-                      setBiayaAdminPersen(
-                        e.target.value.replace(/[^0-9.]/g, ""),
-                      )
-                    }
-                    inputMode="decimal"
-                    placeholder="mis. 3.5"
-                    className={`${inputBase} w-full`}
-                  />
-                  <span className="text-sm text-slate-400">%</span>
-                </div>
-              </Field>
-              <Field label="Biaya transfer (Rp)">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-slate-400">Rp</span>
-                  <input
-                    value={biayaTransfer}
-                    onChange={(e) =>
-                      setBiayaTransfer(e.target.value.replace(/[^0-9]/g, ""))
-                    }
-                    inputMode="numeric"
-                    placeholder="mis. 2500"
-                    className={`${inputBase} w-full`}
-                  />
-                </div>
-              </Field>
-            </div>
-            <p className="mt-2 text-xs text-slate-400">
-              Contoh: nota Rp100.000 → biaya {biayaAdminPersen || 0}% (Rp
-              {Math.round(
-                (100000 * (Number(biayaAdminPersen) || 0)) / 100,
+            <ul className="mb-3 flex flex-col gap-1 text-xs text-amber-900/90 dark:text-amber-200/90">
+              <li>
+                • <b>Biaya proses {PG_ADMIN_PERSEN}%</b> per transaksi, dipotong
+                otomatis dari tiap pembayaran konsumen.
+              </li>
+              <li>
+                • <b>Biaya transfer Rp
+                {WITHDRAW_FEE.toLocaleString("id-ID")}</b> per penarikan dana ke
+                rekening bank Anda.
+              </li>
+              <li>
+                • Dana masuk ke <b>Saldo Pembayaran Digital</b> dan dapat ditarik
+                (withdraw) ke rekening bank melalui menu <b>Dana Masuk</b>.
+              </li>
+            </ul>
+            <p className="mb-3 text-xs text-amber-900/80 dark:text-amber-200/80">
+              Contoh: konsumen bayar Rp100.000 → biaya {PG_ADMIN_PERSEN}% (Rp
+              {Math.round((100000 * PG_ADMIN_PERSEN) / 100).toLocaleString(
+                "id-ID",
+              )}
+              ) → masuk saldo Rp
+              {(
+                100000 - Math.round((100000 * PG_ADMIN_PERSEN) / 100)
               ).toLocaleString("id-ID")}
-              ) + transfer Rp
-              {(Number(biayaTransfer) || 0).toLocaleString("id-ID")} → Anda
-              terima Rp
-              {Math.max(
-                0,
-                100000 -
-                  Math.round((100000 * (Number(biayaAdminPersen) || 0)) / 100) -
-                  (Number(biayaTransfer) || 0),
-              ).toLocaleString("id-ID")}
-              .
+              . Biaya ini adalah beban laundry dan tercatat otomatis di
+              pembukuan.
             </p>
+
+            {initial.bayarDigitalSetuju ? (
+              <p className="text-xs font-medium text-green-700 dark:text-green-400">
+                ✓ Anda telah menyetujui ketentuan biaya ini.
+              </p>
+            ) : (
+              <label className="flex items-start gap-2 text-xs text-amber-900 dark:text-amber-200">
+                <input
+                  type="checkbox"
+                  checked={setujuBayar}
+                  onChange={(e) => setSetujuBayar(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded border-amber-400"
+                />
+                <span>
+                  Saya telah membaca dan <b>menyetujui</b> ketentuan biaya
+                  pembayaran digital AkaLink di atas.
+                </span>
+              </label>
+            )}
           </div>
         )}
       </section>

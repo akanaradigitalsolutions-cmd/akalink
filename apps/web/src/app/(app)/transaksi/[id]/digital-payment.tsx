@@ -12,7 +12,6 @@ export function DigitalPayment({
   txId,
   gross,
   feeAdmin,
-  feeTransfer,
   net,
   persen,
   existingUrl,
@@ -21,7 +20,6 @@ export function DigitalPayment({
   txId: string;
   gross: number;
   feeAdmin: number;
-  feeTransfer: number;
   net: number;
   persen: number;
   existingUrl: string | null;
@@ -94,15 +92,11 @@ export function DigitalPayment({
           <span className="font-medium">{formatRupiah(gross)}</span>
         </div>
         <div className="flex justify-between text-slate-400">
-          <span>Biaya admin ({persen}%)</span>
+          <span>Biaya proses ({persen}%)</span>
           <span>− {formatRupiah(feeAdmin)}</span>
         </div>
-        <div className="flex justify-between text-slate-400">
-          <span>Biaya transfer</span>
-          <span>− {formatRupiah(feeTransfer)}</span>
-        </div>
         <div className="mt-1 flex justify-between border-t border-slate-100 pt-1 font-semibold text-slate-800 dark:border-slate-800 dark:text-slate-100">
-          <span>Anda terima (bersih)</span>
+          <span>Masuk saldo pembayaran</span>
           <span>{formatRupiah(net)}</span>
         </div>
       </div>

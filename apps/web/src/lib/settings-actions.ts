@@ -18,8 +18,8 @@ export type SettingsInput = {
   fiturPoin?: boolean;
   fiturPromo?: boolean;
   fiturBayarDigital?: boolean;
-  biayaAdminPersen?: number | string;
-  biayaTransfer?: number | string;
+  // Persetujuan syarat biaya pembayaran digital (wajib saat mengaktifkan).
+  setujuBayarDigital?: boolean;
 };
 
 export async function updateSettings(
@@ -46,6 +46,28 @@ export async function updateSettings(
 
   try {
     const db = getDb();
+
+    // Pembayaran digital: wajib menyetujui syarat sebelum aktivasi pertama.
+    const [cur] = await db
+      .select({ setujuAt: tenants.bayarDigitalSetujuAt })
+      .from(tenants)
+      .where(eq(tenants.id, tenantId))
+      .limit(1);
+    const sudahSetuju = !!cur?.setujuAt;
+    const aktifkanBayar = !!input.fiturBayarDigital;
+    if (aktifkanBayar && !sudahSetuju && !input.setujuBayarDigital) {
+      return {
+        ok: false,
+        error:
+          "Anda harus menyetujui syarat biaya pembayaran digital sebelum mengaktifkannya.",
+      };
+    }
+    // Catat waktu persetujuan sekali (saat pertama menyetujui).
+    const setujuAt =
+      aktifkanBayar && !sudahSetuju && input.setujuBayarDigital
+        ? new Date()
+        : cur?.setujuAt ?? null;
+
     await db
       .update(tenants)
       .set({
@@ -58,11 +80,8 @@ export async function updateSettings(
         fiturMember: !!input.fiturMember,
         fiturPoin: !!input.fiturPoin,
         fiturPromo: !!input.fiturPromo,
-        fiturBayarDigital: !!input.fiturBayarDigital,
-        biayaAdminPersen: String(
-          Math.min(100, Math.max(0, Number(input.biayaAdminPersen) || 0)),
-        ),
-        biayaTransfer: Math.max(0, Math.floor(Number(input.biayaTransfer) || 0)),
+        fiturBayarDigital: aktifkanBayar,
+        bayarDigitalSetujuAt: setujuAt,
         updatedAt: new Date(),
       })
       .where(eq(tenants.id, tenantId));

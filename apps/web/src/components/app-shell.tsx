@@ -23,6 +23,7 @@ export function AppShell({
   activeOutletId = null,
   showMember = false,
   showPromo = false,
+  showBayar = false,
   children,
 }: {
   tenantName: string;
@@ -32,6 +33,7 @@ export function AppShell({
   activeOutletId?: string | null;
   showMember?: boolean;
   showPromo?: boolean;
+  showBayar?: boolean;
   children: React.ReactNode;
 }) {
   const initials = initialsOf(userName || "?");
@@ -43,7 +45,12 @@ export function AppShell({
         <div className="px-2">
           <Logo size={36} subtitle={null} />
         </div>
-        <SidebarNav role={role} showMember={showMember} showPromo={showPromo} />
+        <SidebarNav
+          role={role}
+          showMember={showMember}
+          showPromo={showPromo}
+          showBayar={showBayar}
+        />
         <form action={keluar}>
           <button
             type="submit"
@@ -65,6 +72,7 @@ export function AppShell({
               userName={userName}
               showMember={showMember}
               showPromo={showPromo}
+              showBayar={showBayar}
             />
             <div className="shrink-0 md:hidden">
               <Logo size={30} showText={false} />
