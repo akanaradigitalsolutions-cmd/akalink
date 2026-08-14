@@ -9,6 +9,7 @@ import {
   buyStock,
   useStock,
   adjustStock,
+  transferStock,
 } from "@/lib/inventory-actions";
 import {
   createSupplier,
@@ -55,17 +56,20 @@ function fmtQty(v: string | number) {
   return Number.isInteger(n) ? String(n) : n.toFixed(2).replace(/\.?0+$/, "");
 }
 
-type Mode = "beli" | "pakai" | "opname" | "edit";
+type Mode = "beli" | "pakai" | "opname" | "edit" | "transfer";
+type OutletOpt = { id: string; nama: string };
 
 export function InventoryManager({
   items,
   kas,
   suppliers,
+  transferOutlets = [],
   movements,
 }: {
   items: Item[];
   kas: Kas[];
   suppliers: Supplier[];
+  transferOutlets?: OutletOpt[];
   movements: Mov[];
 }) {
   const router = useRouter();
@@ -164,6 +168,9 @@ export function InventoryManager({
                   <div className="flex flex-wrap gap-1.5">
                     <Act label="Beli" onClick={() => setActive({ id: it.id, mode: "beli" })} />
                     <Act label="Pakai" onClick={() => setActive({ id: it.id, mode: "pakai" })} />
+                    {transferOutlets.length > 0 && (
+                      <Act label="Transfer" onClick={() => setActive({ id: it.id, mode: "transfer" })} />
+                    )}
                     <Act label="Opname" onClick={() => setActive({ id: it.id, mode: "opname" })} />
                     <Act label="Edit" onClick={() => setActive({ id: it.id, mode: "edit" })} />
                   </div>
@@ -199,6 +206,25 @@ export function InventoryManager({
                           keterangan: ket,
                         });
                         if (res.ok) done("Pemakaian stok tercatat ✓");
+                        else setMsg({ text: res.error });
+                      })
+                    }
+                  />
+                )}
+                {open && active.mode === "transfer" && (
+                  <TransferForm
+                    item={it}
+                    outlets={transferOutlets}
+                    pending={pending}
+                    onCancel={() => setActive(null)}
+                    onSubmit={(qty, toOutletId) =>
+                      start(async () => {
+                        const res = await transferStock({
+                          itemId: it.id,
+                          qty,
+                          toOutletId,
+                        });
+                        if (res.ok) done("Stok ditransfer ✓");
                         else setMsg({ text: res.error });
                       })
                     }
@@ -572,6 +598,60 @@ function SimpleQtyForm({
           />
         </div>
         <Buttons pending={pending} onCancel={onCancel} />
+      </form>
+    </Panel>
+  );
+}
+
+function TransferForm({
+  item,
+  outlets,
+  pending,
+  onSubmit,
+  onCancel,
+}: {
+  item: Item;
+  outlets: OutletOpt[];
+  pending: boolean;
+  onSubmit: (qty: number, toOutletId: string) => void;
+  onCancel: () => void;
+}) {
+  const [qty, setQty] = useState("");
+  const [toOutletId, setTo] = useState(outlets[0]?.id ?? "");
+  return (
+    <Panel>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          onSubmit(Number(qty) || 0, toOutletId);
+        }}
+        className="flex flex-col gap-2"
+      >
+        <div className="grid gap-2 sm:grid-cols-2">
+          <input
+            value={qty}
+            onChange={(e) => setQty(e.target.value)}
+            inputMode="decimal"
+            autoFocus
+            placeholder={`Jumlah transfer (${item.satuan})`}
+            className={`${inputBase} w-full`}
+          />
+          <select
+            value={toOutletId}
+            onChange={(e) => setTo(e.target.value)}
+            className={`${inputBase} w-full`}
+          >
+            {outlets.map((o) => (
+              <option key={o.id} value={o.id}>
+                Ke: {o.nama}
+              </option>
+            ))}
+          </select>
+        </div>
+        <p className="text-[11px] text-slate-400">
+          Stok pindah ke outlet tujuan (dibuat otomatis bila belum ada).
+        </p>
+        <Buttons pending={pending} onCancel={onCancel} submitLabel="Transfer" />
       </form>
     </Panel>
   );

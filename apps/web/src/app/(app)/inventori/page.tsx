@@ -1,7 +1,15 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { getSessionUser, getTenantIdFromUser } from "@/lib/auth";
-import { getActiveOutlet, seedDefaultOutletIfEmpty } from "@/lib/outlets";
+import {
+  getSessionUser,
+  getTenantIdFromUser,
+  getRoleFromUser,
+} from "@/lib/auth";
+import {
+  getActiveOutlet,
+  getOutlets,
+  seedDefaultOutletIfEmpty,
+} from "@/lib/outlets";
 import { getInventory, getRecentMovements } from "@/lib/inventory";
 import { getSuppliers } from "@/lib/suppliers";
 import { getCoa, seedDefaultCoaIfEmpty } from "@/lib/coa";
@@ -20,12 +28,20 @@ export default async function InventoriPage() {
   const outlet = await getActiveOutlet(tenantId);
   if (!outlet) redirect("/dashboard");
 
-  const [items, movements, akun, suppliers] = await Promise.all([
+  const isOwner = getRoleFromUser(user) === "owner";
+  const [items, movements, akun, suppliers, allOutlets] = await Promise.all([
     getInventory(tenantId, outlet.id),
     getRecentMovements(tenantId, outlet.id, 25),
     getCoa(tenantId),
     getSuppliers(tenantId),
+    getOutlets(tenantId),
   ]);
+  // Tujuan transfer: outlet lain (khusus owner).
+  const transferOutlets = isOwner
+    ? allOutlets
+        .filter((o) => o.id !== outlet.id)
+        .map((o) => ({ id: o.id, nama: o.nama }))
+    : [];
   const kas = akun
     .filter((a) => a.isKas && a.aktif)
     .map((a) => ({ kode: a.kode, nama: a.nama }));
@@ -48,6 +64,7 @@ export default async function InventoriPage() {
       <InventoryManager
         items={items}
         kas={kas}
+        transferOutlets={transferOutlets}
         suppliers={suppliers.map((s) => ({ id: s.id, nama: s.nama, telepon: s.telepon, alamat: s.alamat, aktif: s.aktif }))}
         movements={movements.map((m) => ({
           id: m.id,

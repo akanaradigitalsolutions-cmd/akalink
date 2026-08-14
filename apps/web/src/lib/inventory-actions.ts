@@ -1,14 +1,19 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import {
   getDb,
   inventoryItems,
   inventoryMovements,
   suppliers,
+  outlets,
 } from "@akalink/db";
-import { getSessionUser, getTenantIdFromUser } from "@/lib/auth";
+import {
+  getSessionUser,
+  getTenantIdFromUser,
+  getRoleFromUser,
+} from "@/lib/auth";
 import { getActiveOutlet, seedDefaultOutletIfEmpty } from "@/lib/outlets";
 import { seedDefaultCoaIfEmpty } from "@/lib/coa";
 import { postJournal } from "@/lib/journal";
@@ -372,5 +377,126 @@ export async function adjustStock(input: {
     };
   }
   revalidate();
+  return { ok: true };
+}
+
+/** Transfer stok dari outlet aktif ke outlet lain (owner). Tanpa jurnal. */
+export async function transferStock(input: {
+  itemId: string;
+  qty: number | string;
+  toOutletId: string;
+  keterangan?: string;
+}): Promise<InvResult> {
+  const user = await getSessionUser();
+  const c = await ctx();
+  if ("error" in c) return { ok: false, error: c.error };
+  if (getRoleFromUser(user) !== "owner")
+    return { ok: false, error: "Hanya pemilik yang dapat transfer stok." };
+
+  const qty = num(input.qty);
+  if (!(qty > 0)) return { ok: false, error: "Jumlah harus lebih dari 0." };
+  if (input.toOutletId === c.outletId)
+    return { ok: false, error: "Outlet tujuan harus berbeda." };
+
+  const item = await loadItem(c, input.itemId);
+  if (!item) return { ok: false, error: "Bahan tidak ditemukan." };
+  if (qty > Number(item.stok))
+    return {
+      ok: false,
+      error: `Stok tidak cukup (tersisa ${Number(item.stok)} ${item.satuan}).`,
+    };
+
+  const db = getDb();
+  const outletRows = await db
+    .select({ id: outlets.id, nama: outlets.nama })
+    .from(outlets)
+    .where(
+      and(
+        eq(outlets.tenantId, c.tenantId),
+        inArray(outlets.id, [c.outletId, input.toOutletId]),
+      ),
+    );
+  const dest = outletRows.find((o) => o.id === input.toOutletId);
+  const src = outletRows.find((o) => o.id === c.outletId);
+  if (!dest) return { ok: false, error: "Outlet tujuan tidak ditemukan." };
+
+  try {
+    await db.transaction(async (tx) => {
+      // Sumber: kurangi stok.
+      const srcSaldo = Number(item.stok) - qty;
+      await tx
+        .update(inventoryItems)
+        .set({ stok: String(srcSaldo), updatedAt: new Date() })
+        .where(eq(inventoryItems.id, item.id));
+      await tx.insert(inventoryMovements).values({
+        tenantId: c.tenantId,
+        outletId: c.outletId,
+        itemId: item.id,
+        tipe: "penyesuaian",
+        qtyDelta: String(-qty),
+        hargaSatuan: item.harga,
+        saldoSesudah: String(srcSaldo),
+        keterangan: input.keterangan?.trim() || `Transfer ke ${dest.nama}`,
+        createdBy: c.userId,
+      });
+
+      // Tujuan: cari bahan serupa (nama+satuan), buat bila belum ada.
+      const [existing] = await tx
+        .select()
+        .from(inventoryItems)
+        .where(
+          and(
+            eq(inventoryItems.tenantId, c.tenantId),
+            eq(inventoryItems.outletId, input.toOutletId),
+            eq(inventoryItems.nama, item.nama),
+            eq(inventoryItems.satuan, item.satuan),
+          ),
+        )
+        .limit(1);
+
+      let destItemId: string;
+      let destSaldo: number;
+      if (existing) {
+        destItemId = existing.id;
+        destSaldo = Number(existing.stok) + qty;
+        await tx
+          .update(inventoryItems)
+          .set({ stok: String(destSaldo), updatedAt: new Date() })
+          .where(eq(inventoryItems.id, existing.id));
+      } else {
+        destSaldo = qty;
+        const [created] = await tx
+          .insert(inventoryItems)
+          .values({
+            tenantId: c.tenantId,
+            outletId: input.toOutletId,
+            nama: item.nama,
+            satuan: item.satuan,
+            harga: item.harga,
+            minStok: item.minStok,
+            stok: String(qty),
+          })
+          .returning({ id: inventoryItems.id });
+        destItemId = created.id;
+      }
+      await tx.insert(inventoryMovements).values({
+        tenantId: c.tenantId,
+        outletId: input.toOutletId,
+        itemId: destItemId,
+        tipe: "penyesuaian",
+        qtyDelta: String(qty),
+        hargaSatuan: item.harga,
+        saldoSesudah: String(destSaldo),
+        keterangan: `Transfer dari ${src?.nama ?? "outlet lain"}`,
+        createdBy: c.userId,
+      });
+    });
+  } catch (e) {
+    return {
+      ok: false,
+      error: e instanceof Error ? e.message : "Gagal transfer.",
+    };
+  }
+  revalidatePath("/inventori");
   return { ok: true };
 }
