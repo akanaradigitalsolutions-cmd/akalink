@@ -17,6 +17,7 @@ export type SettingsInput = {
   fiturMember?: boolean;
   fiturPoin?: boolean;
   fiturPromo?: boolean;
+  fiturBayarDigital?: boolean;
 };
 
 export async function updateSettings(
@@ -55,6 +56,7 @@ export async function updateSettings(
         fiturMember: !!input.fiturMember,
         fiturPoin: !!input.fiturPoin,
         fiturPromo: !!input.fiturPromo,
+        fiturBayarDigital: !!input.fiturBayarDigital,
         updatedAt: new Date(),
       })
       .where(eq(tenants.id, tenantId));

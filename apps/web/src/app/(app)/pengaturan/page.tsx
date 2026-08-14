@@ -38,6 +38,7 @@ export default async function PengaturanPage() {
           fiturMember: s.fiturMember,
           fiturPoin: s.fiturPoin,
           fiturPromo: s.fiturPromo,
+          fiturBayarDigital: s.fiturBayarDigital,
           syaratKetentuan:
             s.syaratKetentuan && s.syaratKetentuan.length
               ? s.syaratKetentuan

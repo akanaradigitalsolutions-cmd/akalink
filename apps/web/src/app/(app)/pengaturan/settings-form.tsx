@@ -16,6 +16,7 @@ type Initial = {
   fiturMember: boolean;
   fiturPoin: boolean;
   fiturPromo: boolean;
+  fiturBayarDigital: boolean;
   syaratKetentuan: string[];
 };
 
@@ -38,6 +39,9 @@ export function SettingsForm({
   const [fiturMember, setFiturMember] = useState(initial.fiturMember);
   const [fiturPoin, setFiturPoin] = useState(initial.fiturPoin);
   const [fiturPromo, setFiturPromo] = useState(initial.fiturPromo);
+  const [fiturBayarDigital, setFiturBayarDigital] = useState(
+    initial.fiturBayarDigital,
+  );
   const [sk, setSk] = useState<string[]>(
     initial.syaratKetentuan.length ? initial.syaratKetentuan : [""],
   );
@@ -68,6 +72,7 @@ export function SettingsForm({
         fiturMember,
         fiturPoin,
         fiturPromo,
+        fiturBayarDigital,
         syaratKetentuan: sk,
       });
       if (res.ok) {
@@ -175,6 +180,23 @@ export function SettingsForm({
             </div>
           )}
         </div>
+      </section>
+
+      {/* Pembayaran Digital */}
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
+        <h2 className="mb-1 text-sm font-semibold text-slate-900 dark:text-white">
+          Pembayaran Digital
+        </h2>
+        <p className="mb-4 text-xs text-slate-500 dark:text-slate-400">
+          Terima pembayaran konsumen lewat QRIS / e-wallet (via DOKU). Aktifkan
+          hanya bila laundry Anda memakainya.
+        </p>
+        <Toggle
+          label="Pembayaran Digital (QRIS / e-wallet)"
+          desc="Tampilkan opsi bayar QRIS di kasir & nota konsumen."
+          on={fiturBayarDigital}
+          onChange={setFiturBayarDigital}
+        />
       </section>
 
       {/* Syarat & Ketentuan */}

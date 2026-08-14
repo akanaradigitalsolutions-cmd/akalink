@@ -183,6 +183,20 @@
       "when": 1786697008769,
       "tag": "0025_suppliers_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1786698320257,
+      "tag": "0026_tough_hemingway",
+      "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1786698326874,
+      "tag": "0027_app_coin_rls",
+      "breakpoints": true
     }
   ]
 }

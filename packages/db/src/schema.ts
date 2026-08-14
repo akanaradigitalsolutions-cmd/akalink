@@ -61,6 +61,13 @@ export const tenants = pgTable("tenants", {
   fiturMember: boolean("fitur_member").notNull().default(false),
   fiturPoin: boolean("fitur_poin").notNull().default(false),
   fiturPromo: boolean("fitur_promo").notNull().default(false),
+  // Pembayaran digital konsumen (QRIS/e-wallet via DOKU).
+  fiturBayarDigital: boolean("fitur_bayar_digital").notNull().default(false),
+  // Saldo Koin AkaLink (dompet aplikasi milik laundry) — dalam Rupiah.
+  saldoKoin: integer("saldo_koin").notNull().default(0),
+  // Tarif pemakaian aplikasi (Rupiah) yang dipotong dari saldo koin.
+  biayaPerNota: integer("biaya_per_nota").notNull().default(50),
+  biayaPerWa: integer("biaya_per_wa").notNull().default(50),
   tier: tenantTierEnum("tier").notNull().default("basic"),
   status: tenantStatusEnum("status").notNull().default("trial"),
   createdAt: timestamp("created_at", { withTimezone: true })
@@ -748,6 +755,43 @@ export const pointTransactions = pgTable(
   ],
 );
 
+// --- app_coin_ledger: mutasi Saldo Koin AkaLink (Phase 6) ----------------
+// Monetisasi platform: setiap Nota & pengiriman WhatsApp memotong saldo koin
+// laundry. Isi ulang (top-up) via DOKU akan menambah saldo.
+export const appCoinTipeEnum = pgEnum("app_coin_tipe", [
+  "topup", // isi ulang saldo (mis. via DOKU)
+  "pemakaian", // potongan biaya (nota / whatsapp)
+  "bonus", // bonus/hadiah dari platform
+  "penyesuaian", // koreksi manual
+]);
+
+export const appCoinLedger = pgTable(
+  "app_coin_ledger",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    tipe: appCoinTipeEnum("tipe").notNull(),
+    // Delta bertanda (Rupiah): + menambah, − memotong saldo.
+    delta: integer("delta").notNull(),
+    // Saldo koin setelah mutasi ini (Rupiah).
+    saldoSesudah: integer("saldo_sesudah").notNull(),
+    keterangan: text("keterangan"),
+    // Sumber mutasi: 'nota' | 'whatsapp' | 'topup' | 'manual' | 'doku'.
+    refType: text("ref_type"),
+    refId: uuid("ref_id"),
+    createdBy: uuid("created_by"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("app_coin_tenant_id_idx").on(t.tenantId),
+    index("app_coin_ref_idx").on(t.refType, t.refId),
+  ],
+);
+
 export const inventoryItemsRelations = relations(inventoryItems, ({ one }) => ({
   tenant: one(tenants, {
     fields: [inventoryItems.tenantId],
@@ -809,3 +853,5 @@ export type Promo = typeof promos.$inferSelect;
 export type NewPromo = typeof promos.$inferInsert;
 export type Supplier = typeof suppliers.$inferSelect;
 export type NewSupplier = typeof suppliers.$inferInsert;
+export type AppCoinLedger = typeof appCoinLedger.$inferSelect;
+export type NewAppCoinLedger = typeof appCoinLedger.$inferInsert;

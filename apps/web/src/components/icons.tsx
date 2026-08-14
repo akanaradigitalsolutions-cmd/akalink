@@ -64,6 +64,16 @@ export function IconWallet(p: IconProps) {
   );
 }
 
+export function IconCoin(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <ellipse cx="12" cy="6" rx="8" ry="3.2" />
+      <path d="M4 6v6c0 1.77 3.58 3.2 8 3.2s8-1.43 8-3.2V6" />
+      <path d="M4 12v6c0 1.77 3.58 3.2 8 3.2s8-1.43 8-3.2v-6" />
+    </Svg>
+  );
+}
+
 export function IconChart(p: IconProps) {
   return (
     <Svg {...p}>

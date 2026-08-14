@@ -21,6 +21,7 @@ import { seedDefaultCoaIfEmpty } from "@/lib/coa";
 import { getActiveOutlet, seedDefaultOutletIfEmpty } from "@/lib/outlets";
 import { postJournal, hasJournal } from "@/lib/journal";
 import { awardPointsOnPayment } from "@/lib/loyalty";
+import { chargeAppCoin, getCoinConfig } from "@/lib/app-coin";
 
 const WORK_STATUSES = ["belum_dikerjakan", "proses", "selesai", "diambil"] as const;
 const PAY_STATUSES = ["belum_dibayar", "dp", "lunas"] as const;
@@ -144,6 +145,9 @@ export async function createTransaction(
   await seedDefaultOutletIfEmpty(tenantId);
   const activeOutlet = await getActiveOutlet(tenantId);
 
+  // Biaya aplikasi (Saldo Koin AkaLink) yang dipotong per nota.
+  const { biayaPerNota } = await getCoinConfig(tenantId);
+
   const txId = await db.transaction(async (tx) => {
     const [row] = await tx
       .insert(transactions)
@@ -183,6 +187,18 @@ export async function createTransaction(
       refId: row.id,
       lines: jLines,
     });
+
+    // Potong Saldo Koin AkaLink (biaya aplikasi per nota). Idempoten per nota;
+    // saldo boleh minus agar operasional laundry tidak terblokir.
+    if (biayaPerNota > 0) {
+      await chargeAppCoin(tx, tenantId, {
+        amount: biayaPerNota,
+        keterangan: `Biaya nota ${noNota}`,
+        refType: "nota",
+        refId: row.id,
+        createdBy: me?.id ?? null,
+      });
+    }
 
     return row.id;
   });
