@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getSessionUser, getTenantIdFromUser } from "@/lib/auth";
 import { getActiveOutlet, seedDefaultOutletIfEmpty } from "@/lib/outlets";
 import { getInventory, getRecentMovements } from "@/lib/inventory";
+import { getSuppliers } from "@/lib/suppliers";
 import { getCoa, seedDefaultCoaIfEmpty } from "@/lib/coa";
 import { InventoryManager } from "./inventory-manager";
 
@@ -19,10 +20,11 @@ export default async function InventoriPage() {
   const outlet = await getActiveOutlet(tenantId);
   if (!outlet) redirect("/dashboard");
 
-  const [items, movements, akun] = await Promise.all([
+  const [items, movements, akun, suppliers] = await Promise.all([
     getInventory(tenantId, outlet.id),
     getRecentMovements(tenantId, outlet.id, 25),
     getCoa(tenantId),
+    getSuppliers(tenantId),
   ]);
   const kas = akun
     .filter((a) => a.isKas && a.aktif)
@@ -46,6 +48,7 @@ export default async function InventoriPage() {
       <InventoryManager
         items={items}
         kas={kas}
+        suppliers={suppliers.map((s) => ({ id: s.id, nama: s.nama, telepon: s.telepon, alamat: s.alamat, aktif: s.aktif }))}
         movements={movements.map((m) => ({
           id: m.id,
           tipe: m.tipe,

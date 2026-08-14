@@ -2,7 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { and, eq } from "drizzle-orm";
-import { getDb, inventoryItems, inventoryMovements } from "@akalink/db";
+import {
+  getDb,
+  inventoryItems,
+  inventoryMovements,
+  suppliers,
+} from "@akalink/db";
 import { getSessionUser, getTenantIdFromUser } from "@/lib/auth";
 import { getActiveOutlet, seedDefaultOutletIfEmpty } from "@/lib/outlets";
 import { seedDefaultCoaIfEmpty } from "@/lib/coa";
@@ -146,12 +151,16 @@ async function loadItem(c: Ctx, id: string) {
   return item;
 }
 
-/** Beli stok → stok bertambah + jurnal Dr Persediaan / Cr Kas. */
+/**
+ * Beli stok → stok bertambah + jurnal Dr Persediaan / Cr Kas (atau Hutang).
+ * `kasKode` = "HUTANG" berarti beli kredit (Cr Hutang Usaha 2.1).
+ */
 export async function buyStock(input: {
   itemId: string;
   qty: number | string;
   totalHarga: number | string;
   kasKode: string;
+  supplierId?: string | null;
   keterangan?: string;
 }): Promise<InvResult> {
   const c = await ctx();
@@ -162,10 +171,27 @@ export async function buyStock(input: {
   const kas = String(input.kasKode ?? "");
   if (!(qty > 0)) return { ok: false, error: "Jumlah harus lebih dari 0." };
   if (!(total >= 0)) return { ok: false, error: "Total harga tidak valid." };
-  if (!kas) return { ok: false, error: "Pilih sumber kas." };
+  if (!kas) return { ok: false, error: "Pilih metode pembayaran." };
+  const kredit = kas === "HUTANG";
 
   const item = await loadItem(c, input.itemId);
   if (!item) return { ok: false, error: "Bahan tidak ditemukan." };
+
+  // Validasi supplier (bila dipilih).
+  let supplierId: string | null = null;
+  if (input.supplierId) {
+    const [s] = await getDb()
+      .select({ id: suppliers.id })
+      .from(suppliers)
+      .where(
+        and(
+          eq(suppliers.id, input.supplierId),
+          eq(suppliers.tenantId, c.tenantId),
+        ),
+      )
+      .limit(1);
+    supplierId = s?.id ?? null;
+  }
 
   const unit = qty > 0 ? total / qty : 0;
   const saldo = Number(item.stok) + qty;
@@ -182,11 +208,14 @@ export async function buyStock(input: {
         tenantId: c.tenantId,
         outletId: c.outletId,
         itemId: item.id,
+        supplierId,
         tipe: "pembelian",
         qtyDelta: String(qty),
         hargaSatuan: String(unit),
         saldoSesudah: String(saldo),
-        keterangan: input.keterangan?.trim() || `Beli ${item.nama}`,
+        keterangan:
+          input.keterangan?.trim() ||
+          `Beli ${item.nama}${kredit ? " (kredit)" : ""}`,
         createdBy: c.userId,
       });
       if (total > 0) {
@@ -196,7 +225,8 @@ export async function buyStock(input: {
           refId: item.id,
           lines: [
             { kode: "1.3", debit: total },
-            { kode: kas, kredit: total },
+            // Cr Kas (bila tunai) atau Cr Hutang Usaha 2.1 (bila kredit).
+            { kode: kredit ? "2.1" : kas, kredit: total },
           ],
         });
       }

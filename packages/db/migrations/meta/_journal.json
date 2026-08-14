@@ -169,6 +169,20 @@
       "when": 1786696307500,
       "tag": "0023_promos_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1786697007713,
+      "tag": "0024_violet_ben_grimm",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1786697008769,
+      "tag": "0025_suppliers_rls",
+      "breakpoints": true
     }
   ]
 }

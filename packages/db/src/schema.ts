@@ -625,6 +625,24 @@ export const inventoryMovementTypeEnum = pgEnum("inventory_movement_type", [
   "penyesuaian",
 ]);
 
+export const suppliers = pgTable(
+  "suppliers",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    nama: text("nama").notNull(),
+    telepon: text("telepon"),
+    alamat: text("alamat"),
+    aktif: boolean("aktif").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("suppliers_tenant_id_idx").on(t.tenantId)],
+);
+
 export const inventoryItems = pgTable(
   "inventory_items",
   {
@@ -672,6 +690,9 @@ export const inventoryMovements = pgTable(
     itemId: uuid("item_id")
       .notNull()
       .references(() => inventoryItems.id, { onDelete: "cascade" }),
+    supplierId: uuid("supplier_id").references(() => suppliers.id, {
+      onDelete: "set null",
+    }),
     tipe: inventoryMovementTypeEnum("tipe").notNull(),
     // Delta bertanda: + menambah stok, − mengurangi.
     qtyDelta: numeric("qty_delta", { precision: 14, scale: 2 }).notNull(),
@@ -786,3 +807,5 @@ export type PointTransaction = typeof pointTransactions.$inferSelect;
 export type NewPointTransaction = typeof pointTransactions.$inferInsert;
 export type Promo = typeof promos.$inferSelect;
 export type NewPromo = typeof promos.$inferInsert;
+export type Supplier = typeof suppliers.$inferSelect;
+export type NewSupplier = typeof suppliers.$inferInsert;

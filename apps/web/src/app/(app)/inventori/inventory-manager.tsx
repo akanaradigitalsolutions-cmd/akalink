@@ -10,9 +10,21 @@ import {
   useStock,
   adjustStock,
 } from "@/lib/inventory-actions";
+import {
+  createSupplier,
+  updateSupplier,
+  deleteSupplier,
+} from "@/lib/suppliers-actions";
 import { formatRupiah } from "@/lib/format";
 import { IconPlus, IconTrash } from "@/components/icons";
 
+type Supplier = {
+  id: string;
+  nama: string;
+  telepon: string | null;
+  alamat: string | null;
+  aktif: boolean;
+};
 type Item = {
   id: string;
   nama: string;
@@ -48,10 +60,12 @@ type Mode = "beli" | "pakai" | "opname" | "edit";
 export function InventoryManager({
   items,
   kas,
+  suppliers,
   movements,
 }: {
   items: Item[];
   kas: Kas[];
+  suppliers: Supplier[];
   movements: Mov[];
 }) {
   const router = useRouter();
@@ -102,6 +116,8 @@ export function InventoryManager({
           {msg.text}
         </p>
       )}
+
+      <SupplierSection suppliers={suppliers} />
 
       {/* Daftar bahan */}
       {items.length === 0 ? (
@@ -157,6 +173,7 @@ export function InventoryManager({
                   <BuyForm
                     item={it}
                     kas={kas}
+                    suppliers={suppliers.filter((s) => s.aktif)}
                     pending={pending}
                     onCancel={() => setActive(null)}
                     onSubmit={(d) =>
@@ -429,18 +446,20 @@ function AddForm({
 function BuyForm({
   item,
   kas,
+  suppliers,
   pending,
   onSubmit,
   onCancel,
 }: {
   item: Item;
   kas: Kas[];
+  suppliers: Supplier[];
   pending: boolean;
   onSubmit: (d: {
     qty: number;
     totalHarga: number;
     kasKode: string;
-    keterangan?: string;
+    supplierId?: string | null;
   }) => void;
   onCancel: () => void;
 }) {
@@ -449,6 +468,7 @@ function BuyForm({
   const [kasKode, setKas] = useState(
     kas.find((k) => k.kode === "1.1.02")?.kode ?? kas[0]?.kode ?? "",
   );
+  const [supplierId, setSupplier] = useState("");
   return (
     <Panel>
       <form
@@ -458,6 +478,7 @@ function BuyForm({
             qty: Number(qty) || 0,
             totalHarga: Number(total) || 0,
             kasKode,
+            supplierId: supplierId || null,
           });
         }}
         className="flex flex-col gap-2"
@@ -480,11 +501,24 @@ function BuyForm({
           <select
             value={kasKode}
             onChange={(e) => setKas(e.target.value)}
-            className={`${inputBase} w-full sm:col-span-2`}
+            className={`${inputBase} w-full`}
           >
             {kas.map((k) => (
               <option key={k.kode} value={k.kode}>
-                Dibayar dari: {k.nama}
+                Bayar dari: {k.nama}
+              </option>
+            ))}
+            <option value="HUTANG">Bayar nanti (Hutang)</option>
+          </select>
+          <select
+            value={supplierId}
+            onChange={(e) => setSupplier(e.target.value)}
+            className={`${inputBase} w-full`}
+          >
+            <option value="">Tanpa supplier</option>
+            {suppliers.map((s) => (
+              <option key={s.id} value={s.id}>
+                Supplier: {s.nama}
               </option>
             ))}
           </select>
@@ -617,5 +651,177 @@ function EditForm({
         </div>
       </form>
     </Panel>
+  );
+}
+
+function SupplierSection({ suppliers }: { suppliers: Supplier[] }) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
+  const [pending, start] = useTransition();
+  const [err, setErr] = useState<string>();
+
+  function refresh() {
+    setAdding(false);
+    setEditId(null);
+    router.refresh();
+  }
+
+  return (
+    <section className="rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between px-5 py-3 text-left"
+      >
+        <span className="text-sm font-semibold uppercase tracking-wide text-slate-400">
+          Supplier ({suppliers.length})
+        </span>
+        <span className="text-slate-400">{open ? "▲" : "▼"}</span>
+      </button>
+
+      {open && (
+        <div className="flex flex-col gap-3 border-t border-slate-100 p-5 dark:border-slate-800">
+          {!adding && editId === null && (
+            <button
+              onClick={() => setAdding(true)}
+              className="inline-flex w-fit items-center gap-2 rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+            >
+              <IconPlus className="h-4 w-4" />
+              Tambah Supplier
+            </button>
+          )}
+          {err && <p className="text-sm text-red-600">{err}</p>}
+
+          {adding && (
+            <SupplierForm
+              pending={pending}
+              onCancel={() => setAdding(false)}
+              onSubmit={(d) =>
+                start(async () => {
+                  const res = await createSupplier(d);
+                  if (res.ok) refresh();
+                  else setErr(res.error);
+                })
+              }
+            />
+          )}
+
+          <ul className="flex flex-col gap-2">
+            {suppliers.map((s) =>
+              editId === s.id ? (
+                <li key={s.id}>
+                  <SupplierForm
+                    initial={s}
+                    pending={pending}
+                    onCancel={() => setEditId(null)}
+                    onSubmit={(d) =>
+                      start(async () => {
+                        const res = await updateSupplier({ id: s.id, ...d });
+                        if (res.ok) refresh();
+                        else setErr(res.error);
+                      })
+                    }
+                  />
+                </li>
+              ) : (
+                <li
+                  key={s.id}
+                  className="flex items-center justify-between gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm dark:border-slate-800"
+                >
+                  <div className="min-w-0">
+                    <p className="font-medium text-slate-800 dark:text-slate-100">
+                      {s.nama}
+                      {!s.aktif && (
+                        <span className="ml-2 text-[10px] text-slate-400">
+                          (nonaktif)
+                        </span>
+                      )}
+                    </p>
+                    <p className="truncate text-xs text-slate-400">
+                      {[s.telepon, s.alamat].filter(Boolean).join(" · ") || "—"}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-1.5">
+                    <button
+                      onClick={() => {
+                        setEditId(s.id);
+                        setAdding(false);
+                      }}
+                      className="rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-600 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (!window.confirm(`Hapus supplier "${s.nama}"?`))
+                          return;
+                        start(async () => {
+                          const res = await deleteSupplier({ id: s.id });
+                          if (res.ok) refresh();
+                          else setErr(res.error);
+                        });
+                      }}
+                      disabled={pending}
+                      aria-label="Hapus"
+                      className="rounded-lg border border-red-200 p-1.5 text-red-500 transition hover:bg-red-50 disabled:opacity-60 dark:border-red-900/50 dark:hover:bg-red-950/40"
+                    >
+                      <IconTrash className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </li>
+              ),
+            )}
+          </ul>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function SupplierForm({
+  initial,
+  pending,
+  onSubmit,
+  onCancel,
+}: {
+  initial?: Supplier;
+  pending: boolean;
+  onSubmit: (d: { nama: string; telepon: string; alamat: string }) => void;
+  onCancel: () => void;
+}) {
+  const [nama, setNama] = useState(initial?.nama ?? "");
+  const [telepon, setTelepon] = useState(initial?.telepon ?? "");
+  const [alamat, setAlamat] = useState(initial?.alamat ?? "");
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        onSubmit({ nama, telepon, alamat });
+      }}
+      className="flex flex-col gap-2 rounded-lg bg-slate-50 p-3 dark:bg-slate-800/50"
+    >
+      <div className="grid gap-2 sm:grid-cols-3">
+        <input
+          value={nama}
+          onChange={(e) => setNama(e.target.value)}
+          placeholder="Nama supplier"
+          className={`${inputBase} w-full`}
+        />
+        <input
+          value={telepon}
+          onChange={(e) => setTelepon(e.target.value)}
+          placeholder="Telepon (opsional)"
+          className={`${inputBase} w-full`}
+        />
+        <input
+          value={alamat}
+          onChange={(e) => setAlamat(e.target.value)}
+          placeholder="Alamat (opsional)"
+          className={`${inputBase} w-full`}
+        />
+      </div>
+      <Buttons pending={pending} onCancel={onCancel} />
+    </form>
   );
 }
