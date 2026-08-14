@@ -211,6 +211,20 @@
       "when": 1786709593771,
       "tag": "0029_coin_topup_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1786715373649,
+      "tag": "0030_pale_vance_astro",
+      "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1786715374898,
+      "tag": "0031_payment_orders_rls",
+      "breakpoints": true
     }
   ]
 }

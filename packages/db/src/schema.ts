@@ -63,6 +63,11 @@ export const tenants = pgTable("tenants", {
   fiturPromo: boolean("fitur_promo").notNull().default(false),
   // Pembayaran digital konsumen (QRIS/e-wallet via DOKU).
   fiturBayarDigital: boolean("fitur_bayar_digital").notNull().default(false),
+  // Biaya penanganan pembayaran digital (ditanggung laundry).
+  biayaAdminPersen: numeric("biaya_admin_persen", { precision: 5, scale: 2 })
+    .notNull()
+    .default("3.5"),
+  biayaTransfer: integer("biaya_transfer").notNull().default(2500),
   // Saldo Koin AkaLink (dompet aplikasi milik laundry) — dalam Rupiah.
   saldoKoin: integer("saldo_koin").notNull().default(0),
   // Tarif pemakaian aplikasi (Rupiah) yang dipotong dari saldo koin.
@@ -824,6 +829,44 @@ export const coinTopupOrders = pgTable(
   (t) => [index("coin_topup_tenant_id_idx").on(t.tenantId)],
 );
 
+// --- payment_orders: pembayaran nota konsumen via DOKU (Phase 6) ---------
+export const paymentOrders = pgTable(
+  "payment_orders",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    transactionId: uuid("transaction_id")
+      .notNull()
+      .references(() => transactions.id, { onDelete: "cascade" }),
+    outletId: uuid("outlet_id").references(() => outlets.id, {
+      onDelete: "set null",
+    }),
+    invoiceNumber: text("invoice_number").notNull().unique(),
+    // Nominal kotor (total nota yang dibayar konsumen).
+    amount: integer("amount").notNull(),
+    // Biaya penanganan (ditanggung laundry): 3,5% + biaya transfer.
+    feeAdmin: integer("fee_admin").notNull().default(0),
+    feeTransfer: integer("fee_transfer").notNull().default(0),
+    // Nominal bersih yang diterima laundry (amount − fee).
+    netAmount: integer("net_amount").notNull().default(0),
+    status: coinTopupStatusEnum("status").notNull().default("pending"),
+    channel: text("channel"),
+    dokuTokenId: text("doku_token_id"),
+    paymentUrl: text("payment_url"),
+    createdBy: uuid("created_by"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    paidAt: timestamp("paid_at", { withTimezone: true }),
+  },
+  (t) => [
+    index("payment_orders_tenant_id_idx").on(t.tenantId),
+    index("payment_orders_transaction_id_idx").on(t.transactionId),
+  ],
+);
+
 export const inventoryItemsRelations = relations(inventoryItems, ({ one }) => ({
   tenant: one(tenants, {
     fields: [inventoryItems.tenantId],
@@ -889,3 +932,5 @@ export type AppCoinLedger = typeof appCoinLedger.$inferSelect;
 export type NewAppCoinLedger = typeof appCoinLedger.$inferInsert;
 export type CoinTopupOrder = typeof coinTopupOrders.$inferSelect;
 export type NewCoinTopupOrder = typeof coinTopupOrders.$inferInsert;
+export type PaymentOrder = typeof paymentOrders.$inferSelect;
+export type NewPaymentOrder = typeof paymentOrders.$inferInsert;

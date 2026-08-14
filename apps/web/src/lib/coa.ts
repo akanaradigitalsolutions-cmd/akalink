@@ -1,6 +1,6 @@
 import "server-only";
 
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { getDb, chartOfAccounts } from "@akalink/db";
 
 type Tipe = "aset" | "kewajiban" | "modal" | "pendapatan" | "beban";
@@ -36,8 +36,12 @@ export const DEFAULT_COA: Seed[] = [
   { kode: "5", nama: "BEBAN", tipe: "beban", normal: "debit" },
   { kode: "5.1", nama: "Beban Operasional", tipe: "beban", normal: "debit", parent: "5" },
   { kode: "5.2", nama: "Beban Gaji & Komisi", tipe: "beban", normal: "debit", parent: "5" },
+  { kode: "5.3", nama: "Beban Biaya Pembayaran Digital", tipe: "beban", normal: "debit", parent: "5" },
   { kode: "5.9", nama: "Biaya Pemakaian Kredit", tipe: "beban", normal: "debit", parent: "5" },
 ];
+
+/** Kode akun beban untuk biaya penanganan pembayaran digital (DOKU). */
+export const AKUN_BIAYA_PG = "5.3";
 
 export async function getCoa(tenantId: string) {
   const db = getDb();
@@ -75,4 +79,47 @@ export async function seedDefaultCoaIfEmpty(tenantId: string) {
       .returning({ id: chartOfAccounts.id });
     kodeToId.set(a.kode, row.id);
   }
+}
+
+/**
+ * Pastikan satu akun (berdasarkan kode) ada untuk tenant; buat bila belum.
+ * Dipakai agar tenant lama yang sudah pernah seeding tetap punya akun baru
+ * (mis. Beban Biaya Pembayaran Digital).
+ */
+export async function ensureCoaAccount(tenantId: string, kode: string) {
+  const seed = DEFAULT_COA.find((a) => a.kode === kode);
+  if (!seed) return;
+  const db = getDb();
+  const [existing] = await db
+    .select({ id: chartOfAccounts.id })
+    .from(chartOfAccounts)
+    .where(
+      and(eq(chartOfAccounts.tenantId, tenantId), eq(chartOfAccounts.kode, kode)),
+    )
+    .limit(1);
+  if (existing) return;
+
+  let parentId: string | null = null;
+  if (seed.parent) {
+    const [p] = await db
+      .select({ id: chartOfAccounts.id })
+      .from(chartOfAccounts)
+      .where(
+        and(
+          eq(chartOfAccounts.tenantId, tenantId),
+          eq(chartOfAccounts.kode, seed.parent),
+        ),
+      )
+      .limit(1);
+    parentId = p?.id ?? null;
+  }
+  await db.insert(chartOfAccounts).values({
+    tenantId,
+    kode: seed.kode,
+    nama: seed.nama,
+    tipe: seed.tipe,
+    saldoNormal: seed.normal,
+    parentId,
+    isKas: seed.kas ?? false,
+  });
 }

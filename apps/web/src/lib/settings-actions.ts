@@ -18,6 +18,8 @@ export type SettingsInput = {
   fiturPoin?: boolean;
   fiturPromo?: boolean;
   fiturBayarDigital?: boolean;
+  biayaAdminPersen?: number | string;
+  biayaTransfer?: number | string;
 };
 
 export async function updateSettings(
@@ -57,6 +59,10 @@ export async function updateSettings(
         fiturPoin: !!input.fiturPoin,
         fiturPromo: !!input.fiturPromo,
         fiturBayarDigital: !!input.fiturBayarDigital,
+        biayaAdminPersen: String(
+          Math.min(100, Math.max(0, Number(input.biayaAdminPersen) || 0)),
+        ),
+        biayaTransfer: Math.max(0, Math.floor(Number(input.biayaTransfer) || 0)),
         updatedAt: new Date(),
       })
       .where(eq(tenants.id, tenantId));

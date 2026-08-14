@@ -24,8 +24,10 @@ import {
   buildWaSiapAmbil,
   SYARAT_KETENTUAN_DEFAULT,
 } from "@/lib/nota";
+import { getPaymentFeeConfig, getLatestPaymentOrder, hitungFee } from "@/lib/payments";
 import { StatusEditor } from "./status-editor";
 import { DeleteNota } from "./delete-nota";
+import { DigitalPayment } from "./digital-payment";
 
 export const metadata: Metadata = {
   title: "Detail Transaksi — AkaLink",
@@ -33,10 +35,13 @@ export const metadata: Metadata = {
 
 export default async function DetailTransaksiPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ doku?: string }>;
 }) {
   const { id } = await params;
+  const sp = await searchParams;
   const user = await getSessionUser();
   if (!user) redirect("/masuk");
   const tenantId = getTenantIdFromUser(user);
@@ -46,6 +51,17 @@ export default async function DetailTransaksiPage({
   if (!data) notFound();
   const { tx, consumer, items } = data;
   const { tenant } = await getTenantContext(user.id, tenantId);
+
+  // Pembayaran digital (bila diaktifkan & belum lunas).
+  const feeCfg = await getPaymentFeeConfig(tenantId);
+  const showDigital = feeCfg.aktif && tx.statusPembayaran !== "lunas";
+  const grossTx = Math.round(Number(tx.grandTotal));
+  const feeParts = hitungFee(grossTx, feeCfg.persen, feeCfg.transfer);
+  const lastOrder = showDigital
+    ? await getLatestPaymentOrder(tenantId, tx.id)
+    : null;
+  const existingUrl =
+    lastOrder && lastOrder.status === "pending" ? lastOrder.paymentUrl : null;
   const base = await getBaseUrl();
   const notaLink = `${base}/n/${tx.id}`;
 
@@ -218,6 +234,20 @@ export default async function DetailTransaksiPage({
           </p>
         )}
       </div>
+
+      {/* Pembayaran digital (QRIS/DOKU) — bila diaktifkan & belum lunas */}
+      {showDigital && grossTx > 0 && (
+        <DigitalPayment
+          txId={tx.id}
+          gross={grossTx}
+          feeAdmin={feeParts.feeAdmin}
+          feeTransfer={feeParts.feeTransfer}
+          net={feeParts.net}
+          persen={feeCfg.persen}
+          existingUrl={existingUrl}
+          kembaliDariDoku={sp.doku === "selesai"}
+        />
+      )}
 
       {/* Kontrol status dengan tombol Simpan (tidak ikut tercetak) */}
       <StatusEditor

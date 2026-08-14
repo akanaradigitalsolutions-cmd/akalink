@@ -16,6 +16,8 @@ export type TenantSettings = {
   fiturPoin: boolean;
   fiturPromo: boolean;
   fiturBayarDigital: boolean;
+  biayaAdminPersen: number;
+  biayaTransfer: number;
 };
 
 /** Ambil profil usaha (tenant) untuk halaman Pengaturan. */
@@ -35,10 +37,14 @@ export const getTenantSettings = cache(
         fiturPoin: tenants.fiturPoin,
         fiturPromo: tenants.fiturPromo,
         fiturBayarDigital: tenants.fiturBayarDigital,
+        biayaAdminPersen: tenants.biayaAdminPersen,
+        biayaTransfer: tenants.biayaTransfer,
       })
       .from(tenants)
       .where(eq(tenants.id, tenantId))
       .limit(1);
-    return row ?? null;
+    if (!row) return null;
+    // numeric → number
+    return { ...row, biayaAdminPersen: Number(row.biayaAdminPersen) };
   },
 );

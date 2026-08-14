@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
-import { getDb, coinTopupOrders } from "@akalink/db";
+import { getDb, coinTopupOrders, paymentOrders } from "@akalink/db";
 import { verifyNotificationSignature } from "@/lib/doku";
 import { topupAppCoin } from "@/lib/app-coin";
+import { settlePaymentOrder } from "@/lib/payments";
 
 export const dynamic = "force-dynamic";
 
@@ -51,10 +52,59 @@ export async function POST(req: Request) {
     );
 
   const db = getDb();
-  const [order] = await db
+
+  // --- 1) Isi ulang Saldo Koin (coin_topup_orders) ------------------------
+  const [coin] = await db
     .select()
     .from(coinTopupOrders)
     .where(eq(coinTopupOrders.invoiceNumber, invoice))
+    .limit(1);
+
+  if (coin) {
+    if (coin.status === "success")
+      return NextResponse.json({ received: true, alreadyProcessed: true });
+    if (status !== "SUCCESS") {
+      if (status === "FAILED" || status === "EXPIRED") {
+        await db
+          .update(coinTopupOrders)
+          .set({ status: status === "EXPIRED" ? "expired" : "failed" })
+          .where(eq(coinTopupOrders.id, coin.id));
+      }
+      return NextResponse.json({ received: true, status });
+    }
+    try {
+      await db.transaction(async (tx) => {
+        await topupAppCoin(tx, coin.tenantId, {
+          amount: coin.amount,
+          keterangan: `Isi ulang via DOKU (${invoice})`,
+          refType: "doku",
+          refId: coin.id,
+          tipe: "topup",
+          createdBy: coin.createdBy ?? null,
+        });
+        await tx
+          .update(coinTopupOrders)
+          .set({
+            status: "success",
+            paidAt: new Date(),
+            channel: payload.channel?.id ?? null,
+          })
+          .where(eq(coinTopupOrders.id, coin.id));
+      });
+    } catch (e) {
+      return NextResponse.json(
+        { error: e instanceof Error ? e.message : "Gagal memproses." },
+        { status: 500 },
+      );
+    }
+    return NextResponse.json({ received: true, status: "SUCCESS", type: "coin" });
+  }
+
+  // --- 2) Pembayaran nota konsumen (payment_orders) -----------------------
+  const [order] = await db
+    .select()
+    .from(paymentOrders)
+    .where(eq(paymentOrders.invoiceNumber, invoice))
     .limit(1);
   if (!order)
     return NextResponse.json(
@@ -62,46 +112,31 @@ export async function POST(req: Request) {
       { status: 404 },
     );
 
-  // Sudah diproses → balas OK (idempoten terhadap notifikasi berulang).
   if (order.status === "success")
     return NextResponse.json({ received: true, alreadyProcessed: true });
-
   if (status !== "SUCCESS") {
     if (status === "FAILED" || status === "EXPIRED") {
       await db
-        .update(coinTopupOrders)
+        .update(paymentOrders)
         .set({ status: status === "EXPIRED" ? "expired" : "failed" })
-        .where(eq(coinTopupOrders.id, order.id));
+        .where(eq(paymentOrders.id, order.id));
     }
     return NextResponse.json({ received: true, status });
   }
 
-  // SUKSES → kreditkan saldo (idempoten via refType/refId = order).
   try {
-    await db.transaction(async (tx) => {
-      await topupAppCoin(tx, order.tenantId, {
-        amount: order.amount,
-        keterangan: `Isi ulang via DOKU (${invoice})`,
-        refType: "doku",
-        refId: order.id,
-        tipe: "topup",
-        createdBy: order.createdBy ?? null,
-      });
-      await tx
-        .update(coinTopupOrders)
-        .set({
-          status: "success",
-          paidAt: new Date(),
-          channel: payload.channel?.id ?? null,
-        })
-        .where(eq(coinTopupOrders.id, order.id));
-    });
+    if (payload.channel?.id) {
+      await db
+        .update(paymentOrders)
+        .set({ channel: payload.channel.id })
+        .where(eq(paymentOrders.id, order.id));
+    }
+    await settlePaymentOrder({ ...order, channel: payload.channel?.id ?? order.channel });
   } catch (e) {
     return NextResponse.json(
       { error: e instanceof Error ? e.message : "Gagal memproses." },
       { status: 500 },
     );
   }
-
-  return NextResponse.json({ received: true, status: "SUCCESS" });
+  return NextResponse.json({ received: true, status: "SUCCESS", type: "nota" });
 }

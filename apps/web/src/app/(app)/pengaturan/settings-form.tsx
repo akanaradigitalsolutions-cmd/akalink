@@ -17,6 +17,8 @@ type Initial = {
   fiturPoin: boolean;
   fiturPromo: boolean;
   fiturBayarDigital: boolean;
+  biayaAdminPersen: number;
+  biayaTransfer: number;
   syaratKetentuan: string[];
 };
 
@@ -41,6 +43,12 @@ export function SettingsForm({
   const [fiturPromo, setFiturPromo] = useState(initial.fiturPromo);
   const [fiturBayarDigital, setFiturBayarDigital] = useState(
     initial.fiturBayarDigital,
+  );
+  const [biayaAdminPersen, setBiayaAdminPersen] = useState(
+    String(initial.biayaAdminPersen ?? 3.5),
+  );
+  const [biayaTransfer, setBiayaTransfer] = useState(
+    String(initial.biayaTransfer ?? 2500),
   );
   const [sk, setSk] = useState<string[]>(
     initial.syaratKetentuan.length ? initial.syaratKetentuan : [""],
@@ -73,6 +81,8 @@ export function SettingsForm({
         fiturPoin,
         fiturPromo,
         fiturBayarDigital,
+        biayaAdminPersen: Number(biayaAdminPersen) || 0,
+        biayaTransfer: Number(biayaTransfer) || 0,
         syaratKetentuan: sk,
       });
       if (res.ok) {
@@ -197,6 +207,63 @@ export function SettingsForm({
           on={fiturBayarDigital}
           onChange={setFiturBayarDigital}
         />
+
+        {fiturBayarDigital && (
+          <div className="mt-3 rounded-xl bg-slate-50 p-3 dark:bg-slate-800/50">
+            <p className="mb-3 text-xs text-slate-500 dark:text-slate-400">
+              Biaya penanganan pembayaran digital (ditanggung laundry, dipotong
+              dari dana yang Anda terima). Dicatat otomatis sebagai beban.
+            </p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="Biaya admin (%)">
+                <div className="flex items-center gap-2">
+                  <input
+                    value={biayaAdminPersen}
+                    onChange={(e) =>
+                      setBiayaAdminPersen(
+                        e.target.value.replace(/[^0-9.]/g, ""),
+                      )
+                    }
+                    inputMode="decimal"
+                    placeholder="mis. 3.5"
+                    className={`${inputBase} w-full`}
+                  />
+                  <span className="text-sm text-slate-400">%</span>
+                </div>
+              </Field>
+              <Field label="Biaya transfer (Rp)">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-slate-400">Rp</span>
+                  <input
+                    value={biayaTransfer}
+                    onChange={(e) =>
+                      setBiayaTransfer(e.target.value.replace(/[^0-9]/g, ""))
+                    }
+                    inputMode="numeric"
+                    placeholder="mis. 2500"
+                    className={`${inputBase} w-full`}
+                  />
+                </div>
+              </Field>
+            </div>
+            <p className="mt-2 text-xs text-slate-400">
+              Contoh: nota Rp100.000 → biaya {biayaAdminPersen || 0}% (Rp
+              {Math.round(
+                (100000 * (Number(biayaAdminPersen) || 0)) / 100,
+              ).toLocaleString("id-ID")}
+              ) + transfer Rp
+              {(Number(biayaTransfer) || 0).toLocaleString("id-ID")} → Anda
+              terima Rp
+              {Math.max(
+                0,
+                100000 -
+                  Math.round((100000 * (Number(biayaAdminPersen) || 0)) / 100) -
+                  (Number(biayaTransfer) || 0),
+              ).toLocaleString("id-ID")}
+              .
+            </p>
+          </div>
+        )}
       </section>
 
       {/* Syarat & Ketentuan */}
