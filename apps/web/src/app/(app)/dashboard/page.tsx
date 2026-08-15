@@ -68,20 +68,32 @@ export default async function DashboardPage() {
 
   const namaUser = me?.nama ?? user.email ?? "Pengguna";
 
-  if (loadError) {
+  // Sesi tanpa tenant_id → jangan crash, tampilkan pesan yang jelas.
+  if (!tenantId && !loadError) {
+    loadError =
+      "Sesi Anda belum terhubung ke laundry (tenant_id kosong). Silakan Keluar lalu Masuk kembali. Bila masih sama, akun perlu ditautkan ulang ke tenant.";
+  }
+
+  if (loadError || !stats) {
     return (
       <div className="rounded-2xl border border-red-200 bg-red-50 p-6 dark:border-red-900 dark:bg-red-950/40">
         <h2 className="text-lg font-semibold text-red-800 dark:text-red-300">
           Gagal memuat data
         </h2>
         <pre className="mt-3 overflow-x-auto rounded-lg bg-red-100 p-3 text-xs text-red-900 dark:bg-red-900/40 dark:text-red-200">
-          {loadError}
+          {loadError ?? "Data belum tersedia."}
         </pre>
+        <a
+          href="/masuk"
+          className="mt-4 inline-block rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-700"
+        >
+          Ke Halaman Masuk
+        </a>
       </div>
     );
   }
 
-  const s = stats!;
+  const s = stats;
   const isOwner = me?.role === "owner";
   const saldo = coin?.saldoKoin ?? 0;
   const biayaNota = coin?.biayaPerNota ?? 50;
