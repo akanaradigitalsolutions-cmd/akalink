@@ -111,7 +111,7 @@ export function SidebarNav({
   };
 
   return (
-    <nav className="mt-8 flex flex-1 flex-col gap-1">
+    <nav className="mt-6 flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto pr-1">
       {items
         .filter((item) => !item.ownerOnly || isOwner)
         .filter((item) => !item.feature || featureOn[item.feature])

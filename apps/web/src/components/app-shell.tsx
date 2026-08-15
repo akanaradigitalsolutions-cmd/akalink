@@ -49,7 +49,7 @@ export function AppShell({
   return (
     <div className="min-h-dvh bg-slate-50 dark:bg-slate-950">
       {/* Sidebar (desktop) */}
-      <aside className="fixed inset-y-0 left-0 hidden w-64 flex-col border-r border-slate-200 bg-white px-4 py-6 dark:border-slate-800 dark:bg-slate-900 md:flex">
+      <aside className="fixed inset-y-0 left-0 hidden w-64 flex-col overflow-hidden border-r border-slate-200 bg-white px-4 py-6 dark:border-slate-800 dark:bg-slate-900 md:flex">
         <div className="px-2">
           <Logo size={36} subtitle={null} />
         </div>
