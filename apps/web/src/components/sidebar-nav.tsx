@@ -18,6 +18,7 @@ import {
   IconMachine,
   IconTruck,
   IconBuilding,
+  IconSparkle,
 } from "./icons";
 
 type NavItem = {
@@ -26,7 +27,7 @@ type NavItem = {
   icon: (p: { className?: string }) => React.ReactNode;
   soon?: boolean;
   ownerOnly?: boolean;
-  feature?: "member" | "promo" | "bayar" | "self" | "antar" | "b2b" | "investor";
+  feature?: "member" | "promo" | "bayar" | "self" | "antar" | "b2b" | "investor" | "admin";
 };
 
 const items: NavItem[] = [
@@ -77,6 +78,7 @@ const items: NavItem[] = [
     ownerOnly: true,
   },
   { label: "Akun Saya", href: "/akun", icon: IconUser },
+  { label: "Admin AkaLink", href: "/admin", icon: IconSparkle, feature: "admin" },
 ];
 
 export function SidebarNav({
@@ -88,6 +90,7 @@ export function SidebarNav({
   showAntar = false,
   showB2b = false,
   showInvestor = false,
+  showAdmin = false,
 }: {
   role?: string;
   showMember?: boolean;
@@ -97,6 +100,7 @@ export function SidebarNav({
   showAntar?: boolean;
   showB2b?: boolean;
   showInvestor?: boolean;
+  showAdmin?: boolean;
 }) {
   const pathname = usePathname();
   const isOwner = role === "owner";
@@ -108,6 +112,7 @@ export function SidebarNav({
     antar: showAntar,
     b2b: showB2b,
     investor: showInvestor,
+    admin: showAdmin,
   };
 
   return (

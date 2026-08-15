@@ -885,6 +885,20 @@ export const paymentOrders = pgTable(
   ],
 );
 
+// --- platform_admins: super-admin AkaLink (Phase 11) ---------------------
+// Lintas-tenant. Tanpa tenant_id. Akses hanya lewat koneksi service (RLS deny).
+export const platformAdmins = pgTable(
+  "platform_admins",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    email: text("email").notNull().unique(),
+    nama: text("nama"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+);
+
 // --- investors: modal & bagi hasil (Phase 9) -----------------------------
 export const investors = pgTable(
   "investors",
@@ -1272,3 +1286,5 @@ export type Investment = typeof investments.$inferSelect;
 export type NewInvestment = typeof investments.$inferInsert;
 export type InvestorPayout = typeof investorPayouts.$inferSelect;
 export type NewInvestorPayout = typeof investorPayouts.$inferInsert;
+export type PlatformAdmin = typeof platformAdmins.$inferSelect;
+export type NewPlatformAdmin = typeof platformAdmins.$inferInsert;

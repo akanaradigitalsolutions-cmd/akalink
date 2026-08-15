@@ -93,6 +93,7 @@ export const config = {
     "/antar-jemput/:path*",
     "/b2b/:path*",
     "/investor/:path*",
+    "/admin/:path*",
     "/akun/:path*",
     "/masuk",
     "/daftar",

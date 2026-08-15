@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getSessionUser, getTenantIdFromUser } from "@/lib/auth";
 import { getTenantContext } from "@/lib/tenant";
+import { isPlatformAdmin } from "@/lib/platform";
 import {
   getAllowedOutlets,
   getActiveOutlet,
@@ -34,6 +35,7 @@ export default async function AppLayout({
   let showAntar = false;
   let showB2b = false;
   let showInvestor = false;
+  let showAdmin = false;
   try {
     const { me, tenant } = await getTenantContext(user.id, tenantId);
     tenantName = tenant?.nama ?? tenantName;
@@ -46,6 +48,7 @@ export default async function AppLayout({
     showAntar = tenant?.fiturAntarJemput ?? false;
     showB2b = tenant?.fiturB2b ?? false;
     showInvestor = tenant?.fiturInvestor ?? false;
+    showAdmin = await isPlatformAdmin(user);
 
     if (tenantId) {
       await seedDefaultOutletIfEmpty(tenantId);
@@ -74,6 +77,7 @@ export default async function AppLayout({
       showAntar={showAntar}
       showB2b={showB2b}
       showInvestor={showInvestor}
+      showAdmin={showAdmin}
     >
       {children}
     </AppShell>
