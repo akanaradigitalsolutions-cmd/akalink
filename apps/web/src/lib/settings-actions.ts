@@ -21,6 +21,7 @@ export type SettingsInput = {
   // Persetujuan syarat biaya pembayaran digital (wajib saat mengaktifkan).
   setujuBayarDigital?: boolean;
   fiturSelfService?: boolean;
+  fiturAntarJemput?: boolean;
 };
 
 export async function updateSettings(
@@ -84,6 +85,7 @@ export async function updateSettings(
         fiturBayarDigital: aktifkanBayar,
         bayarDigitalSetujuAt: setujuAt,
         fiturSelfService: !!input.fiturSelfService,
+        fiturAntarJemput: !!input.fiturAntarJemput,
         updatedAt: new Date(),
       })
       .where(eq(tenants.id, tenantId));

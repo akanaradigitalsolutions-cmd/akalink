@@ -19,6 +19,7 @@ type Initial = {
   fiturBayarDigital: boolean;
   bayarDigitalSetuju: boolean;
   fiturSelfService: boolean;
+  fiturAntarJemput: boolean;
   syaratKetentuan: string[];
 };
 
@@ -51,6 +52,9 @@ export function SettingsForm({
   const [setujuBayar, setSetujuBayar] = useState(initial.bayarDigitalSetuju);
   const [fiturSelfService, setFiturSelfService] = useState(
     initial.fiturSelfService,
+  );
+  const [fiturAntarJemput, setFiturAntarJemput] = useState(
+    initial.fiturAntarJemput,
   );
   const [sk, setSk] = useState<string[]>(
     initial.syaratKetentuan.length ? initial.syaratKetentuan : [""],
@@ -91,6 +95,7 @@ export function SettingsForm({
         fiturBayarDigital,
         setujuBayarDigital: setujuBayar,
         fiturSelfService,
+        fiturAntarJemput,
         syaratKetentuan: sk,
       });
       if (res.ok) {
@@ -274,18 +279,26 @@ export function SettingsForm({
       {/* Self-Service (IoT) */}
       <section className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
         <h2 className="mb-1 text-sm font-semibold text-slate-900 dark:text-white">
-          Self-Service &amp; Mesin (IoT)
+          Fitur Operasional
         </h2>
         <p className="mb-4 text-xs text-slate-500 dark:text-slate-400">
-          Kelola mesin cuci/pengering dengan mulai/stop sesi. Bisa disambung ke
-          perangkat relay IoT untuk kontrol otomatis.
+          Aktifkan fitur tambahan sesuai kebutuhan laundry Anda. Menu terkait
+          muncul saat diaktifkan.
         </p>
-        <Toggle
-          label="Self-Service Mesin"
-          desc="Tampilkan menu Mesin untuk mengelola & menjalankan sesi."
-          on={fiturSelfService}
-          onChange={setFiturSelfService}
-        />
+        <div className="flex flex-col gap-3">
+          <Toggle
+            label="Self-Service Mesin"
+            desc="Tampilkan menu Mesin untuk mengelola & menjalankan sesi."
+            on={fiturSelfService}
+            onChange={setFiturSelfService}
+          />
+          <Toggle
+            label="Antar-Jemput"
+            desc="Kelola penjemputan & pengantaran cucian (kurir, ongkir, status)."
+            on={fiturAntarJemput}
+            onChange={setFiturAntarJemput}
+          />
+        </div>
       </section>
 
       {/* Syarat & Ketentuan */}

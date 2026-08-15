@@ -71,6 +71,8 @@ export const tenants = pgTable("tenants", {
   saldoPembayaran: integer("saldo_pembayaran").notNull().default(0),
   // Self-service & kontrol mesin (IoT).
   fiturSelfService: boolean("fitur_self_service").notNull().default(false),
+  // Antar-jemput (pickup & delivery).
+  fiturAntarJemput: boolean("fitur_antar_jemput").notNull().default(false),
   // (Tidak dipakai lagi — biaya kini ketentuan platform; disimpan utk kompat.)
   biayaAdminPersen: numeric("biaya_admin_persen", { precision: 5, scale: 2 })
     .notNull()
@@ -875,6 +877,56 @@ export const paymentOrders = pgTable(
   ],
 );
 
+// --- deliveries: antar-jemput / pickup & delivery (Phase 8) --------------
+export const deliveryTypeEnum = pgEnum("delivery_type", ["jemput", "antar"]);
+export const deliveryStatusEnum = pgEnum("delivery_status", [
+  "menunggu",
+  "dijadwalkan",
+  "dalam_perjalanan",
+  "selesai",
+  "batal",
+]);
+
+export const deliveries = pgTable(
+  "deliveries",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    outletId: uuid("outlet_id").references(() => outlets.id, {
+      onDelete: "set null",
+    }),
+    consumerId: uuid("consumer_id").references(() => consumers.id, {
+      onDelete: "set null",
+    }),
+    transactionId: uuid("transaction_id").references(() => transactions.id, {
+      onDelete: "set null",
+    }),
+    tipe: deliveryTypeEnum("tipe").notNull(),
+    // Nama/telepon kontak (bila konsumen belum terdaftar).
+    kontakNama: text("kontak_nama"),
+    kontakHp: text("kontak_hp"),
+    alamat: text("alamat").notNull(),
+    jadwal: timestamp("jadwal", { withTimezone: true }),
+    kurirId: uuid("kurir_id"),
+    biayaAntar: integer("biaya_antar").notNull().default(0),
+    status: deliveryStatusEnum("status").notNull().default("menunggu"),
+    catatan: text("catatan"),
+    createdBy: uuid("created_by"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("deliveries_tenant_id_idx").on(t.tenantId),
+    index("deliveries_status_idx").on(t.status),
+  ],
+);
+
 // --- machines & machine_sessions: self-service (Phase 7) -----------------
 export const machineTypeEnum = pgEnum("machine_type", [
   "mesin_cuci",
@@ -1061,3 +1113,5 @@ export type Machine = typeof machines.$inferSelect;
 export type NewMachine = typeof machines.$inferInsert;
 export type MachineSession = typeof machineSessions.$inferSelect;
 export type NewMachineSession = typeof machineSessions.$inferInsert;
+export type Delivery = typeof deliveries.$inferSelect;
+export type NewDelivery = typeof deliveries.$inferInsert;

@@ -16,6 +16,7 @@ import {
   IconBox,
   IconCoin,
   IconMachine,
+  IconTruck,
 } from "./icons";
 
 type NavItem = {
@@ -24,7 +25,7 @@ type NavItem = {
   icon: (p: { className?: string }) => React.ReactNode;
   soon?: boolean;
   ownerOnly?: boolean;
-  feature?: "member" | "promo" | "bayar" | "self";
+  feature?: "member" | "promo" | "bayar" | "self" | "antar";
 };
 
 const items: NavItem[] = [
@@ -48,6 +49,7 @@ const items: NavItem[] = [
   },
   { label: "Inventori", href: "/inventori", icon: IconBox },
   { label: "Mesin", href: "/mesin", icon: IconMachine, feature: "self" },
+  { label: "Antar-Jemput", href: "/antar-jemput", icon: IconTruck, feature: "antar" },
   { label: "Keuangan", href: "/keuangan", icon: IconWallet, ownerOnly: true },
   { label: "Laporan", href: "/laporan", icon: IconChart, ownerOnly: true },
   {
@@ -80,12 +82,14 @@ export function SidebarNav({
   showPromo = false,
   showBayar = false,
   showSelf = false,
+  showAntar = false,
 }: {
   role?: string;
   showMember?: boolean;
   showPromo?: boolean;
   showBayar?: boolean;
   showSelf?: boolean;
+  showAntar?: boolean;
 }) {
   const pathname = usePathname();
   const isOwner = role === "owner";
@@ -94,6 +98,7 @@ export function SidebarNav({
     promo: showPromo,
     bayar: showBayar,
     self: showSelf,
+    antar: showAntar,
   };
 
   return (

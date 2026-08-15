@@ -75,6 +75,17 @@ export function IconMachine(p: IconProps) {
   );
 }
 
+export function IconTruck(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <path d="M3 6.5h11v9H3z" />
+      <path d="M14 9.5h4l3 3v3h-7z" />
+      <circle cx="7" cy="17.5" r="1.8" />
+      <circle cx="17" cy="17.5" r="1.8" />
+    </Svg>
+  );
+}
+
 export function IconCoin(p: IconProps) {
   return (
     <Svg {...p}>
