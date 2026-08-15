@@ -26,7 +26,7 @@ type NavItem = {
   icon: (p: { className?: string }) => React.ReactNode;
   soon?: boolean;
   ownerOnly?: boolean;
-  feature?: "member" | "promo" | "bayar" | "self" | "antar" | "b2b";
+  feature?: "member" | "promo" | "bayar" | "self" | "antar" | "b2b" | "investor";
 };
 
 const items: NavItem[] = [
@@ -52,6 +52,7 @@ const items: NavItem[] = [
   { label: "Mesin", href: "/mesin", icon: IconMachine, feature: "self" },
   { label: "Antar-Jemput", href: "/antar-jemput", icon: IconTruck, feature: "antar" },
   { label: "B2B Korporat", href: "/b2b", icon: IconBuilding, ownerOnly: true, feature: "b2b" },
+  { label: "Investor", href: "/investor", icon: IconChart, ownerOnly: true, feature: "investor" },
   { label: "Keuangan", href: "/keuangan", icon: IconWallet, ownerOnly: true },
   { label: "Laporan", href: "/laporan", icon: IconChart, ownerOnly: true },
   {
@@ -86,6 +87,7 @@ export function SidebarNav({
   showSelf = false,
   showAntar = false,
   showB2b = false,
+  showInvestor = false,
 }: {
   role?: string;
   showMember?: boolean;
@@ -94,6 +96,7 @@ export function SidebarNav({
   showSelf?: boolean;
   showAntar?: boolean;
   showB2b?: boolean;
+  showInvestor?: boolean;
 }) {
   const pathname = usePathname();
   const isOwner = role === "owner";
@@ -104,6 +107,7 @@ export function SidebarNav({
     self: showSelf,
     antar: showAntar,
     b2b: showB2b,
+    investor: showInvestor,
   };
 
   return (

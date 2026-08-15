@@ -21,6 +21,7 @@ type Initial = {
   fiturSelfService: boolean;
   fiturAntarJemput: boolean;
   fiturB2b: boolean;
+  fiturInvestor: boolean;
   syaratKetentuan: string[];
 };
 
@@ -58,6 +59,7 @@ export function SettingsForm({
     initial.fiturAntarJemput,
   );
   const [fiturB2b, setFiturB2b] = useState(initial.fiturB2b);
+  const [fiturInvestor, setFiturInvestor] = useState(initial.fiturInvestor);
   const [sk, setSk] = useState<string[]>(
     initial.syaratKetentuan.length ? initial.syaratKetentuan : [""],
   );
@@ -99,6 +101,7 @@ export function SettingsForm({
         fiturSelfService,
         fiturAntarJemput,
         fiturB2b,
+        fiturInvestor,
         syaratKetentuan: sk,
       });
       if (res.ok) {
@@ -306,6 +309,12 @@ export function SettingsForm({
             desc="Klien perusahaan, transaksi tempo, & tagihan bulanan (invoice)."
             on={fiturB2b}
             onChange={setFiturB2b}
+          />
+          <Toggle
+            label="Investor & Bagi Hasil"
+            desc="Modal investor, hitung bagi hasil dari laba, & catat pembayaran."
+            on={fiturInvestor}
+            onChange={setFiturInvestor}
           />
         </div>
       </section>

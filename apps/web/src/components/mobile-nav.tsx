@@ -17,6 +17,7 @@ export function MobileNav({
   showSelf = false,
   showAntar = false,
   showB2b = false,
+  showInvestor = false,
 }: {
   role: string;
   userName: string;
@@ -26,6 +27,7 @@ export function MobileNav({
   showSelf?: boolean;
   showAntar?: boolean;
   showB2b?: boolean;
+  showInvestor?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -77,6 +79,7 @@ export function MobileNav({
           showSelf={showSelf}
           showAntar={showAntar}
           showB2b={showB2b}
+          showInvestor={showInvestor}
         />
 
         <div className="mt-2 border-t border-slate-100 pt-3 dark:border-slate-800">

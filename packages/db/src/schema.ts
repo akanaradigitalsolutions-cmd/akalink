@@ -75,6 +75,8 @@ export const tenants = pgTable("tenants", {
   fiturAntarJemput: boolean("fitur_antar_jemput").notNull().default(false),
   // B2B korporat (klien perusahaan + tagihan bulanan).
   fiturB2b: boolean("fitur_b2b").notNull().default(false),
+  // Investor & bagi hasil.
+  fiturInvestor: boolean("fitur_investor").notNull().default(false),
   // (Tidak dipakai lagi — biaya kini ketentuan platform; disimpan utk kompat.)
   biayaAdminPersen: numeric("biaya_admin_persen", { precision: 5, scale: 2 })
     .notNull()
@@ -883,6 +885,80 @@ export const paymentOrders = pgTable(
   ],
 );
 
+// --- investors: modal & bagi hasil (Phase 9) -----------------------------
+export const investors = pgTable(
+  "investors",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    nama: text("nama").notNull(),
+    telepon: text("telepon"),
+    email: text("email"),
+    catatan: text("catatan"),
+    aktif: boolean("aktif").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("investors_tenant_id_idx").on(t.tenantId)],
+);
+
+export const investments = pgTable(
+  "investments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    investorId: uuid("investor_id")
+      .notNull()
+      .references(() => investors.id, { onDelete: "cascade" }),
+    outletId: uuid("outlet_id").references(() => outlets.id, {
+      onDelete: "set null",
+    }),
+    modal: integer("modal").notNull().default(0),
+    // Persentase bagi hasil dari laba (mis. 20.00 = 20%).
+    persenBagiHasil: numeric("persen_bagi_hasil", { precision: 5, scale: 2 })
+      .notNull()
+      .default("0"),
+    tanggalMulai: date("tanggal_mulai"),
+    aktif: boolean("aktif").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("investments_tenant_id_idx").on(t.tenantId),
+    index("investments_investor_id_idx").on(t.investorId),
+  ],
+);
+
+export const investorPayouts = pgTable(
+  "investor_payouts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    investorId: uuid("investor_id")
+      .notNull()
+      .references(() => investors.id, { onDelete: "cascade" }),
+    periodeAwal: date("periode_awal"),
+    periodeAkhir: date("periode_akhir"),
+    labaPeriode: integer("laba_periode").notNull().default(0),
+    persen: numeric("persen", { precision: 5, scale: 2 }).notNull().default("0"),
+    jumlah: integer("jumlah").notNull(),
+    catatan: text("catatan"),
+    createdBy: uuid("created_by"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("investor_payouts_tenant_id_idx").on(t.tenantId)],
+);
+
 // --- b2b_clients & invoices: korporat / tagihan bulanan (Phase 9) --------
 export const b2bClients = pgTable(
   "b2b_clients",
@@ -1190,3 +1266,9 @@ export type B2bClient = typeof b2bClients.$inferSelect;
 export type NewB2bClient = typeof b2bClients.$inferInsert;
 export type Invoice = typeof invoices.$inferSelect;
 export type NewInvoice = typeof invoices.$inferInsert;
+export type Investor = typeof investors.$inferSelect;
+export type NewInvestor = typeof investors.$inferInsert;
+export type Investment = typeof investments.$inferSelect;
+export type NewInvestment = typeof investments.$inferInsert;
+export type InvestorPayout = typeof investorPayouts.$inferSelect;
+export type NewInvestorPayout = typeof investorPayouts.$inferInsert;

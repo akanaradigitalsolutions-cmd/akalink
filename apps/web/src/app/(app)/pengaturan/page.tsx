@@ -43,6 +43,7 @@ export default async function PengaturanPage() {
           fiturSelfService: s.fiturSelfService,
           fiturAntarJemput: s.fiturAntarJemput,
           fiturB2b: s.fiturB2b,
+          fiturInvestor: s.fiturInvestor,
           syaratKetentuan:
             s.syaratKetentuan && s.syaratKetentuan.length
               ? s.syaratKetentuan
