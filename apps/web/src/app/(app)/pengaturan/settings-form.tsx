@@ -20,6 +20,7 @@ type Initial = {
   bayarDigitalSetuju: boolean;
   fiturSelfService: boolean;
   fiturAntarJemput: boolean;
+  fiturB2b: boolean;
   syaratKetentuan: string[];
 };
 
@@ -56,6 +57,7 @@ export function SettingsForm({
   const [fiturAntarJemput, setFiturAntarJemput] = useState(
     initial.fiturAntarJemput,
   );
+  const [fiturB2b, setFiturB2b] = useState(initial.fiturB2b);
   const [sk, setSk] = useState<string[]>(
     initial.syaratKetentuan.length ? initial.syaratKetentuan : [""],
   );
@@ -96,6 +98,7 @@ export function SettingsForm({
         setujuBayarDigital: setujuBayar,
         fiturSelfService,
         fiturAntarJemput,
+        fiturB2b,
         syaratKetentuan: sk,
       });
       if (res.ok) {
@@ -297,6 +300,12 @@ export function SettingsForm({
             desc="Kelola penjemputan & pengantaran cucian (kurir, ongkir, status)."
             on={fiturAntarJemput}
             onChange={setFiturAntarJemput}
+          />
+          <Toggle
+            label="B2B Korporat"
+            desc="Klien perusahaan, transaksi tempo, & tagihan bulanan (invoice)."
+            on={fiturB2b}
+            onChange={setFiturB2b}
           />
         </div>
       </section>

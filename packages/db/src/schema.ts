@@ -73,6 +73,8 @@ export const tenants = pgTable("tenants", {
   fiturSelfService: boolean("fitur_self_service").notNull().default(false),
   // Antar-jemput (pickup & delivery).
   fiturAntarJemput: boolean("fitur_antar_jemput").notNull().default(false),
+  // B2B korporat (klien perusahaan + tagihan bulanan).
+  fiturB2b: boolean("fitur_b2b").notNull().default(false),
   // (Tidak dipakai lagi — biaya kini ketentuan platform; disimpan utk kompat.)
   biayaAdminPersen: numeric("biaya_admin_persen", { precision: 5, scale: 2 })
     .notNull()
@@ -355,6 +357,8 @@ export const consumers = pgTable(
       onDelete: "set null",
     }),
     poin: numeric("poin", { precision: 14, scale: 2 }).notNull().default("0"),
+    // Tautan ke klien korporat B2B (Phase 9) — null bila konsumen ritel.
+    b2bClientId: uuid("b2b_client_id"),
     // Data opsional
     instansi: text("instansi"),
     email: text("email"),
@@ -418,6 +422,8 @@ export const transactions = pgTable(
     consumerId: uuid("consumer_id").references(() => consumers.id, {
       onDelete: "set null",
     }),
+    // Tautan ke invoice B2B (Phase 9) — null bila belum ditagihkan.
+    invoiceId: uuid("invoice_id"),
     kasirId: uuid("kasir_id").references(() => employees.id, {
       onDelete: "set null",
     }),
@@ -877,6 +883,71 @@ export const paymentOrders = pgTable(
   ],
 );
 
+// --- b2b_clients & invoices: korporat / tagihan bulanan (Phase 9) --------
+export const b2bClients = pgTable(
+  "b2b_clients",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    perusahaan: text("perusahaan").notNull(),
+    pic: text("pic"),
+    telepon: text("telepon"),
+    email: text("email"),
+    alamat: text("alamat"),
+    npwp: text("npwp"),
+    // Termin pembayaran (hari) untuk transaksi tempo.
+    terminHari: integer("termin_hari").notNull().default(30),
+    aktif: boolean("aktif").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("b2b_clients_tenant_id_idx").on(t.tenantId)],
+);
+
+export const invoiceStatusEnum = pgEnum("invoice_status", [
+  "terbit",
+  "lunas",
+  "batal",
+]);
+
+export const invoices = pgTable(
+  "invoices",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    b2bClientId: uuid("b2b_client_id")
+      .notNull()
+      .references(() => b2bClients.id, { onDelete: "cascade" }),
+    nomor: text("nomor").notNull().unique(),
+    periodeAwal: date("periode_awal"),
+    periodeAkhir: date("periode_akhir"),
+    tanggalTerbit: timestamp("tanggal_terbit", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    jatuhTempo: date("jatuh_tempo"),
+    total: integer("total").notNull().default(0),
+    status: invoiceStatusEnum("status").notNull().default("terbit"),
+    catatan: text("catatan"),
+    createdBy: uuid("created_by"),
+    lunasAt: timestamp("lunas_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("invoices_tenant_id_idx").on(t.tenantId),
+    index("invoices_client_id_idx").on(t.b2bClientId),
+  ],
+);
+
 // --- deliveries: antar-jemput / pickup & delivery (Phase 8) --------------
 export const deliveryTypeEnum = pgEnum("delivery_type", ["jemput", "antar"]);
 export const deliveryStatusEnum = pgEnum("delivery_status", [
@@ -1115,3 +1186,7 @@ export type MachineSession = typeof machineSessions.$inferSelect;
 export type NewMachineSession = typeof machineSessions.$inferInsert;
 export type Delivery = typeof deliveries.$inferSelect;
 export type NewDelivery = typeof deliveries.$inferInsert;
+export type B2bClient = typeof b2bClients.$inferSelect;
+export type NewB2bClient = typeof b2bClients.$inferInsert;
+export type Invoice = typeof invoices.$inferSelect;
+export type NewInvoice = typeof invoices.$inferInsert;

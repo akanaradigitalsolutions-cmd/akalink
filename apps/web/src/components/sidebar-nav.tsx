@@ -17,6 +17,7 @@ import {
   IconCoin,
   IconMachine,
   IconTruck,
+  IconBuilding,
 } from "./icons";
 
 type NavItem = {
@@ -25,7 +26,7 @@ type NavItem = {
   icon: (p: { className?: string }) => React.ReactNode;
   soon?: boolean;
   ownerOnly?: boolean;
-  feature?: "member" | "promo" | "bayar" | "self" | "antar";
+  feature?: "member" | "promo" | "bayar" | "self" | "antar" | "b2b";
 };
 
 const items: NavItem[] = [
@@ -50,6 +51,7 @@ const items: NavItem[] = [
   { label: "Inventori", href: "/inventori", icon: IconBox },
   { label: "Mesin", href: "/mesin", icon: IconMachine, feature: "self" },
   { label: "Antar-Jemput", href: "/antar-jemput", icon: IconTruck, feature: "antar" },
+  { label: "B2B Korporat", href: "/b2b", icon: IconBuilding, ownerOnly: true, feature: "b2b" },
   { label: "Keuangan", href: "/keuangan", icon: IconWallet, ownerOnly: true },
   { label: "Laporan", href: "/laporan", icon: IconChart, ownerOnly: true },
   {
@@ -83,6 +85,7 @@ export function SidebarNav({
   showBayar = false,
   showSelf = false,
   showAntar = false,
+  showB2b = false,
 }: {
   role?: string;
   showMember?: boolean;
@@ -90,6 +93,7 @@ export function SidebarNav({
   showBayar?: boolean;
   showSelf?: boolean;
   showAntar?: boolean;
+  showB2b?: boolean;
 }) {
   const pathname = usePathname();
   const isOwner = role === "owner";
@@ -99,6 +103,7 @@ export function SidebarNav({
     bayar: showBayar,
     self: showSelf,
     antar: showAntar,
+    b2b: showB2b,
   };
 
   return (

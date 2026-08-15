@@ -86,6 +86,16 @@ export function IconTruck(p: IconProps) {
   );
 }
 
+export function IconBuilding(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <rect x="4" y="3" width="16" height="18" rx="1.5" />
+      <path d="M8 7h.01M12 7h.01M16 7h.01M8 11h.01M12 11h.01M16 11h.01M8 15h.01M16 15h.01" />
+      <path d="M10 21v-3.5h4V21" />
+    </Svg>
+  );
+}
+
 export function IconCoin(p: IconProps) {
   return (
     <Svg {...p}>

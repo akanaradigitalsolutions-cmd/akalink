@@ -22,6 +22,7 @@ export type SettingsInput = {
   setujuBayarDigital?: boolean;
   fiturSelfService?: boolean;
   fiturAntarJemput?: boolean;
+  fiturB2b?: boolean;
 };
 
 export async function updateSettings(
@@ -86,6 +87,7 @@ export async function updateSettings(
         bayarDigitalSetujuAt: setujuAt,
         fiturSelfService: !!input.fiturSelfService,
         fiturAntarJemput: !!input.fiturAntarJemput,
+        fiturB2b: !!input.fiturB2b,
         updatedAt: new Date(),
       })
       .where(eq(tenants.id, tenantId));

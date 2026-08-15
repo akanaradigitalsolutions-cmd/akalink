@@ -19,6 +19,7 @@ export type TenantSettings = {
   bayarDigitalSetuju: boolean;
   fiturSelfService: boolean;
   fiturAntarJemput: boolean;
+  fiturB2b: boolean;
 };
 
 /** Ambil profil usaha (tenant) untuk halaman Pengaturan. */
@@ -41,6 +42,7 @@ export const getTenantSettings = cache(
         bayarDigitalSetujuAt: tenants.bayarDigitalSetujuAt,
         fiturSelfService: tenants.fiturSelfService,
         fiturAntarJemput: tenants.fiturAntarJemput,
+        fiturB2b: tenants.fiturB2b,
       })
       .from(tenants)
       .where(eq(tenants.id, tenantId))
