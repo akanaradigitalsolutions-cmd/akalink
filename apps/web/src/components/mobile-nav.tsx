@@ -14,12 +14,14 @@ export function MobileNav({
   showMember = false,
   showPromo = false,
   showBayar = false,
+  showSelf = false,
 }: {
   role: string;
   userName: string;
   showMember?: boolean;
   showPromo?: boolean;
   showBayar?: boolean;
+  showSelf?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -68,6 +70,7 @@ export function MobileNav({
           showMember={showMember}
           showPromo={showPromo}
           showBayar={showBayar}
+          showSelf={showSelf}
         />
 
         <div className="mt-2 border-t border-slate-100 pt-3 dark:border-slate-800">

@@ -15,6 +15,7 @@ import {
   IconStore,
   IconBox,
   IconCoin,
+  IconMachine,
 } from "./icons";
 
 type NavItem = {
@@ -23,7 +24,7 @@ type NavItem = {
   icon: (p: { className?: string }) => React.ReactNode;
   soon?: boolean;
   ownerOnly?: boolean;
-  feature?: "member" | "promo" | "bayar";
+  feature?: "member" | "promo" | "bayar" | "self";
 };
 
 const items: NavItem[] = [
@@ -46,6 +47,7 @@ const items: NavItem[] = [
     feature: "promo",
   },
   { label: "Inventori", href: "/inventori", icon: IconBox },
+  { label: "Mesin", href: "/mesin", icon: IconMachine, feature: "self" },
   { label: "Keuangan", href: "/keuangan", icon: IconWallet, ownerOnly: true },
   { label: "Laporan", href: "/laporan", icon: IconChart, ownerOnly: true },
   {
@@ -77,11 +79,13 @@ export function SidebarNav({
   showMember = false,
   showPromo = false,
   showBayar = false,
+  showSelf = false,
 }: {
   role?: string;
   showMember?: boolean;
   showPromo?: boolean;
   showBayar?: boolean;
+  showSelf?: boolean;
 }) {
   const pathname = usePathname();
   const isOwner = role === "owner";
@@ -89,6 +93,7 @@ export function SidebarNav({
     member: showMember,
     promo: showPromo,
     bayar: showBayar,
+    self: showSelf,
   };
 
   return (

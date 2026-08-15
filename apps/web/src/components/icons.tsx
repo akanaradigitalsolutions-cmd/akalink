@@ -64,6 +64,17 @@ export function IconWallet(p: IconProps) {
   );
 }
 
+export function IconMachine(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <rect x="4" y="3" width="16" height="18" rx="2.5" />
+      <circle cx="12" cy="13" r="4.5" />
+      <circle cx="12" cy="13" r="1.6" />
+      <path d="M7 6h.01M10 6h.01" />
+    </Svg>
+  );
+}
+
 export function IconCoin(p: IconProps) {
   return (
     <Svg {...p}>

@@ -18,6 +18,7 @@ type Initial = {
   fiturPromo: boolean;
   fiturBayarDigital: boolean;
   bayarDigitalSetuju: boolean;
+  fiturSelfService: boolean;
   syaratKetentuan: string[];
 };
 
@@ -48,6 +49,9 @@ export function SettingsForm({
     initial.fiturBayarDigital,
   );
   const [setujuBayar, setSetujuBayar] = useState(initial.bayarDigitalSetuju);
+  const [fiturSelfService, setFiturSelfService] = useState(
+    initial.fiturSelfService,
+  );
   const [sk, setSk] = useState<string[]>(
     initial.syaratKetentuan.length ? initial.syaratKetentuan : [""],
   );
@@ -86,6 +90,7 @@ export function SettingsForm({
         fiturPromo,
         fiturBayarDigital,
         setujuBayarDigital: setujuBayar,
+        fiturSelfService,
         syaratKetentuan: sk,
       });
       if (res.ok) {
@@ -264,6 +269,23 @@ export function SettingsForm({
             )}
           </div>
         )}
+      </section>
+
+      {/* Self-Service (IoT) */}
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
+        <h2 className="mb-1 text-sm font-semibold text-slate-900 dark:text-white">
+          Self-Service &amp; Mesin (IoT)
+        </h2>
+        <p className="mb-4 text-xs text-slate-500 dark:text-slate-400">
+          Kelola mesin cuci/pengering dengan mulai/stop sesi. Bisa disambung ke
+          perangkat relay IoT untuk kontrol otomatis.
+        </p>
+        <Toggle
+          label="Self-Service Mesin"
+          desc="Tampilkan menu Mesin untuk mengelola & menjalankan sesi."
+          on={fiturSelfService}
+          onChange={setFiturSelfService}
+        />
       </section>
 
       {/* Syarat & Ketentuan */}

@@ -40,6 +40,7 @@ export default async function PengaturanPage() {
           fiturPromo: s.fiturPromo,
           fiturBayarDigital: s.fiturBayarDigital,
           bayarDigitalSetuju: s.bayarDigitalSetuju,
+          fiturSelfService: s.fiturSelfService,
           syaratKetentuan:
             s.syaratKetentuan && s.syaratKetentuan.length
               ? s.syaratKetentuan

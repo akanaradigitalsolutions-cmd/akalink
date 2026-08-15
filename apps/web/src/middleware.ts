@@ -87,6 +87,7 @@ export const config = {
     "/promo/:path*",
     "/tagihan/:path*",
     "/dana/:path*",
+    "/mesin/:path*",
     "/akun/:path*",
     "/masuk",
     "/daftar",

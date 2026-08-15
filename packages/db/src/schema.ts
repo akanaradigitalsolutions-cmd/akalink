@@ -69,6 +69,8 @@ export const tenants = pgTable("tenants", {
   }),
   // Saldo dana masuk dari pembayaran digital yang siap ditarik (Rupiah).
   saldoPembayaran: integer("saldo_pembayaran").notNull().default(0),
+  // Self-service & kontrol mesin (IoT).
+  fiturSelfService: boolean("fitur_self_service").notNull().default(false),
   // (Tidak dipakai lagi — biaya kini ketentuan platform; disimpan utk kompat.)
   biayaAdminPersen: numeric("biaya_admin_persen", { precision: 5, scale: 2 })
     .notNull()
@@ -873,6 +875,91 @@ export const paymentOrders = pgTable(
   ],
 );
 
+// --- machines & machine_sessions: self-service (Phase 7) -----------------
+export const machineTypeEnum = pgEnum("machine_type", [
+  "mesin_cuci",
+  "pengering",
+]);
+export const machineStatusEnum = pgEnum("machine_status", [
+  "idle",
+  "running",
+  "maintenance",
+]);
+export const machineSessionStatusEnum = pgEnum("machine_session_status", [
+  "running",
+  "selesai",
+  "batal",
+]);
+
+export const machines = pgTable(
+  "machines",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    outletId: uuid("outlet_id").references(() => outlets.id, {
+      onDelete: "cascade",
+    }),
+    nama: text("nama").notNull(),
+    tipe: machineTypeEnum("tipe").notNull().default("mesin_cuci"),
+    kapasitasKg: numeric("kapasitas_kg", { precision: 6, scale: 2 }),
+    hargaSesi: integer("harga_sesi").notNull().default(0),
+    durasiMenit: integer("durasi_menit").notNull().default(40),
+    status: machineStatusEnum("status").notNull().default("idle"),
+    // Token perangkat IoT (dipakai relay untuk polling perintah ON/OFF).
+    deviceToken: text("device_token").notNull().unique(),
+    lastSeenAt: timestamp("last_seen_at", { withTimezone: true }),
+    aktif: boolean("aktif").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("machines_tenant_id_idx").on(t.tenantId),
+    index("machines_outlet_id_idx").on(t.outletId),
+  ],
+);
+
+export const machineSessions = pgTable(
+  "machine_sessions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    machineId: uuid("machine_id")
+      .notNull()
+      .references(() => machines.id, { onDelete: "cascade" }),
+    outletId: uuid("outlet_id").references(() => outlets.id, {
+      onDelete: "set null",
+    }),
+    consumerId: uuid("consumer_id").references(() => consumers.id, {
+      onDelete: "set null",
+    }),
+    kasirId: uuid("kasir_id"),
+    mulai: timestamp("mulai", { withTimezone: true }).notNull().defaultNow(),
+    selesaiEstimasi: timestamp("selesai_estimasi", {
+      withTimezone: true,
+    }).notNull(),
+    selesai: timestamp("selesai", { withTimezone: true }),
+    durasiMenit: integer("durasi_menit").notNull(),
+    biaya: integer("biaya").notNull().default(0),
+    metodeBayar: text("metode_bayar").notNull().default("tunai"),
+    status: machineSessionStatusEnum("status").notNull().default("running"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("machine_sessions_tenant_id_idx").on(t.tenantId),
+    index("machine_sessions_machine_id_idx").on(t.machineId),
+  ],
+);
+
 // --- withdrawals: penarikan dana pembayaran digital ke bank (Phase 6) ----
 export const withdrawals = pgTable(
   "withdrawals",
@@ -970,3 +1057,7 @@ export type PaymentOrder = typeof paymentOrders.$inferSelect;
 export type NewPaymentOrder = typeof paymentOrders.$inferInsert;
 export type Withdrawal = typeof withdrawals.$inferSelect;
 export type NewWithdrawal = typeof withdrawals.$inferInsert;
+export type Machine = typeof machines.$inferSelect;
+export type NewMachine = typeof machines.$inferInsert;
+export type MachineSession = typeof machineSessions.$inferSelect;
+export type NewMachineSession = typeof machineSessions.$inferInsert;

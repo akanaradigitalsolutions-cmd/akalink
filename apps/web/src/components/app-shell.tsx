@@ -24,6 +24,7 @@ export function AppShell({
   showMember = false,
   showPromo = false,
   showBayar = false,
+  showSelf = false,
   children,
 }: {
   tenantName: string;
@@ -34,6 +35,7 @@ export function AppShell({
   showMember?: boolean;
   showPromo?: boolean;
   showBayar?: boolean;
+  showSelf?: boolean;
   children: React.ReactNode;
 }) {
   const initials = initialsOf(userName || "?");
@@ -50,6 +52,7 @@ export function AppShell({
           showMember={showMember}
           showPromo={showPromo}
           showBayar={showBayar}
+          showSelf={showSelf}
         />
         <form action={keluar}>
           <button
@@ -73,6 +76,7 @@ export function AppShell({
               showMember={showMember}
               showPromo={showPromo}
               showBayar={showBayar}
+              showSelf={showSelf}
             />
             <div className="shrink-0 md:hidden">
               <Logo size={30} showText={false} />

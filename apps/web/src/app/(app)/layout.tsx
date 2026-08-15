@@ -30,6 +30,7 @@ export default async function AppLayout({
   let showMember = false;
   let showPromo = false;
   let showBayar = false;
+  let showSelf = false;
   try {
     const { me, tenant } = await getTenantContext(user.id, tenantId);
     tenantName = tenant?.nama ?? tenantName;
@@ -38,6 +39,7 @@ export default async function AppLayout({
     showMember = tenant?.fiturMember ?? false;
     showPromo = tenant?.fiturPromo ?? false;
     showBayar = tenant?.fiturBayarDigital ?? false;
+    showSelf = tenant?.fiturSelfService ?? false;
 
     if (tenantId) {
       await seedDefaultOutletIfEmpty(tenantId);
@@ -62,6 +64,7 @@ export default async function AppLayout({
       showMember={showMember}
       showPromo={showPromo}
       showBayar={showBayar}
+      showSelf={showSelf}
     >
       {children}
     </AppShell>

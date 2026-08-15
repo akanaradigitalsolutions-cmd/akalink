@@ -239,6 +239,20 @@
       "when": 1786716352205,
       "tag": "0033_withdrawals_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1786763420481,
+      "tag": "0034_overconfident_nomad",
+      "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1786763421541,
+      "tag": "0035_machines_rls",
+      "breakpoints": true
     }
   ]
 }
