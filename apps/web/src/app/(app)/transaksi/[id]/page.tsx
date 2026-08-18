@@ -25,6 +25,7 @@ import {
   SYARAT_KETENTUAN_DEFAULT,
 } from "@/lib/nota";
 import { getPaymentFeeConfig, getLatestPaymentOrder, hitungFee } from "@/lib/payments";
+import { getPendingDeleteForTx } from "@/lib/delete-requests";
 import { StatusEditor } from "./status-editor";
 import { DeleteNota } from "./delete-nota";
 import { DigitalPayment } from "./digital-payment";
@@ -47,10 +48,11 @@ export default async function DetailTransaksiPage({
   const tenantId = getTenantIdFromUser(user);
   if (!tenantId) redirect("/masuk");
 
-  const [data, ctx, feeCfg] = await Promise.all([
+  const [data, ctx, feeCfg, pendingDelete] = await Promise.all([
     getTransactionWithItems(tenantId, id),
     getTenantContext(user.id, tenantId),
     getPaymentFeeConfig(tenantId),
+    getPendingDeleteForTx(tenantId, id),
   ]);
   if (!data) notFound();
   const { tx, consumer, items } = data;
@@ -258,10 +260,12 @@ export default async function DetailTransaksiPage({
         pay={tx.statusPembayaran}
       />
 
-      {/* Hapus nota — hanya untuk pemilik (Owner) */}
-      {getRoleFromUser(user) === "owner" && (
-        <DeleteNota txId={tx.id} />
-      )}
+      {/* Hapus nota — pemilik langsung; staf mengajukan persetujuan */}
+      <DeleteNota
+        txId={tx.id}
+        isOwner={getRoleFromUser(user) === "owner"}
+        pending={pendingDelete}
+      />
     </div>
   );
 }

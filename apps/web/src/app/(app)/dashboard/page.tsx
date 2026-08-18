@@ -5,7 +5,9 @@ import { getSessionUser, getTenantIdFromUser } from "@/lib/auth";
 import { getTenantContext } from "@/lib/tenant";
 import { getDashboardStats } from "@/lib/dashboard";
 import { getCoinConfig } from "@/lib/app-coin";
+import { getPendingDeleteRequests } from "@/lib/delete-requests";
 import { searchTransactions } from "@/lib/transactions";
+import { DeleteRequestsPanel } from "./delete-requests-panel";
 import {
   getOutlets,
   getActiveOutlet,
@@ -41,16 +43,19 @@ export default async function DashboardPage() {
   let outletNama: string | null = null;
   let outletCount = 0;
   let coin: Awaited<ReturnType<typeof getCoinConfig>> | undefined;
+  let pendingDeletes: Awaited<ReturnType<typeof getPendingDeleteRequests>> = [];
   try {
     if (tenantId) {
-      const [ctx, active, outletList, coinConfig] = await Promise.all([
+      const [ctx, active, outletList, coinConfig, delReqs] = await Promise.all([
         getTenantContext(user.id, tenantId),
         getActiveOutlet(tenantId),
         getOutlets(tenantId),
         getCoinConfig(tenantId),
+        getPendingDeleteRequests(tenantId, 20),
       ]);
       me = ctx.me;
       coin = coinConfig;
+      pendingDeletes = delReqs;
       outletNama = active?.nama ?? null;
       outletCount = outletList.length;
       // Tautkan transaksi lama tanpa outlet ke outlet pertama (sekali saja).
@@ -122,6 +127,11 @@ export default async function DashboardPage() {
           Transaksi Baru
         </Link>
       </section>
+
+      {/* Permintaan hapus nota (pemilik: aksi; staf: pemberitahuan) */}
+      {pendingDeletes.length > 0 && (
+        <DeleteRequestsPanel requests={pendingDeletes} isOwner={isOwner} />
+      )}
 
       {/* Saldo AkaLink (khusus pemilik) */}
       {isOwner && (

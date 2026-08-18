@@ -885,6 +885,44 @@ export const paymentOrders = pgTable(
   ],
 );
 
+// --- delete_requests: persetujuan hapus nota (staf → pemilik) ------------
+export const deleteRequestStatusEnum = pgEnum("delete_request_status", [
+  "pending",
+  "approved",
+  "rejected",
+]);
+
+export const deleteRequests = pgTable(
+  "delete_requests",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    // Nota bisa terhapus setelah disetujui → simpan snapshot noNota.
+    transactionId: uuid("transaction_id").references(() => transactions.id, {
+      onDelete: "set null",
+    }),
+    noNota: text("no_nota").notNull(),
+    alasan: text("alasan").notNull(),
+    status: deleteRequestStatusEnum("status").notNull().default("pending"),
+    requestedBy: uuid("requested_by"),
+    requestedByNama: text("requested_by_nama"),
+    decidedBy: uuid("decided_by"),
+    decidedByNama: text("decided_by_nama"),
+    catatanKeputusan: text("catatan_keputusan"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    decidedAt: timestamp("decided_at", { withTimezone: true }),
+  },
+  (t) => [
+    index("delete_requests_tenant_id_idx").on(t.tenantId),
+    index("delete_requests_status_idx").on(t.status),
+    index("delete_requests_tx_idx").on(t.transactionId),
+  ],
+);
+
 // --- platform_admins: super-admin AkaLink (Phase 11) ---------------------
 // Lintas-tenant. Tanpa tenant_id. Akses hanya lewat koneksi service (RLS deny).
 export const platformAdmins = pgTable(
@@ -1288,3 +1326,5 @@ export type InvestorPayout = typeof investorPayouts.$inferSelect;
 export type NewInvestorPayout = typeof investorPayouts.$inferInsert;
 export type PlatformAdmin = typeof platformAdmins.$inferSelect;
 export type NewPlatformAdmin = typeof platformAdmins.$inferInsert;
+export type DeleteRequest = typeof deleteRequests.$inferSelect;
+export type NewDeleteRequest = typeof deleteRequests.$inferInsert;
