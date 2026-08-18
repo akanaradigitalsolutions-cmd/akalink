@@ -490,6 +490,7 @@ export type DeleteTxResult = { ok: true } | { ok: false; error: string };
 
 export async function deleteTransaction(
   id: string,
+  alasan?: string,
 ): Promise<DeleteTxResult> {
   const user = await getSessionUser();
   const tenantId = getTenantIdFromUser(user);
@@ -500,13 +501,22 @@ export async function deleteTransaction(
       error: "Hanya pemilik (Owner) yang dapat menghapus nota.",
     };
 
+  const alasanBersih = String(alasan ?? "").trim();
+  if (alasanBersih.length < 3)
+    return { ok: false, error: "Alasan penghapusan wajib diisi." };
+
   const db = getDb();
   const [tx] = await db
-    .select({ id: transactions.id })
+    .select({ id: transactions.id, noNota: transactions.noNota })
     .from(transactions)
     .where(and(eq(transactions.id, id), eq(transactions.tenantId, tenantId)))
     .limit(1);
   if (!tx) return { ok: false, error: "Transaksi tidak ditemukan." };
+
+  // Jejak audit ringan (tampil di log server): siapa & alasan menghapus.
+  console.info(
+    `[hapus-nota] tenant=${tenantId} nota=${tx.noNota} oleh=${user.email} alasan="${alasanBersih}"`,
+  );
 
   try {
     await db.transaction(async (trx) => {

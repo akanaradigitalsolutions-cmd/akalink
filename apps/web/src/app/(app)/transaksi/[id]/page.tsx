@@ -260,7 +260,7 @@ export default async function DetailTransaksiPage({
 
       {/* Hapus nota — hanya untuk pemilik (Owner) */}
       {getRoleFromUser(user) === "owner" && (
-        <DeleteNota txId={tx.id} noNota={tx.noNota} />
+        <DeleteNota txId={tx.id} />
       )}
     </div>
   );
