@@ -47,13 +47,16 @@ export default async function DetailTransaksiPage({
   const tenantId = getTenantIdFromUser(user);
   if (!tenantId) redirect("/masuk");
 
-  const data = await getTransactionWithItems(tenantId, id);
+  const [data, ctx, feeCfg] = await Promise.all([
+    getTransactionWithItems(tenantId, id),
+    getTenantContext(user.id, tenantId),
+    getPaymentFeeConfig(tenantId),
+  ]);
   if (!data) notFound();
   const { tx, consumer, items } = data;
-  const { tenant } = await getTenantContext(user.id, tenantId);
+  const { tenant } = ctx;
 
   // Pembayaran digital (bila diaktifkan & belum lunas).
-  const feeCfg = await getPaymentFeeConfig(tenantId);
   const showDigital = feeCfg.aktif && tx.statusPembayaran !== "lunas";
   const grossTx = Math.round(Number(tx.grandTotal));
   const feeParts = hitungFee(grossTx);

@@ -42,11 +42,13 @@ export default async function KonsumenDetailPage({
   const tenantId = getTenantIdFromUser(user);
   if (!tenantId) redirect("/masuk");
 
-  const data = await getConsumerDetail(tenantId, id);
+  const [data, settings] = await Promise.all([
+    getConsumerDetail(tenantId, id),
+    getTenantSettings(tenantId),
+  ]);
   if (!data) notFound();
   const { consumer: c, jumlah, belanja, piutang, txs } = data;
 
-  const settings = await getTenantSettings(tenantId);
   const fiturMember = settings?.fiturMember ?? false;
   const fiturPoin = settings?.fiturPoin ?? false;
   const memberTypes = fiturMember ? await getMemberTypes(tenantId) : [];
