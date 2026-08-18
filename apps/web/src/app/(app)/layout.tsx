@@ -37,7 +37,11 @@ export default async function AppLayout({
   let showInvestor = false;
   let showAdmin = false;
   try {
-    const { me, tenant } = await getTenantContext(user.id, tenantId);
+    // Konteks tenant & status admin diambil paralel (tidak saling bergantung).
+    const [{ me, tenant }, admin] = await Promise.all([
+      getTenantContext(user.id, tenantId),
+      isPlatformAdmin(user),
+    ]);
     tenantName = tenant?.nama ?? tenantName;
     userName = me?.nama ?? userName;
     role = me?.role ?? role;
@@ -48,7 +52,7 @@ export default async function AppLayout({
     showAntar = tenant?.fiturAntarJemput ?? false;
     showB2b = tenant?.fiturB2b ?? false;
     showInvestor = tenant?.fiturInvestor ?? false;
-    showAdmin = await isPlatformAdmin(user);
+    showAdmin = admin;
 
     if (tenantId) {
       await seedDefaultOutletIfEmpty(tenantId);

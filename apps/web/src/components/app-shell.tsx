@@ -2,6 +2,8 @@ import { Logo } from "./logo";
 import { SidebarNav } from "./sidebar-nav";
 import { OutletSwitcher } from "./outlet-switcher";
 import { MobileNav } from "./mobile-nav";
+import { RouteProgress } from "./route-progress";
+import { PageFade } from "./page-fade";
 import { keluar } from "@/lib/auth-actions";
 import { IconLogout } from "./icons";
 
@@ -50,6 +52,7 @@ export function AppShell({
 
   return (
     <div className="min-h-dvh bg-slate-50 dark:bg-slate-950">
+      <RouteProgress />
       {/* Sidebar (desktop) */}
       <aside className="fixed inset-y-0 left-0 hidden w-64 flex-col overflow-hidden border-r border-slate-200 bg-white px-4 py-6 dark:border-slate-800 dark:bg-slate-900 md:flex">
         <div className="px-2">
@@ -123,7 +126,7 @@ export function AppShell({
         </header>
 
         <main className="overflow-x-clip px-4 py-6 sm:px-6 lg:px-8">
-          {children}
+          <PageFade>{children}</PageFade>
         </main>
       </div>
     </div>

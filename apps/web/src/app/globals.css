@@ -43,6 +43,156 @@ body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  /* Hilangkan kilau biru saat ketuk di HP. */
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ---- UX global ---------------------------------------------------------- */
+
+/* Transisi halus di semua elemen interaktif (hover/fokus terasa mulus). */
+a,
+button,
+input,
+select,
+textarea,
+[role="switch"],
+[role="button"] {
+  transition:
+    color 0.15s ease,
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.1s ease;
+}
+
+/* Umpan balik ketuk pada tombol (sedikit mengecil). */
+button:active:not(:disabled),
+[role="button"]:active,
+a:active {
+  transform: scale(0.985);
+}
+
+/* Fokus keyboard yang jelas & konsisten (aksesibilitas). */
+:where(a, button, input, select, textarea, [role="switch"], [tabindex]):focus-visible {
+  outline: 2px solid var(--color-brand-500);
+  outline-offset: 2px;
+  border-radius: 0.4rem;
+}
+
+/* Dropdown seragam lintas peramban + ikon panah bawaan AkaLink. */
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.6rem center;
+  background-size: 1rem;
+  padding-right: 2rem;
+}
+select::-ms-expand {
+  display: none;
+}
+
+/* Ikon kalender date/time picker mengikuti warna teks (agar terlihat). */
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.6;
+}
+input[type="date"]::-webkit-calendar-picker-indicator:hover,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover,
+input[type="time"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+.dark input[type="date"]::-webkit-calendar-picker-indicator,
+.dark input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+.dark input[type="time"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.8);
+}
+
+/* Scrollbar tipis & rapi (mis. sidebar & daftar panjang). */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(203 213 225) transparent;
+}
+.dark * {
+  scrollbar-color: rgb(51 65 85) transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-thumb {
+  background: rgb(203 213 225);
+  border-radius: 9999px;
+}
+.dark *::-webkit-scrollbar-thumb {
+  background: rgb(51 65 85);
+}
+
+/* Muat isi halaman dengan fade lembut. */
+@keyframes aka-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.aka-fade-in {
+  animation: aka-fade-in 0.28s ease both;
+}
+
+/* Skeleton shimmer untuk state loading. */
+@keyframes aka-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+.aka-skeleton {
+  position: relative;
+  overflow: hidden;
+  background: rgb(226 232 240);
+  border-radius: 0.5rem;
+}
+.dark .aka-skeleton {
+  background: rgb(30 41 59);
+}
+.aka-skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.45),
+    transparent
+  );
+  animation: aka-shimmer 1.4s infinite;
+}
+.dark .aka-skeleton::after {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.06),
+    transparent
+  );
+}
+
+/* Hormati preferensi "kurangi gerak". */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* Saat mencetak: sembunyikan semua kecuali area .printable (nota/label).

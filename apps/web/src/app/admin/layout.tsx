@@ -4,6 +4,7 @@ import { getSessionUser } from "@/lib/auth";
 import { isPlatformAdmin } from "@/lib/platform";
 import { keluar } from "@/lib/auth-actions";
 import { Logo } from "@/components/logo";
+import { RouteProgress } from "@/components/route-progress";
 import { IconLogout } from "@/components/icons";
 
 export default async function AdminLayout({
@@ -17,6 +18,7 @@ export default async function AdminLayout({
 
   return (
     <div className="min-h-dvh bg-slate-50 dark:bg-slate-950">
+      <RouteProgress />
       <header className="sticky top-0 z-10 flex h-16 items-center justify-between gap-3 border-b border-slate-200 bg-white/80 px-4 backdrop-blur dark:border-slate-800 dark:bg-slate-900/80 sm:px-6">
         <div className="flex items-center gap-3">
           <Logo size={30} showText={false} />
