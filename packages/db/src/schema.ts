@@ -919,6 +919,43 @@ export const salaryAdvances = pgTable(
   ],
 );
 
+// --- approvals: persetujuan aksi staf → pemilik (mis. beli inventori) -----
+export const approvalStatusEnum = pgEnum("approval_status", [
+  "pending",
+  "approved",
+  "rejected",
+]);
+
+export const approvals = pgTable(
+  "approvals",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    // Jenis aksi, mis. "beli_inventori".
+    tipe: text("tipe").notNull(),
+    judul: text("judul").notNull(),
+    nominal: integer("nominal").notNull().default(0),
+    // Parameter aksi untuk dieksekusi saat disetujui.
+    payload: jsonb("payload").$type<Record<string, unknown>>(),
+    status: approvalStatusEnum("status").notNull().default("pending"),
+    requestedBy: uuid("requested_by"),
+    requestedByNama: text("requested_by_nama"),
+    decidedBy: uuid("decided_by"),
+    decidedByNama: text("decided_by_nama"),
+    catatan: text("catatan"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    decidedAt: timestamp("decided_at", { withTimezone: true }),
+  },
+  (t) => [
+    index("approvals_tenant_id_idx").on(t.tenantId),
+    index("approvals_status_idx").on(t.status),
+  ],
+);
+
 // --- cash_movements: setoran/pemindahan kas laundry (Fitur Kas) ----------
 export const cashMovementTypeEnum = pgEnum("cash_movement_type", [
   "setor_bank", // kas outlet → bank
@@ -1397,3 +1434,5 @@ export type CashMovement = typeof cashMovements.$inferSelect;
 export type NewCashMovement = typeof cashMovements.$inferInsert;
 export type SalaryAdvance = typeof salaryAdvances.$inferSelect;
 export type NewSalaryAdvance = typeof salaryAdvances.$inferInsert;
+export type Approval = typeof approvals.$inferSelect;
+export type NewApproval = typeof approvals.$inferInsert;

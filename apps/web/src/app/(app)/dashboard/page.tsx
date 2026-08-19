@@ -6,8 +6,10 @@ import { getTenantContext } from "@/lib/tenant";
 import { getDashboardStats } from "@/lib/dashboard";
 import { getCoinConfig } from "@/lib/app-coin";
 import { getPendingDeleteRequests } from "@/lib/delete-requests";
+import { getPendingApprovals } from "@/lib/approvals";
 import { searchTransactions } from "@/lib/transactions";
 import { DeleteRequestsPanel } from "./delete-requests-panel";
+import { ApprovalsPanel } from "./approvals-panel";
 import {
   getOutlets,
   getActiveOutlet,
@@ -44,18 +46,22 @@ export default async function DashboardPage() {
   let outletCount = 0;
   let coin: Awaited<ReturnType<typeof getCoinConfig>> | undefined;
   let pendingDeletes: Awaited<ReturnType<typeof getPendingDeleteRequests>> = [];
+  let pendingApprovals: Awaited<ReturnType<typeof getPendingApprovals>> = [];
   try {
     if (tenantId) {
-      const [ctx, active, outletList, coinConfig, delReqs] = await Promise.all([
-        getTenantContext(user.id, tenantId),
-        getActiveOutlet(tenantId),
-        getOutlets(tenantId),
-        getCoinConfig(tenantId),
-        getPendingDeleteRequests(tenantId, 20),
-      ]);
+      const [ctx, active, outletList, coinConfig, delReqs, apprs] =
+        await Promise.all([
+          getTenantContext(user.id, tenantId),
+          getActiveOutlet(tenantId),
+          getOutlets(tenantId),
+          getCoinConfig(tenantId),
+          getPendingDeleteRequests(tenantId, 20),
+          getPendingApprovals(tenantId, 20),
+        ]);
       me = ctx.me;
       coin = coinConfig;
       pendingDeletes = delReqs;
+      pendingApprovals = apprs;
       outletNama = active?.nama ?? null;
       outletCount = outletList.length;
       // Tautkan transaksi lama tanpa outlet ke outlet pertama (sekali saja).
@@ -127,6 +133,11 @@ export default async function DashboardPage() {
           Transaksi Baru
         </Link>
       </section>
+
+      {/* Permintaan persetujuan aksi staf (mis. beli inventori) */}
+      {pendingApprovals.length > 0 && (
+        <ApprovalsPanel approvals={pendingApprovals} isOwner={isOwner} />
+      )}
 
       {/* Permintaan hapus nota (pemilik: aksi; staf: pemberitahuan) */}
       {pendingDeletes.length > 0 && (

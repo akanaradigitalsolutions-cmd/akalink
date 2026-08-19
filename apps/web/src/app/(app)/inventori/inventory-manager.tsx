@@ -186,7 +186,12 @@ export function InventoryManager({
                     onSubmit={(d) =>
                       start(async () => {
                         const res = await buyStock({ itemId: it.id, ...d });
-                        if (res.ok) done("Pembelian stok tercatat ✓");
+                        if (res.ok)
+                          done(
+                            res.pending
+                              ? "Permintaan pembelian dikirim ke pemilik ⏳"
+                              : "Pembelian stok tercatat ✓",
+                          );
                         else setMsg({ text: res.error });
                       })
                     }

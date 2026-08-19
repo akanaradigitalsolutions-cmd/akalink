@@ -8,6 +8,8 @@ import {
   inventoryMovements,
   suppliers,
   outlets,
+  approvals,
+  employees,
 } from "@akalink/db";
 import {
   getSessionUser,
@@ -17,8 +19,11 @@ import {
 import { getActiveOutlet, seedDefaultOutletIfEmpty } from "@/lib/outlets";
 import { seedDefaultCoaIfEmpty } from "@/lib/coa";
 import { postJournal } from "@/lib/journal";
+import { executeBuyStock } from "@/lib/inventory-core";
 
-export type InvResult = { ok: true } | { ok: false; error: string };
+export type InvResult =
+  | { ok: true; pending?: boolean }
+  | { ok: false; error: string };
 
 type Ctx = { tenantId: string; outletId: string; userId: string };
 
@@ -171,77 +176,62 @@ export async function buyStock(input: {
   const c = await ctx();
   if ("error" in c) return { ok: false, error: c.error };
 
+  const user = await getSessionUser();
+  const isOwner = getRoleFromUser(user) === "owner";
+
   const qty = num(input.qty);
   const total = num(input.totalHarga);
   const kas = String(input.kasKode ?? "");
   if (!(qty > 0)) return { ok: false, error: "Jumlah harus lebih dari 0." };
   if (!(total >= 0)) return { ok: false, error: "Total harga tidak valid." };
   if (!kas) return { ok: false, error: "Pilih metode pembayaran." };
-  const kredit = kas === "HUTANG";
 
   const item = await loadItem(c, input.itemId);
   if (!item) return { ok: false, error: "Bahan tidak ditemukan." };
 
-  // Validasi supplier (bila dipilih).
-  let supplierId: string | null = null;
-  if (input.supplierId) {
-    const [s] = await getDb()
-      .select({ id: suppliers.id })
-      .from(suppliers)
-      .where(
-        and(
-          eq(suppliers.id, input.supplierId),
-          eq(suppliers.tenantId, c.tenantId),
-        ),
-      )
+  const payload = {
+    itemId: input.itemId,
+    qty,
+    totalHarga: total,
+    kasKode: kas,
+    supplierId: input.supplierId ?? null,
+    keterangan: input.keterangan ?? null,
+    outletId: c.outletId,
+  };
+
+  // Staf (bukan pemilik): buat permintaan persetujuan, jangan langsung eksekusi.
+  if (!isOwner) {
+    const db = getDb();
+    const [emp] = await db
+      .select({ id: employees.id, nama: employees.nama })
+      .from(employees)
+      .where(and(eq(employees.authUserId, c.userId), eq(employees.tenantId, c.tenantId)))
       .limit(1);
-    supplierId = s?.id ?? null;
-  }
-
-  const unit = qty > 0 ? total / qty : 0;
-  const saldo = Number(item.stok) + qty;
-
-  await seedDefaultCoaIfEmpty(c.tenantId);
-  const db = getDb();
-  try {
-    await db.transaction(async (tx) => {
-      await tx
-        .update(inventoryItems)
-        .set({ stok: String(saldo), harga: String(unit), updatedAt: new Date() })
-        .where(eq(inventoryItems.id, item.id));
-      await tx.insert(inventoryMovements).values({
-        tenantId: c.tenantId,
-        outletId: c.outletId,
-        itemId: item.id,
-        supplierId,
-        tipe: "pembelian",
-        qtyDelta: String(qty),
-        hargaSatuan: String(unit),
-        saldoSesudah: String(saldo),
-        keterangan:
-          input.keterangan?.trim() ||
-          `Beli ${item.nama}${kredit ? " (kredit)" : ""}`,
-        createdBy: c.userId,
-      });
-      if (total > 0) {
-        await postJournal(tx, c.tenantId, {
-          keterangan: `Pembelian stok: ${item.nama}`,
-          refType: "inventori_beli",
-          refId: item.id,
-          lines: [
-            { kode: "1.3", debit: total },
-            // Cr Kas (bila tunai) atau Cr Hutang Usaha 2.1 (bila kredit).
-            { kode: kredit ? "2.1" : kas, kredit: total },
-          ],
-        });
-      }
+    await db.insert(approvals).values({
+      tenantId: c.tenantId,
+      tipe: "beli_inventori",
+      judul: `Pembelian stok: ${item.nama} (${qty} ${item.satuan})`,
+      nominal: Math.round(total),
+      payload,
+      status: "pending",
+      requestedBy: emp?.id ?? null,
+      requestedByNama: emp?.nama ?? user?.email ?? null,
     });
-  } catch (e) {
-    return {
-      ok: false,
-      error: e instanceof Error ? e.message : "Gagal menyimpan.",
-    };
+    revalidatePath("/inventori");
+    revalidatePath("/dashboard");
+    return { ok: true, pending: true };
   }
+
+  // Pemilik: eksekusi langsung.
+  const res = await executeBuyStock(c.tenantId, c.outletId, c.userId, {
+    itemId: payload.itemId,
+    qty: payload.qty,
+    totalHarga: payload.totalHarga,
+    kasKode: payload.kasKode,
+    supplierId: payload.supplierId,
+    keterangan: input.keterangan,
+  });
+  if (!res.ok) return res;
   revalidate();
   return { ok: true };
 }
