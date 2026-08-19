@@ -73,6 +73,7 @@ const items: NavItem[] = [
   },
   { label: "Outlet", href: "/outlet", icon: IconStore, ownerOnly: true },
   { label: "Karyawan", href: "/karyawan", icon: IconBadge, ownerOnly: true },
+  { label: "Gaji", href: "/gaji", icon: IconCash, ownerOnly: true },
   {
     label: "Pengaturan",
     href: "/pengaturan",

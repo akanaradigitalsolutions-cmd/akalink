@@ -24,6 +24,7 @@ export const DEFAULT_COA: Seed[] = [
   { kode: "1.1.04", nama: "Bank", tipe: "aset", normal: "debit", parent: "1.1", kas: true },
   { kode: "1.1.05", nama: "Dana Pembayaran Digital", tipe: "aset", normal: "debit", parent: "1.1" },
   { kode: "1.2", nama: "Piutang Usaha", tipe: "aset", normal: "debit", parent: "1" },
+  { kode: "1.4", nama: "Piutang Karyawan (Kasbon)", tipe: "aset", normal: "debit", parent: "1" },
   { kode: "1.3", nama: "Persediaan", tipe: "aset", normal: "debit", parent: "1" },
   { kode: "2", nama: "KEWAJIBAN", tipe: "kewajiban", normal: "kredit" },
   { kode: "2.1", nama: "Hutang Usaha", tipe: "kewajiban", normal: "kredit", parent: "2" },
@@ -53,6 +54,9 @@ export const AKUN_PENDAPATAN_ANTAR = "4.2";
 /** Kode akun modal investor & distribusi bagi hasil. */
 export const AKUN_MODAL_INVESTOR = "3.3";
 export const AKUN_DISTRIBUSI_BAGI_HASIL = "3.4";
+/** Kode akun piutang karyawan (kasbon) & beban gaji. */
+export const AKUN_PIUTANG_KARYAWAN = "1.4";
+export const AKUN_BEBAN_GAJI = "5.2";
 
 export async function getCoa(tenantId: string) {
   const db = getDb();

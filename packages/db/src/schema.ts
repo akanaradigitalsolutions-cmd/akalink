@@ -175,6 +175,8 @@ export const employees = pgTable(
       .notNull()
       .default(sql`'{}'::uuid[]`),
     status: employeeStatusEnum("status").notNull().default("invited"),
+    // Gaji pokok bulanan (Rupiah) — hanya terlihat oleh pemilik.
+    gaji: integer("gaji").notNull().default(0),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -885,6 +887,38 @@ export const paymentOrders = pgTable(
   ],
 );
 
+// --- salary_advances: kasbon / uang muka gaji karyawan (Fitur Gaji) ------
+export const salaryAdvanceStatusEnum = pgEnum("salary_advance_status", [
+  "belum_dipotong",
+  "dipotong",
+]);
+
+export const salaryAdvances = pgTable(
+  "salary_advances",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    employeeId: uuid("employee_id")
+      .notNull()
+      .references(() => employees.id, { onDelete: "cascade" }),
+    jumlah: integer("jumlah").notNull(),
+    catatan: text("catatan"),
+    status: salaryAdvanceStatusEnum("status").notNull().default("belum_dipotong"),
+    createdBy: uuid("created_by"),
+    createdByNama: text("created_by_nama"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    settledAt: timestamp("settled_at", { withTimezone: true }),
+  },
+  (t) => [
+    index("salary_advances_tenant_id_idx").on(t.tenantId),
+    index("salary_advances_employee_id_idx").on(t.employeeId),
+  ],
+);
+
 // --- cash_movements: setoran/pemindahan kas laundry (Fitur Kas) ----------
 export const cashMovementTypeEnum = pgEnum("cash_movement_type", [
   "setor_bank", // kas outlet → bank
@@ -1361,3 +1395,5 @@ export type DeleteRequest = typeof deleteRequests.$inferSelect;
 export type NewDeleteRequest = typeof deleteRequests.$inferInsert;
 export type CashMovement = typeof cashMovements.$inferSelect;
 export type NewCashMovement = typeof cashMovements.$inferInsert;
+export type SalaryAdvance = typeof salaryAdvances.$inferSelect;
+export type NewSalaryAdvance = typeof salaryAdvances.$inferInsert;
