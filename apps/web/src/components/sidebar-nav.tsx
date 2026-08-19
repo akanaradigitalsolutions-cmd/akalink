@@ -19,6 +19,7 @@ import {
   IconTruck,
   IconBuilding,
   IconSparkle,
+  IconCash,
 } from "./icons";
 
 type NavItem = {
@@ -49,6 +50,7 @@ const items: NavItem[] = [
     ownerOnly: true,
     feature: "promo",
   },
+  { label: "Kas & Setoran", href: "/kas", icon: IconCash },
   { label: "Inventori", href: "/inventori", icon: IconBox },
   { label: "Mesin", href: "/mesin", icon: IconMachine, feature: "self" },
   { label: "Antar-Jemput", href: "/antar-jemput", icon: IconTruck, feature: "antar" },

@@ -885,6 +885,37 @@ export const paymentOrders = pgTable(
   ],
 );
 
+// --- cash_movements: setoran/pemindahan kas laundry (Fitur Kas) ----------
+export const cashMovementTypeEnum = pgEnum("cash_movement_type", [
+  "setor_bank", // kas outlet → bank
+  "ambil_owner", // kas outlet → pemilik (prive)
+  "kas_masuk", // tambahan kas dari pemilik/lainnya
+]);
+
+export const cashMovements = pgTable(
+  "cash_movements",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    outletId: uuid("outlet_id").references(() => outlets.id, {
+      onDelete: "set null",
+    }),
+    tipe: cashMovementTypeEnum("tipe").notNull(),
+    jumlah: integer("jumlah").notNull(),
+    // Tujuan/sumber: nama bank+rekening atau "Pemilik".
+    tujuan: text("tujuan"),
+    catatan: text("catatan"),
+    createdBy: uuid("created_by"),
+    createdByNama: text("created_by_nama"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("cash_movements_tenant_id_idx").on(t.tenantId)],
+);
+
 // --- delete_requests: persetujuan hapus nota (staf → pemilik) ------------
 export const deleteRequestStatusEnum = pgEnum("delete_request_status", [
   "pending",
@@ -1328,3 +1359,5 @@ export type PlatformAdmin = typeof platformAdmins.$inferSelect;
 export type NewPlatformAdmin = typeof platformAdmins.$inferInsert;
 export type DeleteRequest = typeof deleteRequests.$inferSelect;
 export type NewDeleteRequest = typeof deleteRequests.$inferInsert;
+export type CashMovement = typeof cashMovements.$inferSelect;
+export type NewCashMovement = typeof cashMovements.$inferInsert;

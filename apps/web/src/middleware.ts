@@ -90,6 +90,7 @@ export const config = {
     "/tagihan/:path*",
     "/dana/:path*",
     "/mesin/:path*",
+    "/kas/:path*",
     "/antar-jemput/:path*",
     "/b2b/:path*",
     "/investor/:path*",
