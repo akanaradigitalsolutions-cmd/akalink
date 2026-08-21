@@ -28,19 +28,31 @@ export type StaffSalaryRow = {
 
 export async function getStaffSalaries(
   tenantId: string,
+  outletId?: string | null,
 ): Promise<StaffSalaryRow[]> {
   const db = getDb();
-  const staff = await db
+  const staffAll = await db
     .select({
       id: employees.id,
       nama: employees.nama,
       role: employees.role,
       gaji: employees.gaji,
       tanggalMulai: employees.tanggalMulai,
+      outletIds: employees.outletIds,
     })
     .from(employees)
     .where(eq(employees.tenantId, tenantId))
     .orderBy(desc(employees.createdAt));
+
+  // Filter per outlet aktif: pemilik & karyawan semua-outlet selalu tampil.
+  const staff = outletId
+    ? staffAll.filter(
+        (s) =>
+          s.role === "owner" ||
+          (s.outletIds ?? []).length === 0 ||
+          (s.outletIds ?? []).includes(outletId),
+      )
+    : staffAll;
 
   const advances = await db
     .select({
@@ -68,8 +80,9 @@ export async function getStaffSalaries(
         .filter((a) => a.jatuhTempo && a.jatuhTempo < today && a.jumlah - a.dibayar > 0)
         .reduce((sum, a) => sum + Math.max(0, a.jumlah - a.dibayar), 0);
       const cyc = salaryCycle(s.tanggalMulai, today);
-      const { tanggalMulai: _tm, ...rest } = s;
+      const { tanggalMulai: _tm, outletIds: _oi, ...rest } = s;
       void _tm;
+      void _oi;
       return {
         ...rest,
         kasbonBelum,
