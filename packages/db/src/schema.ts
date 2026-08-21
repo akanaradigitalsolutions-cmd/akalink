@@ -181,6 +181,8 @@ export const employees = pgTable(
     status: employeeStatusEnum("status").notNull().default("invited"),
     // Gaji pokok bulanan (Rupiah) — hanya terlihat oleh pemilik.
     gaji: integer("gaji").notNull().default(0),
+    // Tanggal mulai kerja → menentukan siklus/tanggal gajian bulanan.
+    tanggalMulai: date("tanggal_mulai"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -943,6 +945,8 @@ export const salaryAdvancePayments = pgTable(
     jumlah: integer("jumlah").notNull(),
     // "potong_gaji" (Dr Beban Gaji) atau "tunai" (Dr Kas — dikembalikan tunai).
     metode: text("metode").notNull().default("potong_gaji"),
+    // Bila pembayaran ini berasal dari proses gaji (payroll), tautkan ke run-nya.
+    payrollRunId: uuid("payroll_run_id"),
     tanggal: date("tanggal"),
     catatan: text("catatan"),
     createdByNama: text("created_by_nama"),
@@ -953,6 +957,38 @@ export const salaryAdvancePayments = pgTable(
   (t) => [
     index("salary_adv_pay_tenant_id_idx").on(t.tenantId),
     index("salary_adv_pay_advance_id_idx").on(t.advanceId),
+  ],
+);
+
+// --- payroll_runs: proses gaji per periode per karyawan (Penggajian) --------
+export const payrollRuns = pgTable(
+  "payroll_runs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    employeeId: uuid("employee_id")
+      .notNull()
+      .references(() => employees.id, { onDelete: "cascade" }),
+    // Periode gaji yang dibayar (mis. 5 Agu – 4 Sep).
+    periodeMulai: date("periode_mulai"),
+    periodeAkhir: date("periode_akhir"),
+    tanggalBayar: date("tanggal_bayar").notNull(),
+    gajiPokok: integer("gaji_pokok").notNull(),
+    potonganKasbon: integer("potongan_kasbon").notNull().default(0),
+    gajiBersih: integer("gaji_bersih").notNull(),
+    // Sumber dana pembayaran: "1.1.02" Kas Outlet | "1.1.04" Bank.
+    akun: text("akun").notNull().default("1.1.02"),
+    catatan: text("catatan"),
+    createdByNama: text("created_by_nama"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("payroll_runs_tenant_id_idx").on(t.tenantId),
+    index("payroll_runs_employee_id_idx").on(t.employeeId),
   ],
 );
 
@@ -1474,5 +1510,7 @@ export type NewSalaryAdvance = typeof salaryAdvances.$inferInsert;
 export type SalaryAdvancePayment = typeof salaryAdvancePayments.$inferSelect;
 export type NewSalaryAdvancePayment =
   typeof salaryAdvancePayments.$inferInsert;
+export type PayrollRun = typeof payrollRuns.$inferSelect;
+export type NewPayrollRun = typeof payrollRuns.$inferInsert;
 export type Approval = typeof approvals.$inferSelect;
 export type NewApproval = typeof approvals.$inferInsert;

@@ -6,7 +6,9 @@ import {
   employees,
   salaryAdvances,
   salaryAdvancePayments,
+  payrollRuns,
 } from "@akalink/db";
+import { salaryCycle, type SalaryCycle } from "./salary-cycle";
 
 /** YYYY-MM-DD hari ini (untuk cek jatuh tempo). */
 function todayStr(): string {
@@ -20,6 +22,8 @@ export type StaffSalaryRow = {
   gaji: number;
   kasbonBelum: number; // sisa kasbon yang belum dipotong (jumlah - dibayar)
   kasbonOverdue: number; // jumlah kasbon lewat jatuh tempo (belum lunas)
+  nextPayDate: string | null; // tanggal gajian berikutnya
+  daysUntil: number | null;
 };
 
 export async function getStaffSalaries(
@@ -32,6 +36,7 @@ export async function getStaffSalaries(
       nama: employees.nama,
       role: employees.role,
       gaji: employees.gaji,
+      tanggalMulai: employees.tanggalMulai,
     })
     .from(employees)
     .where(eq(employees.tenantId, tenantId))
@@ -62,7 +67,16 @@ export async function getStaffSalaries(
       const kasbonOverdue = mine
         .filter((a) => a.jatuhTempo && a.jatuhTempo < today && a.jumlah - a.dibayar > 0)
         .reduce((sum, a) => sum + Math.max(0, a.jumlah - a.dibayar), 0);
-      return { ...s, kasbonBelum, kasbonOverdue };
+      const cyc = salaryCycle(s.tanggalMulai, today);
+      const { tanggalMulai: _tm, ...rest } = s;
+      void _tm;
+      return {
+        ...rest,
+        kasbonBelum,
+        kasbonOverdue,
+        nextPayDate: cyc.nextPayDate,
+        daysUntil: cyc.daysUntil,
+      };
     })
     .sort((a, b) => (a.role === "owner" ? -1 : b.role === "owner" ? 1 : 0));
 }
@@ -92,13 +106,36 @@ export type AdvanceDetail = {
   payments: PaymentRow[];
 };
 
+export type PayrollHistoryRow = {
+  id: string;
+  tanggalBayar: string;
+  periodeMulai: string | null;
+  periodeAkhir: string | null;
+  gajiPokok: number;
+  potonganKasbon: number;
+  gajiBersih: number;
+  akun: string;
+  catatan: string | null;
+  createdByNama: string | null;
+  createdAt: string;
+};
+
 export type EmployeeGajiDetail = {
-  employee: { id: string; nama: string; role: string; gaji: number };
+  employee: {
+    id: string;
+    nama: string;
+    role: string;
+    gaji: number;
+    tanggalMulai: string | null;
+  };
+  cycle: SalaryCycle;
   advances: AdvanceDetail[];
+  payrolls: PayrollHistoryRow[];
   totalKasbon: number; // total nominal kasbon aktif (belum lunas)
   totalDibayar: number; // total sudah dibayar/dicicil pada kasbon aktif
   totalSisa: number; // sisa yang masih terutang
   overdueCount: number; // jumlah kasbon lewat jatuh tempo
+  estimasiGajiBersih: number; // gaji pokok - sisa kasbon aktif (perkiraan bawa pulang)
 };
 
 /** Detail lengkap gaji + riwayat kasbon (dengan cicilan) seorang karyawan. */
@@ -113,6 +150,7 @@ export async function getEmployeeGajiDetail(
       nama: employees.nama,
       role: employees.role,
       gaji: employees.gaji,
+      tanggalMulai: employees.tanggalMulai,
     })
     .from(employees)
     .where(and(eq(employees.id, employeeId), eq(employees.tenantId, tenantId)))
@@ -196,12 +234,52 @@ export async function getEmployeeGajiDetail(
   const totalSisa = aktif.reduce((s, a) => s + a.sisa, 0);
   const overdueCount = advances.filter((a) => a.overdue).length;
 
+  const payrollRows = await db
+    .select({
+      id: payrollRuns.id,
+      tanggalBayar: payrollRuns.tanggalBayar,
+      periodeMulai: payrollRuns.periodeMulai,
+      periodeAkhir: payrollRuns.periodeAkhir,
+      gajiPokok: payrollRuns.gajiPokok,
+      potonganKasbon: payrollRuns.potonganKasbon,
+      gajiBersih: payrollRuns.gajiBersih,
+      akun: payrollRuns.akun,
+      catatan: payrollRuns.catatan,
+      createdByNama: payrollRuns.createdByNama,
+      createdAt: payrollRuns.createdAt,
+    })
+    .from(payrollRuns)
+    .where(
+      and(
+        eq(payrollRuns.tenantId, tenantId),
+        eq(payrollRuns.employeeId, employeeId),
+      ),
+    )
+    .orderBy(desc(payrollRuns.tanggalBayar), desc(payrollRuns.createdAt));
+
+  const payrolls: PayrollHistoryRow[] = payrollRows.map((p) => ({
+    id: p.id,
+    tanggalBayar: p.tanggalBayar,
+    periodeMulai: p.periodeMulai,
+    periodeAkhir: p.periodeAkhir,
+    gajiPokok: p.gajiPokok,
+    potonganKasbon: p.potonganKasbon,
+    gajiBersih: p.gajiBersih,
+    akun: p.akun,
+    catatan: p.catatan,
+    createdByNama: p.createdByNama,
+    createdAt: p.createdAt.toISOString(),
+  }));
+
   return {
     employee: emp,
+    cycle: salaryCycle(emp.tanggalMulai, today),
     advances,
+    payrolls,
     totalKasbon,
     totalDibayar,
     totalSisa,
     overdueCount,
+    estimasiGajiBersih: Math.max(0, emp.gaji - totalSisa),
   };
 }

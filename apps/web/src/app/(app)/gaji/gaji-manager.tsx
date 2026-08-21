@@ -7,6 +7,18 @@ import { formatRupiah } from "@/lib/format";
 import { setGaji } from "@/lib/salary-actions";
 import type { StaffSalaryRow } from "@/lib/salary";
 
+const BULAN = [
+  "Jan", "Feb", "Mar", "Apr", "Mei", "Jun",
+  "Jul", "Agu", "Sep", "Okt", "Nov", "Des",
+];
+function fmtTgl(s: string | null): string {
+  if (!s) return "—";
+  const [y, m, d] = s.slice(0, 10).split("-");
+  const mi = Number(m) - 1;
+  if (!y || mi < 0 || mi > 11) return s;
+  return `${Number(d)} ${BULAN[mi]} ${y}`;
+}
+
 export function GajiManager({
   staff,
   totalGaji,
@@ -106,6 +118,14 @@ function StaffCard({ s }: { s: StaffSalaryRow }) {
               <span className="rounded-full bg-red-100 px-2 py-0.5 font-medium text-red-700 dark:bg-red-950 dark:text-red-300">
                 Jatuh tempo {formatRupiah(s.kasbonOverdue)}
               </span>
+            )}
+            {s.nextPayDate ? (
+              <span className="text-slate-500 dark:text-slate-400">
+                · Gajian: {fmtTgl(s.nextPayDate)}
+                {s.daysUntil !== null && s.daysUntil >= 0 ? ` (${s.daysUntil}h)` : ""}
+              </span>
+            ) : (
+              <span className="text-slate-400">· Tgl mulai belum diatur</span>
             )}
           </div>
         </div>
