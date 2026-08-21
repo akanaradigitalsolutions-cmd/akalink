@@ -29,6 +29,12 @@ function todayStr(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
+function labelAkun(kode: string | null): string {
+  if (kode === "1.1.04") return "Bank";
+  if (kode === "1.1.02") return "Kas Outlet";
+  return "";
+}
+
 const inputCls =
   "rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-200 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100";
 
@@ -438,6 +444,7 @@ function PayrollHistory({ detail }: { detail: EmployeeGajiDetail }) {
               <th className="px-3 py-2 text-right font-medium">Pokok</th>
               <th className="px-3 py-2 text-right font-medium">Potong</th>
               <th className="px-3 py-2 text-right font-medium">Bersih</th>
+              <th className="px-3 py-2 text-left font-medium">Sumber</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -458,6 +465,7 @@ function PayrollHistory({ detail }: { detail: EmployeeGajiDetail }) {
                 <td className="px-3 py-2 text-right font-semibold text-green-600 dark:text-green-400">
                   {formatRupiah(p.gajiBersih)}
                 </td>
+                <td className="px-3 py-2 text-slate-500">{labelAkun(p.akun)}</td>
               </tr>
             ))}
           </tbody>
@@ -638,6 +646,9 @@ function AdvanceCard({ a }: { a: AdvanceDetail }) {
           </p>
           <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
             Kasbon: {fmtTgl(a.tanggal)} · Jatuh tempo: {fmtTgl(a.jatuhTempo)}
+            {labelAkun(a.sumberAkun) && (
+              <> · dari <b>{labelAkun(a.sumberAkun)}</b></>
+            )}
           </p>
           {a.catatan && (
             <p className="mt-0.5 text-xs italic text-slate-400">“{a.catatan}”</p>

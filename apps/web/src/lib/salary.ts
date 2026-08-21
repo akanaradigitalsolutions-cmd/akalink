@@ -111,6 +111,7 @@ export type AdvanceDetail = {
   sisa: number;
   catatan: string | null;
   status: "belum_dipotong" | "dipotong";
+  sumberAkun: string | null; // "1.1.02" Kas Outlet | "1.1.04" Bank
   tanggal: string | null;
   jatuhTempo: string | null;
   overdue: boolean;
@@ -177,6 +178,7 @@ export async function getEmployeeGajiDetail(
       dibayar: salaryAdvances.dibayar,
       catatan: salaryAdvances.catatan,
       status: salaryAdvances.status,
+      sumberAkun: salaryAdvances.sumberAkun,
       tanggal: salaryAdvances.tanggal,
       jatuhTempo: salaryAdvances.jatuhTempo,
       createdByNama: salaryAdvances.createdByNama,
@@ -222,6 +224,7 @@ export async function getEmployeeGajiDetail(
       sisa,
       catatan: a.catatan,
       status: a.status,
+      sumberAkun: a.sumberAkun,
       tanggal: a.tanggal,
       jatuhTempo: a.jatuhTempo,
       overdue,

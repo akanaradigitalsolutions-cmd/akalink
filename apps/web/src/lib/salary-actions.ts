@@ -130,6 +130,7 @@ export async function giveAdvance(input: {
           employeeId: emp.id,
           jumlah,
           dibayar: 0,
+          sumberAkun: akun,
           catatan: input.catatan?.trim() || null,
           tanggal: tgl.toISOString().slice(0, 10),
           jatuhTempo: jatuhTempo ? jatuhTempo.toISOString().slice(0, 10) : null,

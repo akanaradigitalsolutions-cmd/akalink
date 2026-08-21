@@ -912,6 +912,8 @@ export const salaryAdvances = pgTable(
     jumlah: integer("jumlah").notNull(),
     // Total yang sudah dibayar/dicicil (cache dari salary_advance_payments).
     dibayar: integer("dibayar").notNull().default(0),
+    // Sumber dana kasbon: "1.1.02" Kas Outlet | "1.1.04" Bank (untuk audit).
+    sumberAkun: text("sumber_akun"),
     catatan: text("catatan"),
     // Tanggal kasbon diberikan (bisa di-backdate) & batas pelunasan.
     tanggal: date("tanggal"),
