@@ -29,9 +29,13 @@ export type DeliveryRow = {
 export async function getDeliveries(
   tenantId: string,
   limit = 50,
+  outletId?: string | null,
 ): Promise<DeliveryRow[]> {
   const db = getDb();
   const kurir = employees;
+  const where = outletId
+    ? and(eq(deliveries.tenantId, tenantId), eq(deliveries.outletId, outletId))
+    : eq(deliveries.tenantId, tenantId);
   const rows = await db
     .select({
       id: deliveries.id,
@@ -54,7 +58,7 @@ export async function getDeliveries(
     .leftJoin(consumers, eq(deliveries.consumerId, consumers.id))
     .leftJoin(kurir, eq(deliveries.kurirId, kurir.id))
     .leftJoin(transactions, eq(deliveries.transactionId, transactions.id))
-    .where(eq(deliveries.tenantId, tenantId))
+    .where(where)
     .orderBy(desc(deliveries.createdAt))
     .limit(limit);
 

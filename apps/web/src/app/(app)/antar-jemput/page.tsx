@@ -8,6 +8,7 @@ import {
 import { getDeliveries } from "@/lib/deliveries";
 import { getRecentConsumers } from "@/lib/consumers";
 import { getEmployees } from "@/lib/employees";
+import { getActiveOutlet } from "@/lib/outlets";
 import { AntarJemputManager } from "./antar-jemput-manager";
 
 export const metadata: Metadata = { title: "Antar-Jemput — AkaLink" };
@@ -18,8 +19,9 @@ export default async function AntarJemputPage() {
   const tenantId = getTenantIdFromUser(user);
   if (!tenantId) redirect("/masuk");
 
+  const activeOutlet = await getActiveOutlet(tenantId);
   const [list, konsumen, karyawan] = await Promise.all([
-    getDeliveries(tenantId, 60),
+    getDeliveries(tenantId, 60, activeOutlet?.id ?? null),
     getRecentConsumers(tenantId, 50),
     getEmployees(tenantId),
   ]);
@@ -37,6 +39,9 @@ export default async function AntarJemputPage() {
         <p className="text-sm text-slate-500 dark:text-slate-400">
           Kelola penjemputan &amp; pengantaran cucian: jadwal, kurir, ongkir,
           dan status perjalanan.
+          {activeOutlet && (
+            <span className="ml-1 text-slate-400">· 🏪 {activeOutlet.nama}</span>
+          )}
         </p>
       </div>
 

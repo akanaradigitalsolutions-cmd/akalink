@@ -146,6 +146,52 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
   animation: aka-fade-in 0.28s ease both;
 }
 
+/* Bar tipis indeterminate saat berpindah outlet (ringan, murni CSS). */
+@keyframes aka-topbar {
+  0% {
+    left: -40%;
+    width: 40%;
+  }
+  50% {
+    width: 55%;
+  }
+  100% {
+    left: 100%;
+    width: 40%;
+  }
+}
+.aka-switch-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  z-index: 60;
+  overflow: hidden;
+  background: transparent;
+  pointer-events: none;
+}
+.aka-switch-bar::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  height: 100%;
+  border-radius: 0 3px 3px 0;
+  background: linear-gradient(90deg, rgb(37 99 235), rgb(59 130 246));
+  animation: aka-topbar 0.9s ease-in-out infinite;
+}
+
+/* Konten sedikit meredup saat data outlet sedang dimuat. */
+.aka-switching {
+  opacity: 0.55;
+  transition: opacity 0.2s ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  .aka-switch-bar::before {
+    animation: none;
+  }
+}
+
 /* Skeleton shimmer untuk state loading. */
 @keyframes aka-shimmer {
   100% {

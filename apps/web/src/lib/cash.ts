@@ -68,8 +68,15 @@ export type CashMovementRow = {
 export async function getCashMovements(
   tenantId: string,
   limit = 40,
+  outletId?: string | null,
 ): Promise<CashMovementRow[]> {
   const db = getDb();
+  const where = outletId
+    ? and(
+        eq(cashMovements.tenantId, tenantId),
+        eq(cashMovements.outletId, outletId),
+      )
+    : eq(cashMovements.tenantId, tenantId);
   const rows = await db
     .select({
       id: cashMovements.id,
@@ -81,7 +88,7 @@ export async function getCashMovements(
       createdAt: cashMovements.createdAt,
     })
     .from(cashMovements)
-    .where(eq(cashMovements.tenantId, tenantId))
+    .where(where)
     .orderBy(desc(cashMovements.createdAt))
     .limit(limit);
   return rows.map((r) => ({ ...r, createdAt: r.createdAt.toISOString() }));

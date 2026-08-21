@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition } from "react";
+import { useEffect, useTransition } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { setActiveOutlet } from "@/lib/outlets-actions";
 
@@ -31,6 +31,14 @@ export function OutletSwitcher({
   const pathname = usePathname();
   const [pending, start] = useTransition();
 
+  // Redupkan area konten selama data outlet dimuat (cue ringan).
+  useEffect(() => {
+    const main = document.getElementById("aka-main");
+    if (!main) return;
+    main.classList.toggle("aka-switching", pending);
+    return () => main.classList.remove("aka-switching");
+  }, [pending]);
+
   if (outlets.length === 0) return null;
   // Halaman Laporan punya pemilih outlet sendiri (dengan opsi "Semua Outlet"),
   // jadi sembunyikan switcher topbar di sana agar tidak ada dua kontrol.
@@ -46,23 +54,26 @@ export function OutletSwitcher({
   }
 
   return (
-    <select
-      value={activeId ?? outlets[0].id}
-      disabled={pending}
-      onChange={(e) =>
-        start(async () => {
-          await setActiveOutlet({ id: e.target.value });
-          router.refresh();
-        })
-      }
-      aria-label="Pilih outlet aktif"
-      className="max-w-[40vw] rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-200 disabled:opacity-60 sm:max-w-[200px] dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
-    >
-      {outlets.map((o) => (
-        <option key={o.id} value={o.id}>
-          🏪 {shortName(o.nama, tenantName)}
-        </option>
-      ))}
-    </select>
+    <>
+      {pending && <span className="aka-switch-bar" aria-hidden />}
+      <select
+        value={activeId ?? outlets[0].id}
+        disabled={pending}
+        onChange={(e) =>
+          start(async () => {
+            await setActiveOutlet({ id: e.target.value });
+            router.refresh();
+          })
+        }
+        aria-label="Pilih outlet aktif"
+        className="max-w-[40vw] rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-200 disabled:opacity-60 sm:max-w-[200px] dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
+      >
+        {outlets.map((o) => (
+          <option key={o.id} value={o.id}>
+            🏪 {shortName(o.nama, tenantName)}
+          </option>
+        ))}
+      </select>
+    </>
   );
 }

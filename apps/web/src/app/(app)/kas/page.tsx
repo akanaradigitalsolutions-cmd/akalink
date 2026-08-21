@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getSessionUser, getTenantIdFromUser, getRoleFromUser } from "@/lib/auth";
 import { seedDefaultCoaIfEmpty } from "@/lib/coa";
 import { getAccountBalance, getCashMovements, getBankAccount } from "@/lib/cash";
+import { getActiveOutlet } from "@/lib/outlets";
 import { KasManager } from "./kas-manager";
 
 export const metadata: Metadata = { title: "Kas & Setoran — AkaLink" };
@@ -14,10 +15,11 @@ export default async function KasPage() {
   if (!tenantId) redirect("/masuk");
 
   await seedDefaultCoaIfEmpty(tenantId);
+  const activeOutlet = await getActiveOutlet(tenantId);
   const [kas, bank, movements, bankAccount] = await Promise.all([
     getAccountBalance(tenantId, "1.1.02"),
     getAccountBalance(tenantId, "1.1.04"),
-    getCashMovements(tenantId, 40),
+    getCashMovements(tenantId, 40, activeOutlet?.id ?? null),
     getBankAccount(tenantId),
   ]);
 
@@ -30,6 +32,11 @@ export default async function KasPage() {
         <p className="text-sm text-slate-500 dark:text-slate-400">
           Pantau uang tunai di laundry dan catat setiap pemindahan ke bank atau
           ke pemilik.
+          {activeOutlet && (
+            <span className="ml-1 text-slate-400">
+              · riwayat outlet 🏪 {activeOutlet.nama}
+            </span>
+          )}
         </p>
       </div>
 
