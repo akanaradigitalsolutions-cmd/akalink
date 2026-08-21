@@ -1,14 +1,25 @@
 import "server-only";
 
 import { and, desc, eq } from "drizzle-orm";
-import { getDb, employees, salaryAdvances } from "@akalink/db";
+import {
+  getDb,
+  employees,
+  salaryAdvances,
+  salaryAdvancePayments,
+} from "@akalink/db";
+
+/** YYYY-MM-DD hari ini (untuk cek jatuh tempo). */
+function todayStr(): string {
+  return new Date().toISOString().slice(0, 10);
+}
 
 export type StaffSalaryRow = {
   id: string;
   nama: string;
   role: string;
   gaji: number;
-  kasbonBelum: number; // total kasbon yang belum dipotong
+  kasbonBelum: number; // sisa kasbon yang belum dipotong (jumlah - dibayar)
+  kasbonOverdue: number; // jumlah kasbon lewat jatuh tempo (belum lunas)
 };
 
 export async function getStaffSalaries(
@@ -30,64 +41,93 @@ export async function getStaffSalaries(
     .select({
       employeeId: salaryAdvances.employeeId,
       jumlah: salaryAdvances.jumlah,
+      dibayar: salaryAdvances.dibayar,
       status: salaryAdvances.status,
+      jatuhTempo: salaryAdvances.jatuhTempo,
     })
     .from(salaryAdvances)
     .where(eq(salaryAdvances.tenantId, tenantId));
 
+  const today = todayStr();
+
   return staff
-    .map((s) => ({
-      ...s,
-      kasbonBelum: advances
-        .filter((a) => a.employeeId === s.id && a.status === "belum_dipotong")
-        .reduce((sum, a) => sum + a.jumlah, 0),
-    }))
-    .sort((a, b) =>
-      a.role === "owner" ? -1 : b.role === "owner" ? 1 : 0,
-    );
+    .map((s) => {
+      const mine = advances.filter(
+        (a) => a.employeeId === s.id && a.status === "belum_dipotong",
+      );
+      const kasbonBelum = mine.reduce(
+        (sum, a) => sum + Math.max(0, a.jumlah - a.dibayar),
+        0,
+      );
+      const kasbonOverdue = mine
+        .filter((a) => a.jatuhTempo && a.jatuhTempo < today && a.jumlah - a.dibayar > 0)
+        .reduce((sum, a) => sum + Math.max(0, a.jumlah - a.dibayar), 0);
+      return { ...s, kasbonBelum, kasbonOverdue };
+    })
+    .sort((a, b) => (a.role === "owner" ? -1 : b.role === "owner" ? 1 : 0));
 }
 
-export type AdvanceRow = {
+export type PaymentRow = {
   id: string;
   jumlah: number;
+  metode: string; // "potong_gaji" | "tunai"
+  tanggal: string | null;
   catatan: string | null;
-  status: "belum_dipotong" | "dipotong";
   createdByNama: string | null;
   createdAt: string;
 };
 
-/** Semua kasbon tenant (untuk dikelompokkan per karyawan di UI). */
-export async function getAllAdvances(
-  tenantId: string,
-): Promise<(AdvanceRow & { employeeId: string })[]> {
-  const db = getDb();
-  const rows = await db
-    .select({
-      id: salaryAdvances.id,
-      employeeId: salaryAdvances.employeeId,
-      jumlah: salaryAdvances.jumlah,
-      catatan: salaryAdvances.catatan,
-      status: salaryAdvances.status,
-      createdByNama: salaryAdvances.createdByNama,
-      createdAt: salaryAdvances.createdAt,
-    })
-    .from(salaryAdvances)
-    .where(eq(salaryAdvances.tenantId, tenantId))
-    .orderBy(desc(salaryAdvances.createdAt));
-  return rows.map((r) => ({ ...r, createdAt: r.createdAt.toISOString() }));
-}
+export type AdvanceDetail = {
+  id: string;
+  jumlah: number;
+  dibayar: number;
+  sisa: number;
+  catatan: string | null;
+  status: "belum_dipotong" | "dipotong";
+  tanggal: string | null;
+  jatuhTempo: string | null;
+  overdue: boolean;
+  createdByNama: string | null;
+  createdAt: string;
+  payments: PaymentRow[];
+};
 
-export async function getAdvances(
+export type EmployeeGajiDetail = {
+  employee: { id: string; nama: string; role: string; gaji: number };
+  advances: AdvanceDetail[];
+  totalKasbon: number; // total nominal kasbon aktif (belum lunas)
+  totalDibayar: number; // total sudah dibayar/dicicil pada kasbon aktif
+  totalSisa: number; // sisa yang masih terutang
+  overdueCount: number; // jumlah kasbon lewat jatuh tempo
+};
+
+/** Detail lengkap gaji + riwayat kasbon (dengan cicilan) seorang karyawan. */
+export async function getEmployeeGajiDetail(
   tenantId: string,
   employeeId: string,
-): Promise<AdvanceRow[]> {
+): Promise<EmployeeGajiDetail | null> {
   const db = getDb();
-  const rows = await db
+  const [emp] = await db
+    .select({
+      id: employees.id,
+      nama: employees.nama,
+      role: employees.role,
+      gaji: employees.gaji,
+    })
+    .from(employees)
+    .where(and(eq(employees.id, employeeId), eq(employees.tenantId, tenantId)))
+    .limit(1);
+  if (!emp) return null;
+
+  const advRows = await db
     .select({
       id: salaryAdvances.id,
       jumlah: salaryAdvances.jumlah,
+      dibayar: salaryAdvances.dibayar,
       catatan: salaryAdvances.catatan,
       status: salaryAdvances.status,
+      tanggal: salaryAdvances.tanggal,
+      jatuhTempo: salaryAdvances.jatuhTempo,
       createdByNama: salaryAdvances.createdByNama,
       createdAt: salaryAdvances.createdAt,
     })
@@ -99,5 +139,69 @@ export async function getAdvances(
       ),
     )
     .orderBy(desc(salaryAdvances.createdAt));
-  return rows.map((r) => ({ ...r, createdAt: r.createdAt.toISOString() }));
+
+  const advIds = advRows.map((a) => a.id);
+  const payRows = advIds.length
+    ? await db
+        .select({
+          id: salaryAdvancePayments.id,
+          advanceId: salaryAdvancePayments.advanceId,
+          jumlah: salaryAdvancePayments.jumlah,
+          metode: salaryAdvancePayments.metode,
+          tanggal: salaryAdvancePayments.tanggal,
+          catatan: salaryAdvancePayments.catatan,
+          createdByNama: salaryAdvancePayments.createdByNama,
+          createdAt: salaryAdvancePayments.createdAt,
+        })
+        .from(salaryAdvancePayments)
+        .where(eq(salaryAdvancePayments.tenantId, tenantId))
+        .orderBy(desc(salaryAdvancePayments.createdAt))
+    : [];
+
+  const today = todayStr();
+
+  const advances: AdvanceDetail[] = advRows.map((a) => {
+    const sisa = Math.max(0, a.jumlah - a.dibayar);
+    const overdue =
+      a.status === "belum_dipotong" && !!a.jatuhTempo && a.jatuhTempo < today && sisa > 0;
+    return {
+      id: a.id,
+      jumlah: a.jumlah,
+      dibayar: a.dibayar,
+      sisa,
+      catatan: a.catatan,
+      status: a.status,
+      tanggal: a.tanggal,
+      jatuhTempo: a.jatuhTempo,
+      overdue,
+      createdByNama: a.createdByNama,
+      createdAt: a.createdAt.toISOString(),
+      payments: payRows
+        .filter((p) => p.advanceId === a.id)
+        .map((p) => ({
+          id: p.id,
+          jumlah: p.jumlah,
+          metode: p.metode,
+          tanggal: p.tanggal,
+          catatan: p.catatan,
+          createdByNama: p.createdByNama,
+          createdAt: p.createdAt.toISOString(),
+        })),
+    };
+  });
+
+  const aktif = advances.filter((a) => a.status === "belum_dipotong");
+  const totalKasbon = aktif.reduce((s, a) => s + a.jumlah, 0);
+  const totalDibayar = aktif.reduce((s, a) => s + a.dibayar, 0);
+  const totalSisa = aktif.reduce((s, a) => s + a.sisa, 0);
+  const overdueCount = advances.filter((a) => a.overdue).length;
+
+  return {
+    employee: emp,
+    advances,
+    totalKasbon,
+    totalDibayar,
+    totalSisa,
+    overdueCount,
+  };
 }

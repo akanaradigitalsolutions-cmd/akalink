@@ -908,7 +908,12 @@ export const salaryAdvances = pgTable(
       .notNull()
       .references(() => employees.id, { onDelete: "cascade" }),
     jumlah: integer("jumlah").notNull(),
+    // Total yang sudah dibayar/dicicil (cache dari salary_advance_payments).
+    dibayar: integer("dibayar").notNull().default(0),
     catatan: text("catatan"),
+    // Tanggal kasbon diberikan (bisa di-backdate) & batas pelunasan.
+    tanggal: date("tanggal"),
+    jatuhTempo: date("jatuh_tempo"),
     status: salaryAdvanceStatusEnum("status").notNull().default("belum_dipotong"),
     createdBy: uuid("created_by"),
     createdByNama: text("created_by_nama"),
@@ -920,6 +925,34 @@ export const salaryAdvances = pgTable(
   (t) => [
     index("salary_advances_tenant_id_idx").on(t.tenantId),
     index("salary_advances_employee_id_idx").on(t.employeeId),
+  ],
+);
+
+// --- salary_advance_payments: riwayat cicilan/pelunasan kasbon ------------
+export const salaryAdvancePayments = pgTable(
+  "salary_advance_payments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    advanceId: uuid("advance_id")
+      .notNull()
+      .references(() => salaryAdvances.id, { onDelete: "cascade" }),
+    employeeId: uuid("employee_id"),
+    jumlah: integer("jumlah").notNull(),
+    // "potong_gaji" (Dr Beban Gaji) atau "tunai" (Dr Kas — dikembalikan tunai).
+    metode: text("metode").notNull().default("potong_gaji"),
+    tanggal: date("tanggal"),
+    catatan: text("catatan"),
+    createdByNama: text("created_by_nama"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("salary_adv_pay_tenant_id_idx").on(t.tenantId),
+    index("salary_adv_pay_advance_id_idx").on(t.advanceId),
   ],
 );
 
@@ -1438,5 +1471,8 @@ export type CashMovement = typeof cashMovements.$inferSelect;
 export type NewCashMovement = typeof cashMovements.$inferInsert;
 export type SalaryAdvance = typeof salaryAdvances.$inferSelect;
 export type NewSalaryAdvance = typeof salaryAdvances.$inferInsert;
+export type SalaryAdvancePayment = typeof salaryAdvancePayments.$inferSelect;
+export type NewSalaryAdvancePayment =
+  typeof salaryAdvancePayments.$inferInsert;
 export type Approval = typeof approvals.$inferSelect;
 export type NewApproval = typeof approvals.$inferInsert;
