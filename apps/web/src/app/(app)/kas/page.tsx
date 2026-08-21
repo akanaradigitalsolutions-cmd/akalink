@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getSessionUser, getTenantIdFromUser, getRoleFromUser } from "@/lib/auth";
 import { seedDefaultCoaIfEmpty } from "@/lib/coa";
-import { getAccountBalance, getCashMovements } from "@/lib/cash";
+import { getAccountBalance, getCashMovements, getBankAccount } from "@/lib/cash";
 import { KasManager } from "./kas-manager";
 
 export const metadata: Metadata = { title: "Kas & Setoran — AkaLink" };
@@ -14,10 +14,11 @@ export default async function KasPage() {
   if (!tenantId) redirect("/masuk");
 
   await seedDefaultCoaIfEmpty(tenantId);
-  const [kas, bank, movements] = await Promise.all([
+  const [kas, bank, movements, bankAccount] = await Promise.all([
     getAccountBalance(tenantId, "1.1.02"),
     getAccountBalance(tenantId, "1.1.04"),
     getCashMovements(tenantId, 40),
+    getBankAccount(tenantId),
   ]);
 
   return (
@@ -37,6 +38,7 @@ export default async function KasPage() {
         bank={bank}
         movements={movements}
         isOwner={getRoleFromUser(user) === "owner"}
+        bankAccount={bankAccount}
       />
     </div>
   );

@@ -73,6 +73,10 @@ export const tenants = pgTable("tenants", {
   fiturSelfService: boolean("fitur_self_service").notNull().default(false),
   // Antar-jemput (pickup & delivery).
   fiturAntarJemput: boolean("fitur_antar_jemput").notNull().default(false),
+  // Rekening bank tujuan setoran kas (diatur pemilik, tetap untuk staf).
+  bankNama: text("bank_nama"),
+  bankRekening: text("bank_rekening"),
+  bankAtasNama: text("bank_atas_nama"),
   // B2B korporat (klien perusahaan + tagihan bulanan).
   fiturB2b: boolean("fitur_b2b").notNull().default(false),
   // Investor & bagi hasil.

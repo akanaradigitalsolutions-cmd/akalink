@@ -6,7 +6,37 @@ import {
   cashMovements,
   chartOfAccounts,
   journalLines,
+  tenants,
 } from "@akalink/db";
+
+export type BankAccount = {
+  nama: string | null;
+  rekening: string | null;
+  atasNama: string | null;
+  lengkap: boolean;
+};
+
+/** Rekening bank setoran (diatur pemilik di Pengaturan). */
+export async function getBankAccount(tenantId: string): Promise<BankAccount> {
+  const db = getDb();
+  const [t] = await db
+    .select({
+      nama: tenants.bankNama,
+      rekening: tenants.bankRekening,
+      atasNama: tenants.bankAtasNama,
+    })
+    .from(tenants)
+    .where(eq(tenants.id, tenantId))
+    .limit(1);
+  const nama = t?.nama ?? null;
+  const rekening = t?.rekening ?? null;
+  return {
+    nama,
+    rekening,
+    atasNama: t?.atasNama ?? null,
+    lengkap: !!(nama && rekening),
+  };
+}
 
 /** Saldo satu akun (debit−kredit untuk akun bersaldo normal debit). */
 export async function getAccountBalance(

@@ -7,6 +7,7 @@ import { getSessionUser, getTenantIdFromUser } from "@/lib/auth";
 import { getActiveOutlet } from "@/lib/outlets";
 import { seedDefaultCoaIfEmpty } from "@/lib/coa";
 import { postJournal } from "@/lib/journal";
+import { getBankAccount } from "@/lib/cash";
 
 export type CashResult = { ok: true } | { ok: false; error: string };
 
@@ -35,6 +36,20 @@ export async function recordCashMovement(input: {
         ? "kas_masuk"
         : "setor_bank";
 
+  // Setor ke Bank: tujuan WAJIB memakai rekening tetap dari pemilik
+  // (tidak boleh diubah staf). Ambil dari pengaturan, abaikan input klien.
+  let tujuanFinal = input.tujuan?.trim() || null;
+  if (tipe === "setor_bank") {
+    const bank = await getBankAccount(tenantId);
+    if (!bank.lengkap)
+      return {
+        ok: false,
+        error:
+          "Rekening bank setoran belum diatur pemilik (Pengaturan → Rekening Bank Setoran).",
+      };
+    tujuanFinal = `${bank.nama} ${bank.rekening}${bank.atasNama ? ` a.n. ${bank.atasNama}` : ""}`;
+  }
+
   await seedDefaultCoaIfEmpty(tenantId);
   const db = getDb();
   const outlet = await getActiveOutlet(tenantId);
@@ -62,10 +77,10 @@ export async function recordCashMovement(input: {
 
   const ket =
     tipe === "setor_bank"
-      ? `Setoran kas ke bank${input.tujuan ? ` (${input.tujuan})` : ""}`
+      ? `Setoran kas ke bank${tujuanFinal ? ` (${tujuanFinal})` : ""}`
       : tipe === "ambil_owner"
-        ? `Kas diserahkan ke pemilik${input.tujuan ? ` (${input.tujuan})` : ""}`
-        : `Kas masuk dari pemilik${input.tujuan ? ` (${input.tujuan})` : ""}`;
+        ? `Kas diserahkan ke pemilik${tujuanFinal ? ` (${tujuanFinal})` : ""}`
+        : `Kas masuk dari pemilik${tujuanFinal ? ` (${tujuanFinal})` : ""}`;
 
   try {
     await db.transaction(async (tx) => {
@@ -76,7 +91,7 @@ export async function recordCashMovement(input: {
           outletId: outlet?.id ?? null,
           tipe,
           jumlah,
-          tujuan: input.tujuan?.trim() || null,
+          tujuan: tujuanFinal,
           catatan: input.catatan?.trim() || null,
           createdBy: me?.id ?? null,
           createdByNama: me?.nama ?? user.email ?? null,

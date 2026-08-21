@@ -24,6 +24,9 @@ export type SettingsInput = {
   fiturAntarJemput?: boolean;
   fiturB2b?: boolean;
   fiturInvestor?: boolean;
+  bankNama?: string;
+  bankRekening?: string;
+  bankAtasNama?: string;
 };
 
 export async function updateSettings(
@@ -90,6 +93,9 @@ export async function updateSettings(
         fiturAntarJemput: !!input.fiturAntarJemput,
         fiturB2b: !!input.fiturB2b,
         fiturInvestor: !!input.fiturInvestor,
+        bankNama: clean(input.bankNama),
+        bankRekening: clean(input.bankRekening),
+        bankAtasNama: clean(input.bankAtasNama),
         updatedAt: new Date(),
       })
       .where(eq(tenants.id, tenantId));

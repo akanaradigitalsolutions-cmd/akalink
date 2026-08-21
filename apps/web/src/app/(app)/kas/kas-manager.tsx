@@ -3,8 +3,9 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { formatRupiah, formatDateTime } from "@/lib/format";
+import Link from "next/link";
 import { recordCashMovement } from "@/lib/cash-actions";
-import type { CashMovementRow } from "@/lib/cash";
+import type { CashMovementRow, BankAccount } from "@/lib/cash";
 
 const TIPE_META: Record<
   CashMovementRow["tipe"],
@@ -20,11 +21,13 @@ export function KasManager({
   bank,
   movements,
   isOwner,
+  bankAccount,
 }: {
   kas: number;
   bank: number;
   movements: CashMovementRow[];
   isOwner: boolean;
+  bankAccount: BankAccount;
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -41,6 +44,8 @@ export function KasManager({
   function simpan() {
     setMsg(undefined);
     if (amt <= 0) return setMsg({ text: "Masukkan nominal." });
+    if (tipe === "setor_bank" && !bankAccount.lengkap)
+      return setMsg({ text: "Atur rekening bank setoran terlebih dahulu." });
     if (tipe !== "kas_masuk" && amt > kas)
       return setMsg({ text: "Nominal melebihi saldo kas di laundry." });
     start(async () => {
@@ -115,10 +120,40 @@ export function KasManager({
             Nominal (Rp)
             <input value={jumlah} onChange={(e) => setJumlah(e.target.value.replace(/[^0-9]/g, ""))} inputMode="numeric" className={`${input} mt-1`} />
           </label>
-          <label className="text-xs text-slate-500">
-            {tipe === "setor_bank" ? "Bank / no. rekening tujuan" : tipe === "ambil_owner" ? "Diserahkan kepada" : "Sumber"}
-            <input value={tujuan} onChange={(e) => setTujuan(e.target.value)} placeholder={tipe === "setor_bank" ? "mis. BCA 1234567890" : "mis. Pemilik"} className={`${input} mt-1`} />
-          </label>
+          {tipe === "setor_bank" ? (
+            bankAccount.lengkap ? (
+              <div>
+                <p className="text-xs text-slate-500">Rekening tujuan (tetap)</p>
+                <div className="mt-1 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800/50">
+                  <p className="font-semibold text-slate-800 dark:text-slate-100">
+                    🏦 {bankAccount.nama} · {bankAccount.rekening}
+                  </p>
+                  {bankAccount.atasNama && (
+                    <p className="text-xs text-slate-500">a.n. {bankAccount.atasNama}</p>
+                  )}
+                </div>
+                <p className="mt-1 text-[11px] text-slate-400">
+                  Rekening ini diatur pemilik &amp; tidak dapat diubah di sini.
+                </p>
+              </div>
+            ) : (
+              <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300">
+                Rekening bank setoran belum diatur.{" "}
+                {isOwner ? (
+                  <Link href="/pengaturan" className="font-semibold underline">
+                    Atur di Pengaturan
+                  </Link>
+                ) : (
+                  "Minta pemilik mengaturnya di Pengaturan."
+                )}
+              </div>
+            )
+          ) : (
+            <label className="text-xs text-slate-500">
+              {tipe === "ambil_owner" ? "Diserahkan kepada" : "Sumber"}
+              <input value={tujuan} onChange={(e) => setTujuan(e.target.value)} placeholder="mis. Pemilik" className={`${input} mt-1`} />
+            </label>
+          )}
           <label className="text-xs text-slate-500">
             Catatan (opsional)
             <input value={catatan} onChange={(e) => setCatatan(e.target.value)} className={`${input} mt-1`} />
@@ -126,7 +161,7 @@ export function KasManager({
           <div className="flex items-center gap-3">
             <button
               onClick={simpan}
-              disabled={pending}
+              disabled={pending || (tipe === "setor_bank" && !bankAccount.lengkap)}
               className="rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-700 disabled:opacity-60"
             >
               {pending ? "Menyimpan…" : "Catat"}

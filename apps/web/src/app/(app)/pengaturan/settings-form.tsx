@@ -22,6 +22,9 @@ type Initial = {
   fiturAntarJemput: boolean;
   fiturB2b: boolean;
   fiturInvestor: boolean;
+  bankNama: string;
+  bankRekening: string;
+  bankAtasNama: string;
   syaratKetentuan: string[];
 };
 
@@ -60,6 +63,9 @@ export function SettingsForm({
   );
   const [fiturB2b, setFiturB2b] = useState(initial.fiturB2b);
   const [fiturInvestor, setFiturInvestor] = useState(initial.fiturInvestor);
+  const [bankNama, setBankNama] = useState(initial.bankNama);
+  const [bankRekening, setBankRekening] = useState(initial.bankRekening);
+  const [bankAtasNama, setBankAtasNama] = useState(initial.bankAtasNama);
   const [sk, setSk] = useState<string[]>(
     initial.syaratKetentuan.length ? initial.syaratKetentuan : [""],
   );
@@ -102,6 +108,9 @@ export function SettingsForm({
         fiturAntarJemput,
         fiturB2b,
         fiturInvestor,
+        bankNama,
+        bankRekening,
+        bankAtasNama,
         syaratKetentuan: sk,
       });
       if (res.ok) {
@@ -316,6 +325,46 @@ export function SettingsForm({
             on={fiturInvestor}
             onChange={setFiturInvestor}
           />
+        </div>
+      </section>
+
+      {/* Rekening Bank Setoran */}
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
+        <h2 className="mb-1 text-sm font-semibold text-slate-900 dark:text-white">
+          Rekening Bank Setoran
+        </h2>
+        <p className="mb-4 text-xs text-slate-500 dark:text-slate-400">
+          Rekening tujuan saat staf melakukan <b>Setor ke Bank</b> di menu Kas.
+          Diatur oleh pemilik &amp; tidak dapat diubah staf.
+        </p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Field label="Nama bank">
+            <input
+              value={bankNama}
+              onChange={(e) => setBankNama(e.target.value)}
+              placeholder="mis. BCA"
+              className={`${inputBase} w-full`}
+            />
+          </Field>
+          <Field label="No. rekening">
+            <input
+              value={bankRekening}
+              onChange={(e) => setBankRekening(e.target.value.replace(/[^0-9]/g, ""))}
+              inputMode="numeric"
+              placeholder="mis. 1234567890"
+              className={`${inputBase} w-full`}
+            />
+          </Field>
+          <div className="sm:col-span-2">
+            <Field label="Atas nama">
+              <input
+                value={bankAtasNama}
+                onChange={(e) => setBankAtasNama(e.target.value)}
+                placeholder="Nama pemilik rekening"
+                className={`${inputBase} w-full`}
+              />
+            </Field>
+          </div>
         </div>
       </section>
 

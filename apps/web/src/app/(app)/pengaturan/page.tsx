@@ -44,6 +44,9 @@ export default async function PengaturanPage() {
           fiturAntarJemput: s.fiturAntarJemput,
           fiturB2b: s.fiturB2b,
           fiturInvestor: s.fiturInvestor,
+          bankNama: s.bankNama ?? "",
+          bankRekening: s.bankRekening ?? "",
+          bankAtasNama: s.bankAtasNama ?? "",
           syaratKetentuan:
             s.syaratKetentuan && s.syaratKetentuan.length
               ? s.syaratKetentuan
