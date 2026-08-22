@@ -7,7 +7,7 @@ import {
   getRoleFromUser,
 } from "@/lib/auth";
 import { searchTransactions } from "@/lib/transactions";
-import { getOutlets, getAllowedOutlets } from "@/lib/outlets";
+import { getAllowedOutlets, getActiveOutlet } from "@/lib/outlets";
 import { TransaksiFilters } from "./transaksi-filters";
 import {
   formatRupiah,
@@ -50,15 +50,14 @@ export default async function TransaksiPage({
   const q = sp.q ?? "";
   const kerja = sp.kerja ?? "";
   const bayar = sp.bayar ?? "";
-  const outlet = sp.outlet ?? "";
-  const adaFilter = !!(q || kerja || bayar || outlet);
+  const adaFilter = !!(q || kerja || bayar);
   const isOwner = getRoleFromUser(user) === "owner";
 
-  // Kasir dibatasi ke outlet yang ditugaskan; owner melihat semua.
-  const [allOutlets, allowedOutlets] = tenantId
-    ? await Promise.all([getOutlets(tenantId), getAllowedOutlets(tenantId)])
-    : [[], []];
-  const outletList = isOwner ? allOutlets : allowedOutlets;
+  // Ikuti outlet aktif dari header (konsisten dgn Layanan/Inventori/Mesin).
+  // Kasir tetap dibatasi ke outlet yang ditugaskan sebagai pengaman.
+  const [allowedOutlets, activeOutlet] = tenantId
+    ? await Promise.all([getAllowedOutlets(tenantId), getActiveOutlet(tenantId)])
+    : [[], null];
   const outletScope = isOwner ? undefined : allowedOutlets.map((o) => o.id);
 
   const list = tenantId
@@ -66,7 +65,7 @@ export default async function TransaksiPage({
         q,
         kerja,
         bayar,
-        outlet,
+        outlet: activeOutlet?.id,
         outletScope,
       })
     : [];
@@ -82,6 +81,9 @@ export default async function TransaksiPage({
             {adaFilter
               ? `${list.length} hasil ditemukan`
               : "Daftar transaksi terbaru."}
+            {activeOutlet && (
+              <span className="ml-1 text-slate-400">· 🏪 {activeOutlet.nama}</span>
+            )}
           </p>
         </div>
         <Link
@@ -93,13 +95,7 @@ export default async function TransaksiPage({
         </Link>
       </header>
 
-      <TransaksiFilters
-        q={q}
-        kerja={kerja}
-        bayar={bayar}
-        outlet={outlet}
-        outlets={outletList.map((o) => ({ id: o.id, nama: o.nama }))}
-      />
+      <TransaksiFilters q={q} kerja={kerja} bayar={bayar} />
 
       {list.length === 0 ? (
         <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-slate-300 bg-white py-16 text-center dark:border-slate-700 dark:bg-slate-900">
@@ -136,9 +132,6 @@ export default async function TransaksiPage({
                     <p className="text-sm text-slate-500 dark:text-slate-400">
                       {t.consumerNama ?? "Umum"} ·{" "}
                       {formatDateTime(t.orderDiterima)}
-                      {outletList.length > 1 && t.outletNama
-                        ? ` · 🏪 ${t.outletNama}`
-                        : ""}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">

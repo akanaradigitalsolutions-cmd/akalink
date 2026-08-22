@@ -1,0 +1,1 @@
+ALTER TABLE "salary_advances" ADD COLUMN "sumber_akun" text;

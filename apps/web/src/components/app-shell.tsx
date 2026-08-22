@@ -125,7 +125,7 @@ export function AppShell({
           </div>
         </header>
 
-        <main className="overflow-x-clip px-4 py-6 sm:px-6 lg:px-8">
+        <main id="aka-main" className="overflow-x-clip px-4 py-6 sm:px-6 lg:px-8">
           <PageFade>{children}</PageFade>
         </main>
       </div>
