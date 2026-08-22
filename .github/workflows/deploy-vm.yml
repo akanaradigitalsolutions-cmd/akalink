@@ -1,0 +1,62 @@
+name: Deploy to GCP VM
+
+# Build di runner GitHub (RAM besar), lalu kirim hasil "standalone" yang ringan
+# ke VM 1 GB. VM tidak pernah menjalankan `next build` atau `pnpm install`.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+concurrency:
+  group: deploy-vm
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build (standalone)
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+        run: pnpm -C apps/web build
+
+      - name: Assemble bundle
+        run: |
+          set -e
+          SA=apps/web/.next/standalone
+          # Next tidak menyalin static & public ke standalone — salin manual.
+          mkdir -p "$SA/apps/web/.next"
+          cp -r apps/web/.next/static "$SA/apps/web/.next/static"
+          if [ -d apps/web/public ]; then cp -r apps/web/public "$SA/apps/web/public"; fi
+          tar czf deploy.tar.gz -C "$SA" .
+          ls -lh deploy.tar.gz
+
+      - name: Ship to VM & restart
+        env:
+          VM_HOST: ${{ secrets.VM_HOST }}
+          VM_USER: ${{ secrets.VM_USER }}
+          VM_SSH_KEY: ${{ secrets.VM_SSH_KEY }}
+        run: |
+          set -e
+          install -m 600 /dev/stdin key <<< "$VM_SSH_KEY"
+          scp -o StrictHostKeyChecking=accept-new -i key \
+            deploy.tar.gz "$VM_USER@$VM_HOST:/tmp/deploy.tar.gz"
+          ssh -o StrictHostKeyChecking=accept-new -i key \
+            "$VM_USER@$VM_HOST" 'bash -s' < deploy/deploy-remote.sh
+          rm -f key
