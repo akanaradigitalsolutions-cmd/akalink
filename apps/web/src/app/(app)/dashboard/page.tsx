@@ -3,7 +3,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSessionUser, getTenantIdFromUser } from "@/lib/auth";
 import { getTenantContext } from "@/lib/tenant";
-import { getDashboardStats } from "@/lib/dashboard";
+import { getDashboardStats, getRevenue7Days } from "@/lib/dashboard";
+import { RevenueChart } from "./revenue-chart";
 import { getCoinConfig } from "@/lib/app-coin";
 import { getPendingDeleteRequests } from "@/lib/delete-requests";
 import { getPendingApprovals } from "@/lib/approvals";
@@ -40,6 +41,7 @@ export default async function DashboardPage() {
 
   let me: Awaited<ReturnType<typeof getTenantContext>>["me"] | undefined;
   let stats: Awaited<ReturnType<typeof getDashboardStats>> | undefined;
+  let revenue7: Awaited<ReturnType<typeof getRevenue7Days>> = [];
   let recent: Awaited<ReturnType<typeof searchTransactions>> = [];
   let loadError: string | undefined;
   let outletNama: string | null = null;
@@ -68,6 +70,9 @@ export default async function DashboardPage() {
       if (outletList[0])
         await backfillOrphanTransactions(tenantId, outletList[0].id);
       stats = await getDashboardStats(tenantId, active?.id);
+      // Bagan omzet hanya untuk pemilik.
+      if (ctx.me?.role === "owner")
+        revenue7 = await getRevenue7Days(tenantId, active?.id);
       recent = await searchTransactions(tenantId, {
         outlet: active?.id,
         limit: 6,
@@ -219,6 +224,9 @@ export default async function DashboardPage() {
           tone={s.lateCount > 0 ? "danger" : "default"}
         />
       </section>
+
+      {/* Bagan omzet 7 hari — hanya pemilik */}
+      {isOwner && revenue7.length > 0 && <RevenueChart data={revenue7} />}
 
       {/* Status pekerjaan */}
       <section className="rounded-2xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">

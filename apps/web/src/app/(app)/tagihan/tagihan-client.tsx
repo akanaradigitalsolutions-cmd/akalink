@@ -3,11 +3,7 @@
 import { useState, useEffect, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { formatRupiah, formatDateTime } from "@/lib/format";
-import {
-  topupManual,
-  createDokuTopup,
-  syncPendingTopups,
-} from "@/lib/app-coin-actions";
+import { createDokuTopup, syncPendingTopups } from "@/lib/app-coin-actions";
 import type { CoinConfig, CoinLedgerRow } from "@/lib/app-coin";
 
 const NOMINAL = [25_000, 50_000, 100_000, 250_000];
@@ -38,7 +34,6 @@ export function TagihanClient({
   kembaliDariDoku: boolean;
 }) {
   const router = useRouter();
-  const [pending, start] = useTransition();
   const [dokuPending, startDoku] = useTransition();
   const [syncing, startSync] = useTransition();
   const [amount, setAmount] = useState<string>("50000");
@@ -95,24 +90,6 @@ export function TagihanClient({
 
   const notaTersisa =
     config.biayaPerNota > 0 ? Math.floor(Math.max(0, saldo) / config.biayaPerNota) : 0;
-
-  function isiUlang() {
-    setMsg(undefined);
-    const n = Number(amount) || 0;
-    if (n <= 0) {
-      setMsg({ text: "Masukkan nominal yang benar." });
-      return;
-    }
-    start(async () => {
-      const res = await topupManual({ amount: n });
-      if (res.ok) {
-        setMsg({ ok: true, text: "Saldo berhasil ditambah ✓" });
-        router.refresh();
-      } else {
-        setMsg({ text: res.error });
-      }
-    });
-  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -184,8 +161,8 @@ export function TagihanClient({
         </h2>
         <p className="mb-4 text-xs text-slate-500 dark:text-slate-400">
           {dokuAktif
-            ? "Pilih nominal, lalu bayar via DOKU (QRIS / e-wallet / VA). Saldo bertambah otomatis setelah pembayaran berhasil."
-            : "Pilih nominal lalu tambahkan ke saldo. (Pembayaran otomatis via DOKU belum aktif.)"}
+            ? "Pilih nominal, lalu proses pembayaran via DOKU (QRIS / e-wallet / VA). Saldo bertambah otomatis setelah pembayaran berhasil."
+            : "Isi ulang saldo hanya dapat diproses melalui pembayaran DOKU, yang saat ini belum aktif."}
         </p>
 
         <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -221,26 +198,12 @@ export function TagihanClient({
               disabled={dokuPending}
               className="rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-700 disabled:opacity-60"
             >
-              {dokuPending ? "Mengalihkan…" : "Bayar via DOKU"}
+              {dokuPending ? "Mengalihkan…" : "Proses Bayar"}
             </button>
           ) : (
-            <button
-              onClick={isiUlang}
-              disabled={pending}
-              className="rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-700 disabled:opacity-60"
-            >
-              {pending ? "Memproses…" : "Isi Ulang"}
-            </button>
-          )}
-          {dokuAktif && (
-            <button
-              onClick={isiUlang}
-              disabled={pending}
-              className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:opacity-60 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
-              title="Catat manual tanpa DOKU"
-            >
-              {pending ? "…" : "Catat Manual"}
-            </button>
+            <span className="text-xs font-medium text-amber-600 dark:text-amber-400">
+              Pembayaran DOKU belum aktif — isi ulang saldo belum dapat diproses.
+            </span>
           )}
           {msg && (
             <span
