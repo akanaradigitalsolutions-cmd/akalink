@@ -72,9 +72,9 @@ export default async function AkunPage() {
 
 function Info({ label, value }: { label: string; value: string }) {
   return (
-    <div>
+    <div className="min-w-0">
       <dt className="text-xs text-slate-400">{label}</dt>
-      <dd className="mt-0.5 font-medium text-slate-800 dark:text-slate-100">
+      <dd className="mt-0.5 break-words font-medium text-slate-800 dark:text-slate-100">
         {value}
       </dd>
     </div>
