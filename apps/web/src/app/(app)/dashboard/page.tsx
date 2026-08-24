@@ -3,7 +3,11 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSessionUser, getTenantIdFromUser } from "@/lib/auth";
 import { getTenantContext } from "@/lib/tenant";
-import { getDashboardStats, getRevenue7Days } from "@/lib/dashboard";
+import {
+  getDashboardStats,
+  getRevenue7Days,
+  getRevenueMonths,
+} from "@/lib/dashboard";
 import { RevenueChart } from "./revenue-chart";
 import { getCoinConfig } from "@/lib/app-coin";
 import { getPendingDeleteRequests } from "@/lib/delete-requests";
@@ -42,6 +46,7 @@ export default async function DashboardPage() {
   let me: Awaited<ReturnType<typeof getTenantContext>>["me"] | undefined;
   let stats: Awaited<ReturnType<typeof getDashboardStats>> | undefined;
   let revenue7: Awaited<ReturnType<typeof getRevenue7Days>> = [];
+  let revenueMonths: Awaited<ReturnType<typeof getRevenueMonths>> = [];
   let recent: Awaited<ReturnType<typeof searchTransactions>> = [];
   let loadError: string | undefined;
   let outletNama: string | null = null;
@@ -73,9 +78,13 @@ export default async function DashboardPage() {
       // Bagan omzet hanya untuk pemilik; kegagalan bagan tak boleh merusak dasbor.
       if (ctx.me?.role === "owner") {
         try {
-          revenue7 = await getRevenue7Days(tenantId, active?.id);
+          [revenue7, revenueMonths] = await Promise.all([
+            getRevenue7Days(tenantId, active?.id),
+            getRevenueMonths(tenantId, active?.id, 6),
+          ]);
         } catch {
           revenue7 = [];
+          revenueMonths = [];
         }
       }
       recent = await searchTransactions(tenantId, {
@@ -230,8 +239,10 @@ export default async function DashboardPage() {
         />
       </section>
 
-      {/* Bagan omzet 7 hari — hanya pemilik */}
-      {isOwner && revenue7.length > 0 && <RevenueChart data={revenue7} />}
+      {/* Bagan omzet (harian / bulanan) — hanya pemilik */}
+      {isOwner && revenue7.length > 0 && (
+        <RevenueChart daily={revenue7} monthly={revenueMonths} />
+      )}
 
       {/* Status pekerjaan */}
       <section className="rounded-2xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
