@@ -1,0 +1,39 @@
+name: Daily DB Backup
+
+# Backup harian OFF-MACHINE: GitHub menjalankan pg_dump lalu menyimpan hasilnya
+# sebagai artifact privat (di luar VM). Pelengkap backup lokal di VM.
+
+on:
+  schedule:
+    - cron: "0 19 * * *" # 19:00 UTC tiap hari (~02:00 WIB)
+  workflow_dispatch: {}
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install pg_dump 17 (cocok dengan Supabase Postgres 17)
+        run: |
+          sudo sh -c "echo 'deb https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main' > /etc/apt/sources.list.d/pgdg.list"
+          curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/pgdg.gpg
+          sudo apt-get update && sudo apt-get install -y postgresql-client-17
+
+      - name: Dump database
+        env:
+          BACKUP_DATABASE_URL: ${{ secrets.BACKUP_DATABASE_URL }}
+        run: |
+          if [ -z "$BACKUP_DATABASE_URL" ]; then
+            echo "::error::Secret BACKUP_DATABASE_URL belum diatur."
+            exit 1
+          fi
+          mkdir -p out
+          FILE="out/akalink_$(date +%Y%m%d_%H%M%S).sql.gz"
+          pg_dump "$BACKUP_DATABASE_URL" --no-owner --no-privileges | gzip -9 > "$FILE"
+          ls -lh "$FILE"
+
+      - name: Upload backup (artifact privat)
+        uses: actions/upload-artifact@v4
+        with:
+          name: akalink-db-backup-${{ github.run_id }}
+          path: out/*.sql.gz
+          retention-days: 90
