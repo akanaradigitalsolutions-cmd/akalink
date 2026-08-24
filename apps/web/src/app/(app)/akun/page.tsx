@@ -7,6 +7,7 @@ import {
 } from "@/lib/auth";
 import { getTenantContext } from "@/lib/tenant";
 import { ChangePasswordForm } from "./change-password-form";
+import { ProfilForm } from "./profil-form";
 
 export const metadata: Metadata = { title: "Akun Saya — AkaLink" };
 
@@ -39,15 +40,23 @@ export default async function AkunPage() {
 
       {/* Info akun */}
       <section className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
-        <dl className="grid gap-4 sm:grid-cols-3">
-          <Info label="Nama" value={nama} />
+        <dl className="mb-5 grid gap-4 sm:grid-cols-2">
           <Info label="Email" value={user.email ?? "—"} />
           <Info label="Peran" value={role} />
         </dl>
+        <div className="border-t border-slate-100 pt-4 dark:border-slate-800">
+          <h2 className="mb-3 text-sm font-semibold text-slate-900 dark:text-white">
+            Ubah Profil
+          </h2>
+          <ProfilForm nama={nama} />
+        </div>
       </section>
 
       {/* Ganti password */}
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
+      <section
+        id="password"
+        className="scroll-mt-20 rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900"
+      >
         <h2 className="mb-1 text-sm font-semibold text-slate-900 dark:text-white">
           Ganti Password
         </h2>

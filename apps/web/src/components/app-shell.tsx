@@ -1,6 +1,7 @@
 import { Logo } from "./logo";
 import { SidebarNav } from "./sidebar-nav";
 import { OutletSwitcher } from "./outlet-switcher";
+import { ProfileMenu } from "./profile-menu";
 import { MobileNav } from "./mobile-nav";
 import { RouteProgress } from "./route-progress";
 import { PageFade } from "./page-fade";
@@ -20,6 +21,7 @@ function initialsOf(name: string) {
 export function AppShell({
   tenantName,
   userName,
+  userEmail = "",
   role,
   outlets = [],
   activeOutletId = null,
@@ -35,6 +37,7 @@ export function AppShell({
 }: {
   tenantName: string;
   userName: string;
+  userEmail?: string;
   role: string;
   outlets?: { id: string; nama: string }[];
   activeOutletId?: string | null;
@@ -113,15 +116,12 @@ export function AppShell({
               activeId={activeOutletId}
               tenantName={tenantName}
             />
-            <div className="hidden text-right sm:block">
-              <p className="text-sm font-semibold text-slate-900 dark:text-white">
-                {userName}
-              </p>
-              <p className="text-xs capitalize text-slate-400">{role}</p>
-            </div>
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-brand-700 text-sm font-bold text-white">
-              {initials}
-            </div>
+            <ProfileMenu
+              userName={userName}
+              userEmail={userEmail}
+              role={role}
+              initials={initials}
+            />
           </div>
         </header>
 
