@@ -26,9 +26,19 @@ jobs:
             echo "::error::Secret BACKUP_DATABASE_URL belum diatur."
             exit 1
           fi
+          # Pakai binari pg_dump 17 secara eksplisit (PATH runner default v16 → mismatch).
+          PGDUMP=/usr/lib/postgresql/17/bin/pg_dump
+          "$PGDUMP" --version
           mkdir -p out
           FILE="out/akalink_$(date +%Y%m%d_%H%M%S).sql.gz"
-          pg_dump "$BACKUP_DATABASE_URL" --no-owner --no-privileges | gzip -9 > "$FILE"
+          "$PGDUMP" "$BACKUP_DATABASE_URL" --no-owner --no-privileges | gzip -9 > "$FILE"
+          SIZE=$(stat -c%s "$FILE")
+          echo "backup size: $SIZE bytes"
+          # Gagalkan bila hasil terlalu kecil (dump kosong/gagal), jangan simpan sampah.
+          if [ "$SIZE" -lt 1000 ]; then
+            echo "::error::Backup terlalu kecil ($SIZE bytes) — dump kemungkinan gagal."
+            exit 1
+          fi
           ls -lh "$FILE"
 
       - name: Upload backup (artifact privat)
