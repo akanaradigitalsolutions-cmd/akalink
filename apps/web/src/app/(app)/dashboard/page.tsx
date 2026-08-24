@@ -70,9 +70,14 @@ export default async function DashboardPage() {
       if (outletList[0])
         await backfillOrphanTransactions(tenantId, outletList[0].id);
       stats = await getDashboardStats(tenantId, active?.id);
-      // Bagan omzet hanya untuk pemilik.
-      if (ctx.me?.role === "owner")
-        revenue7 = await getRevenue7Days(tenantId, active?.id);
+      // Bagan omzet hanya untuk pemilik; kegagalan bagan tak boleh merusak dasbor.
+      if (ctx.me?.role === "owner") {
+        try {
+          revenue7 = await getRevenue7Days(tenantId, active?.id);
+        } catch {
+          revenue7 = [];
+        }
+      }
       recent = await searchTransactions(tenantId, {
         outlet: active?.id,
         limit: 6,

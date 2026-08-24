@@ -125,7 +125,9 @@ export async function getRevenue7Days(
         outletCond,
       ),
     )
-    .groupBy(sql`(${transactions.createdAt} AT TIME ZONE ${APP_TZ})::date`);
+    // Group by kolom pertama (ekspresi tanggal) via ordinal — hindari
+    // ketidakcocokan ekspresi akibat parameter zona waktu yang terbind ganda.
+    .groupBy(sql`1`);
 
   const map = new Map(rows.map((r) => [r.d, Number(r.omzet)]));
   const HARI = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
