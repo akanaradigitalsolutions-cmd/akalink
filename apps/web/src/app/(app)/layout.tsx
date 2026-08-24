@@ -71,6 +71,7 @@ export default async function AppLayout({
     <AppShell
       tenantName={tenantName}
       userName={userName}
+      userEmail={user.email ?? ""}
       role={role}
       outlets={outlets}
       activeOutletId={activeOutletId}
