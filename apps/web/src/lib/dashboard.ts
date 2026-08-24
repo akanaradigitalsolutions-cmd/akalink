@@ -99,3 +99,52 @@ export async function getDashboardStats(tenantId: string, outletId?: string) {
     kerja,
   };
 }
+
+export type RevenueDay = { date: string; label: string; omzet: number };
+
+/** Omzet 7 hari terakhir (termasuk hari ini), per hari, zona waktu aplikasi. */
+export async function getRevenue7Days(
+  tenantId: string,
+  outletId?: string,
+): Promise<RevenueDay[]> {
+  const db = getDb();
+  const startToday = startOfToday();
+  const start = new Date(startToday.getTime() - 6 * 86400000);
+  const outletCond = outletId ? eq(transactions.outletId, outletId) : undefined;
+
+  const rows = await db
+    .select({
+      d: sql<string>`to_char((${transactions.createdAt} AT TIME ZONE ${APP_TZ})::date, 'YYYY-MM-DD')`,
+      omzet: sql<number>`coalesce(sum(${transactions.grandTotal}),0)::float8`,
+    })
+    .from(transactions)
+    .where(
+      and(
+        eq(transactions.tenantId, tenantId),
+        gte(transactions.createdAt, start),
+        outletCond,
+      ),
+    )
+    .groupBy(sql`(${transactions.createdAt} AT TIME ZONE ${APP_TZ})::date`);
+
+  const map = new Map(rows.map((r) => [r.d, Number(r.omzet)]));
+  const HARI = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
+  const out: RevenueDay[] = [];
+  for (let i = 6; i >= 0; i--) {
+    const day = new Date(startToday.getTime() - i * 86400000);
+    const ymd = new Intl.DateTimeFormat("en-CA", {
+      timeZone: APP_TZ,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(day);
+    // Nama hari singkat menurut zona aplikasi.
+    const wd = new Intl.DateTimeFormat("en-US", {
+      timeZone: APP_TZ,
+      weekday: "short",
+    }).format(day);
+    const idx = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(wd);
+    out.push({ date: ymd, label: idx >= 0 ? HARI[idx] : "", omzet: map.get(ymd) ?? 0 });
+  }
+  return out;
+}

@@ -32,6 +32,13 @@ const bayarColor: Record<string, string> = {
   dp: "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300",
   lunas: "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300",
 };
+// Titik status pekerjaan (indikator cepat di sisi kiri baris).
+const kerjaDot: Record<string, string> = {
+  belum_dikerjakan: "bg-slate-300 dark:bg-slate-600",
+  proses: "bg-blue-500",
+  selesai: "bg-green-500",
+  diambil: "bg-slate-400",
+};
 
 export default async function TransaksiPage({
   searchParams,
@@ -70,6 +77,9 @@ export default async function TransaksiPage({
       })
     : [];
 
+  const totalNilai = list.reduce((s, t) => s + Number(t.grandTotal), 0);
+  const belumBayar = list.filter((t) => t.statusPembayaran !== "lunas").length;
+
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-6">
       <header className="flex flex-wrap items-center justify-between gap-4">
@@ -97,6 +107,22 @@ export default async function TransaksiPage({
 
       <TransaksiFilters q={q} kerja={kerja} bayar={bayar} />
 
+      {list.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+            {list.length} transaksi
+          </span>
+          {belumBayar > 0 && (
+            <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-700 dark:bg-amber-950 dark:text-amber-300">
+              {belumBayar} belum dibayar
+            </span>
+          )}
+          <span className="rounded-full bg-brand-50 px-3 py-1 text-xs font-medium text-brand-700 dark:bg-brand-950/50 dark:text-brand-300">
+            Total {formatRupiah(totalNilai)}
+          </span>
+        </div>
+      )}
+
       {list.length === 0 ? (
         <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-slate-300 bg-white py-16 text-center dark:border-slate-700 dark:bg-slate-900">
           <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-brand-50 text-brand-600 dark:bg-brand-950/50 dark:text-brand-400">
@@ -118,36 +144,60 @@ export default async function TransaksiPage({
               <li key={t.id}>
                 <Link
                   href={`/transaksi/${t.id}`}
-                  className="flex flex-wrap items-center justify-between gap-3 px-5 py-4 transition hover:bg-slate-50 dark:hover:bg-slate-800/50"
+                  className="group flex items-center gap-3 px-4 py-3.5 transition hover:bg-slate-50 active:bg-slate-100 sm:px-5 dark:hover:bg-slate-800/50 dark:active:bg-slate-800"
                 >
-                  <div className="min-w-0">
+                  {/* Indikator status pekerjaan */}
+                  <span
+                    className={`mt-0.5 h-2.5 w-2.5 shrink-0 rounded-full ${kerjaDot[t.statusPekerjaan] ?? "bg-slate-300"}`}
+                    aria-hidden
+                  />
+
+                  {/* Nota + konsumen */}
+                  <div className="min-w-0 flex-1">
                     <p className="flex items-center gap-2 font-semibold text-slate-900 dark:text-white">
-                      {t.noNota}
+                      <span className="truncate">{t.noNota}</span>
                       {t.isExpress && (
-                        <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-700 dark:bg-amber-950 dark:text-amber-300">
+                        <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-700 dark:bg-amber-950 dark:text-amber-300">
                           Express
                         </span>
                       )}
                     </p>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">
-                      {t.consumerNama ?? "Umum"} ·{" "}
-                      {formatDateTime(t.orderDiterima)}
+                    <p className="mt-0.5 truncate text-sm text-slate-500 dark:text-slate-400">
+                      {t.consumerNama ?? "Umum"} · {formatDateTime(t.orderDiterima)}
                     </p>
+                    <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${kerjaColor[t.statusPekerjaan]}`}
+                      >
+                        {LABEL_STATUS_KERJA[t.statusPekerjaan]}
+                      </span>
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${bayarColor[t.statusPembayaran]}`}
+                      >
+                        {LABEL_STATUS_BAYAR[t.statusPembayaran]}
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${kerjaColor[t.statusPekerjaan]}`}
-                    >
-                      {LABEL_STATUS_KERJA[t.statusPekerjaan]}
-                    </span>
-                    <span
-                      className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${bayarColor[t.statusPembayaran]}`}
-                    >
-                      {LABEL_STATUS_BAYAR[t.statusPembayaran]}
-                    </span>
-                    <span className="w-24 text-right font-bold text-slate-900 dark:text-white">
+
+                  {/* Nilai + chevron */}
+                  <div className="flex shrink-0 items-center gap-2">
+                    <span className="text-right font-bold text-slate-900 dark:text-white">
                       {formatRupiah(t.grandTotal)}
                     </span>
+                    <svg
+                      className="h-4 w-4 shrink-0 text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-slate-400 dark:text-slate-600"
+                      viewBox="0 0 20 20"
+                      fill="none"
+                      aria-hidden
+                    >
+                      <path
+                        d="M7.5 5l5 5-5 5"
+                        stroke="currentColor"
+                        strokeWidth="1.75"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
                   </div>
                 </Link>
               </li>
