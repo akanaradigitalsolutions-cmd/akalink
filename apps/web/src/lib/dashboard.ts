@@ -150,3 +150,66 @@ export async function getRevenue7Days(
   }
   return out;
 }
+
+export type RevenuePoint = { label: string; omzet: number };
+
+const BULAN_SINGKAT = [
+  "Jan", "Feb", "Mar", "Apr", "Mei", "Jun",
+  "Jul", "Agu", "Sep", "Okt", "Nov", "Des",
+];
+
+/** Omzet N bulan terakhir (default 6, termasuk bulan ini), per bulan. */
+export async function getRevenueMonths(
+  tenantId: string,
+  outletId?: string,
+  months = 6,
+): Promise<RevenuePoint[]> {
+  const db = getDb();
+  // Tahun-bulan saat ini menurut zona waktu aplikasi.
+  const nowYM = new Intl.DateTimeFormat("en-CA", {
+    timeZone: APP_TZ,
+    year: "numeric",
+    month: "2-digit",
+  }).format(new Date()); // "YYYY-MM"
+  const [cy, cm] = nowYM.split("-").map(Number);
+  // Bulan awal = (months-1) bulan lalu.
+  let sy = cy;
+  let sm = cm - (months - 1);
+  while (sm <= 0) {
+    sm += 12;
+    sy -= 1;
+  }
+  const start = new Date(
+    `${sy}-${String(sm).padStart(2, "0")}-01T00:00:00+08:00`,
+  );
+  const outletCond = outletId ? eq(transactions.outletId, outletId) : undefined;
+
+  const rows = await db
+    .select({
+      m: sql<string>`to_char((${transactions.createdAt} AT TIME ZONE ${APP_TZ}), 'YYYY-MM')`,
+      omzet: sql<number>`coalesce(sum(${transactions.grandTotal}),0)::float8`,
+    })
+    .from(transactions)
+    .where(
+      and(
+        eq(transactions.tenantId, tenantId),
+        gte(transactions.createdAt, start),
+        outletCond,
+      ),
+    )
+    .groupBy(sql`1`);
+
+  const map = new Map(rows.map((r) => [r.m, Number(r.omzet)]));
+  const out: RevenuePoint[] = [];
+  for (let i = 0; i < months; i++) {
+    let yy = sy;
+    let mm = sm + i;
+    while (mm > 12) {
+      mm -= 12;
+      yy += 1;
+    }
+    const key = `${yy}-${String(mm).padStart(2, "0")}`;
+    out.push({ label: BULAN_SINGKAT[mm - 1], omzet: map.get(key) ?? 0 });
+  }
+  return out;
+}

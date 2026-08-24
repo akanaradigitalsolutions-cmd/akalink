@@ -1,16 +1,29 @@
-import { formatRupiah } from "@/lib/format";
-import type { RevenueDay } from "@/lib/dashboard";
+"use client";
 
-// Bagan batang omzet 7 hari — SVG murni (tanpa library, ringan, tanpa JS klien).
-export function RevenueChart({ data }: { data: RevenueDay[] }) {
+import { useState } from "react";
+import { formatRupiah } from "@/lib/format";
+import type { RevenuePoint } from "@/lib/dashboard";
+
+// Bagan batang omzet — SVG murni. Bisa beralih Harian (7 hari) / Bulanan (6 bulan).
+export function RevenueChart({
+  daily,
+  monthly,
+}: {
+  daily: RevenuePoint[];
+  monthly: RevenuePoint[];
+}) {
+  const [mode, setMode] = useState<"hari" | "bulan">("hari");
+  const data = mode === "hari" ? daily : monthly;
+
   const max = Math.max(1, ...data.map((d) => d.omzet));
   const total = data.reduce((s, d) => s + d.omzet, 0);
-  const todayIdx = data.length - 1;
+  const curIdx = data.length - 1;
+  const curValue = data[curIdx]?.omzet ?? 0;
 
   // Geometri
   const W = 700;
   const H = 180;
-  const padB = 26; // ruang label bawah
+  const padB = 26;
   const padT = 8;
   const gap = 14;
   const n = data.length;
@@ -19,21 +32,35 @@ export function RevenueChart({ data }: { data: RevenueDay[] }) {
 
   return (
     <section className="rounded-2xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
-      <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
+      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-400">
-            Omzet 7 Hari Terakhir
+            {mode === "hari" ? "Omzet 7 Hari Terakhir" : "Omzet 6 Bulan Terakhir"}
           </h3>
           <p className="mt-1 text-2xl font-bold text-slate-900 dark:text-white">
             {formatRupiah(total)}
             <span className="ml-2 text-xs font-medium text-slate-400">total</span>
           </p>
         </div>
-        <div className="text-right">
-          <p className="text-xs text-slate-400">Hari ini</p>
-          <p className="text-lg font-bold text-brand-600 dark:text-brand-400">
-            {formatRupiah(data[todayIdx]?.omzet ?? 0)}
-          </p>
+
+        <div className="flex items-center gap-4">
+          <div className="text-right">
+            <p className="text-xs text-slate-400">
+              {mode === "hari" ? "Hari ini" : "Bulan ini"}
+            </p>
+            <p className="text-lg font-bold text-brand-600 dark:text-brand-400">
+              {formatRupiah(curValue)}
+            </p>
+          </div>
+          {/* Pengalih Harian / Bulanan */}
+          <div className="inline-flex rounded-lg border border-slate-200 p-0.5 dark:border-slate-700">
+            <ToggleBtn active={mode === "hari"} onClick={() => setMode("hari")}>
+              Harian
+            </ToggleBtn>
+            <ToggleBtn active={mode === "bulan"} onClick={() => setMode("bulan")}>
+              Bulanan
+            </ToggleBtn>
+          </div>
         </div>
       </div>
 
@@ -42,17 +69,16 @@ export function RevenueChart({ data }: { data: RevenueDay[] }) {
           viewBox={`0 0 ${W} ${H}`}
           className="h-44 w-full min-w-[520px]"
           role="img"
-          aria-label="Bagan omzet 7 hari terakhir"
+          aria-label={`Bagan omzet ${mode === "hari" ? "7 hari" : "6 bulan"} terakhir`}
         >
           {data.map((d, i) => {
             const h = Math.max(2, (d.omzet / max) * chartH);
             const x = i * (bw + gap);
             const y = padT + (chartH - h);
-            const isToday = i === todayIdx;
+            const isCur = i === curIdx;
             return (
-              <g key={d.date}>
+              <g key={`${mode}-${i}`}>
                 <title>{`${d.label} — ${formatRupiah(d.omzet)}`}</title>
-                {/* jalur latar */}
                 <rect
                   x={x}
                   y={padT}
@@ -61,7 +87,6 @@ export function RevenueChart({ data }: { data: RevenueDay[] }) {
                   rx={6}
                   className="fill-slate-100 dark:fill-slate-800"
                 />
-                {/* batang nilai */}
                 <rect
                   x={x}
                   y={y}
@@ -69,18 +94,17 @@ export function RevenueChart({ data }: { data: RevenueDay[] }) {
                   height={h}
                   rx={6}
                   className={
-                    isToday
+                    isCur
                       ? "fill-brand-600 dark:fill-brand-500"
                       : "fill-brand-300 dark:fill-brand-700"
                   }
                 />
-                {/* label hari */}
                 <text
                   x={x + bw / 2}
                   y={H - 8}
                   textAnchor="middle"
                   className={
-                    isToday
+                    isCur
                       ? "fill-brand-700 text-[13px] font-semibold dark:fill-brand-300"
                       : "fill-slate-400 text-[13px]"
                   }
@@ -93,5 +117,28 @@ export function RevenueChart({ data }: { data: RevenueDay[] }) {
         </svg>
       </div>
     </section>
+  );
+}
+
+function ToggleBtn({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`rounded-md px-3 py-1 text-xs font-semibold transition ${
+        active
+          ? "bg-brand-600 text-white"
+          : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
+      }`}
+    >
+      {children}
+    </button>
   );
 }
