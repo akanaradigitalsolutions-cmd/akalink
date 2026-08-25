@@ -11,6 +11,15 @@ const nextConfig: NextConfig = {
   transpilePackages: ["@akalink/db"],
   // Biarkan driver "postgres" dimuat dari node_modules saat runtime (jangan di-bundle).
   serverExternalPackages: ["postgres"],
+  // Digital Asset Links untuk TWA (Android): sajikan /.well-known/assetlinks.json.
+  async rewrites() {
+    return [
+      {
+        source: "/.well-known/assetlinks.json",
+        destination: "/api/assetlinks",
+      },
+    ];
+  },
 };
 
 export default nextConfig;
