@@ -11,8 +11,10 @@ import { NextResponse } from "next/server";
 const PACKAGE_NAME = "id.akalink.app";
 
 const FINGERPRINTS: string[] = [
-  // TODO: ganti dengan SHA-256 asli dari paket Android.
-  // Contoh: "3A:B1:...:9F",
+  // Upload key (dari paket PWABuilder).
+  "9A:42:DF:41:98:EC:FD:EA:80:44:CE:B1:CD:33:C7:08:BA:02:60:4A:24:5C:DD:8F:DE:21:35:F0:F5:9A:B3:E4",
+  // TODO (setelah upload ke Play): tambahkan SHA-256 "Google Play app signing
+  // key" dari Play Console → App integrity → App signing.
 ];
 
 export const dynamic = "force-static";
