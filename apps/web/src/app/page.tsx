@@ -95,12 +95,21 @@ export default function Home() {
 
       <footer className="border-t border-slate-200 py-6 text-center text-sm text-slate-400 dark:border-slate-800">
         <p>© {new Date().getFullYear()} AkaLink · Akanara Digital Solutions</p>
-        <Link
-          href="/kebijakan-privasi"
-          className="mt-1 inline-block transition hover:text-brand-600 dark:hover:text-brand-400"
-        >
-          Kebijakan Privasi
-        </Link>
+        <p className="mt-1 flex items-center justify-center gap-3">
+          <Link
+            href="/kebijakan-privasi"
+            className="transition hover:text-brand-600 dark:hover:text-brand-400"
+          >
+            Kebijakan Privasi
+          </Link>
+          <span aria-hidden>·</span>
+          <Link
+            href="/hapus-akun"
+            className="transition hover:text-brand-600 dark:hover:text-brand-400"
+          >
+            Hapus Akun
+          </Link>
+        </p>
       </footer>
     </div>
   );
