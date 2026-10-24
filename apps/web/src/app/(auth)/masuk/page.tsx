@@ -8,8 +8,10 @@ export const metadata: Metadata = {
 export default async function MasukPage({
   searchParams,
 }: {
-  searchParams: Promise<{ terdaftar?: string }>;
+  searchParams: Promise<{ terdaftar?: string; reset?: string }>;
 }) {
-  const { terdaftar } = await searchParams;
-  return <MasukForm baruTerdaftar={terdaftar === "1"} />;
+  const { terdaftar, reset } = await searchParams;
+  return (
+    <MasukForm baruTerdaftar={terdaftar === "1"} setelahReset={reset === "1"} />
+  );
 }
