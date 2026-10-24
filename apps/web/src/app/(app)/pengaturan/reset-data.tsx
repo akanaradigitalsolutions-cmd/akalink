@@ -28,7 +28,7 @@ export function ResetData({ email, namaUsaha }: { email: string; namaUsaha: stri
         return;
       }
       setStep("code");
-      setMsg(`Kode 6 digit dikirim ke ${email}. Cek email (termasuk folder spam).`);
+      setMsg(`Kode dikirim ke ${email}. Cek email (termasuk folder spam).`);
     });
   }
 
@@ -106,19 +106,19 @@ export function ResetData({ email, namaUsaha }: { email: string; namaUsaha: stri
       {step === "code" && (
         <div className="mt-4 space-y-3">
           <label className="block text-sm font-medium text-red-700 dark:text-red-300">
-            Masukkan 6 digit kode dari email:
+            Masukkan kode dari email:
           </label>
           <input
             value={kode}
-            onChange={(e) => setKode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+            onChange={(e) => setKode(e.target.value.replace(/\D/g, "").slice(0, 10))}
             inputMode="numeric"
-            placeholder="______"
-            className="w-40 rounded-lg border border-red-300 bg-white px-3 py-2 text-center text-lg font-bold tracking-[0.3em] text-slate-900 outline-none focus:border-red-500 dark:border-red-800 dark:bg-slate-900 dark:text-white"
+            placeholder="Kode OTP"
+            className="w-48 rounded-lg border border-red-300 bg-white px-3 py-2 text-center text-lg font-bold tracking-[0.3em] text-slate-900 outline-none focus:border-red-500 dark:border-red-800 dark:bg-slate-900 dark:text-white"
           />
           <div className="flex gap-2">
             <button
               type="button"
-              disabled={kode.length !== 6 || pending}
+              disabled={kode.length < 6 || pending}
               onClick={konfirmasi}
               className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-700 disabled:opacity-50"
             >
