@@ -56,8 +56,8 @@ export async function konfirmasiReset(kode: string): Promise<ResetState> {
   if (!owner) return { ok: false, error: "Sesi tidak valid. Masuk ulang." };
 
   const code = String(kode ?? "").trim();
-  if (!/^\d{6}$/.test(code))
-    return { ok: false, error: "Kode harus 6 digit angka." };
+  if (!/^\d{6,10}$/.test(code))
+    return { ok: false, error: "Kode tidak valid (6–10 digit angka)." };
 
   // Verifikasi OTP lewat klien anon terpisah (tidak mengubah sesi cookie).
   const { url, anonKey } = getPublicEnv();
