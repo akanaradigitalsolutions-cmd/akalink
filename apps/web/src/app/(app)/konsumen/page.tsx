@@ -10,6 +10,7 @@ import {
 import { deleteConsumer } from "@/lib/consumers-actions";
 import { formatHp } from "@/lib/format";
 import { ConsumerForm } from "./consumer-form";
+import { BulkImport } from "@/components/bulk-import";
 import { IconUsers, IconTrash } from "@/components/icons";
 
 export const metadata: Metadata = {
@@ -49,6 +50,8 @@ export default async function KonsumenPage({
         </div>
         <ConsumerForm />
       </header>
+
+      <BulkImport kind="konsumen" />
 
       {/* Pencarian */}
       <form className="flex gap-2">

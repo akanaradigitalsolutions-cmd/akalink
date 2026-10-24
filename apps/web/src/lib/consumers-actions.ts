@@ -116,6 +116,78 @@ export async function quickCreateConsumer(input: {
   return { ok: true, consumer: row };
 }
 
+// ---- Impor massal (CSV) --------------------------------------------------
+export type ImportResult = {
+  ok: boolean;
+  inserted: number;
+  failed: number;
+  errors: { baris: number; pesan: string }[];
+  error?: string;
+};
+
+const importRowSchema = z.object({
+  nama: z.string().trim().min(1, "Nama wajib diisi"),
+  hp: z.string().trim().optional(),
+  gender: z.enum(["pria", "wanita"]).optional(),
+  email: z.string().trim().email("Email tidak valid").optional(),
+  instansi: z.string().trim().optional(),
+  tanggalLahir: z.string().trim().optional(),
+  agama: z.string().trim().optional(),
+});
+
+export async function importConsumers(
+  rows: Record<string, string>[],
+): Promise<ImportResult> {
+  const user = await getSessionUser();
+  const tenantId = getTenantIdFromUser(user);
+  if (!user || !tenantId)
+    return { ok: false, inserted: 0, failed: 0, errors: [], error: "Sesi tidak valid. Masuk lagi." };
+  if (!Array.isArray(rows) || rows.length === 0)
+    return { ok: false, inserted: 0, failed: 0, errors: [], error: "File kosong atau format salah." };
+  if (rows.length > 1000)
+    return { ok: false, inserted: 0, failed: 0, errors: [], error: "Maksimal 1000 baris per impor." };
+
+  const values: (typeof consumers.$inferInsert)[] = [];
+  const errors: { baris: number; pesan: string }[] = [];
+
+  rows.forEach((r, i) => {
+    const g = (r.gender || "").trim().toLowerCase();
+    const tgl = (r.tanggal_lahir || "").trim();
+    const parsed = importRowSchema.safeParse({
+      nama: r.nama,
+      hp: (r.hp || "").trim() || undefined,
+      gender: g === "pria" || g === "wanita" ? g : undefined,
+      email: (r.email || "").trim() || undefined,
+      instansi: (r.instansi || "").trim() || undefined,
+      tanggalLahir: /^\d{4}-\d{2}-\d{2}$/.test(tgl) ? tgl : undefined,
+      agama: (r.agama || "").trim() || undefined,
+    });
+    if (!parsed.success) {
+      errors.push({
+        baris: i + 2,
+        pesan: parsed.error.issues[0]?.message ?? "Data tidak valid",
+      });
+      return;
+    }
+    const d = parsed.data;
+    values.push({
+      tenantId,
+      nama: d.nama,
+      hp: normalizeHp(d.hp),
+      gender: d.gender ?? null,
+      email: d.email ?? null,
+      instansi: d.instansi ?? null,
+      tanggalLahir: d.tanggalLahir ?? null,
+      agama: d.agama ?? null,
+    });
+  });
+
+  const db = getDb();
+  if (values.length) await db.insert(consumers).values(values);
+  revalidatePath("/konsumen");
+  return { ok: true, inserted: values.length, failed: errors.length, errors };
+}
+
 export async function deleteConsumer(formData: FormData) {
   const user = await getSessionUser();
   const tenantId = getTenantIdFromUser(user);
