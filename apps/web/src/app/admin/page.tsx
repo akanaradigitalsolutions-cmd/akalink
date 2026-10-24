@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { getPlatformStats, getAllTenants } from "@/lib/platform";
+import { getPlatformStats, getAllTenants, getPlatformAnalytics } from "@/lib/platform";
 import { formatRupiah, formatDateTime } from "@/lib/format";
+import { PlatformAnalytics } from "./analytics";
 
 export const metadata: Metadata = { title: "Admin AkaLink" };
 
@@ -12,9 +13,10 @@ const STATUS_CLS: Record<string, string> = {
 };
 
 export default async function AdminHome() {
-  const [stats, tenants] = await Promise.all([
+  const [stats, tenants, analytics] = await Promise.all([
     getPlatformStats(),
     getAllTenants(),
+    getPlatformAnalytics(6),
   ]);
 
   return (
@@ -43,6 +45,13 @@ export default async function AdminHome() {
         <Stat label="Total Transaksi" value={stats.totalTransaksi.toLocaleString("id-ID")} sub="nota se-platform" />
       </div>
 
+      <div>
+        <h3 className="mb-3 text-sm font-semibold text-slate-900 dark:text-white">
+          Analitik 6 Bulan Terakhir
+        </h3>
+        <PlatformAnalytics data={analytics} />
+      </div>
+
       <div className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
         <h3 className="mb-3 text-sm font-semibold text-slate-900 dark:text-white">
           Daftar Laundry ({tenants.length})
@@ -63,6 +72,9 @@ export default async function AdminHome() {
                     <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${STATUS_CLS[t.status] ?? ""}`}>
                       {t.status}
                     </span>
+                  </p>
+                  <p className="truncate text-xs text-brand-600 dark:text-brand-400">
+                    {t.ownerEmail ?? "— (email tidak ditemukan)"}
                   </p>
                   <p className="text-xs text-slate-400">
                     {t.kota ?? "—"} · {t.tier} · {t.outletCount} outlet · {t.txCount} nota · sejak {formatDateTime(t.createdAt)}

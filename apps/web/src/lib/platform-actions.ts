@@ -2,9 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
-import { getDb, tenants, appCoinLedger } from "@akalink/db";
+import { getDb, tenants, appCoinLedger, employees } from "@akalink/db";
 import { getSessionUser } from "@/lib/auth";
-import { isPlatformAdmin } from "@/lib/platform";
+import { isPlatformAdmin, platformAdminEmails } from "@/lib/platform";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
 export type AdminResult = { ok: true } | { ok: false; error: string };
 
@@ -59,6 +60,69 @@ export async function adjustTenantCoin(input: {
     return { ok: false, error: e instanceof Error ? e.message : "Gagal." };
   }
   revalidatePath(`/admin/tenant/${input.tenantId}`);
+  revalidatePath("/admin");
+  return { ok: true };
+}
+
+/**
+ * Hapus laundry (tenant) beserta SELURUH datanya (cascade), lalu hapus akun
+ * login karyawan yang tidak lagi dipakai tenant lain & bukan admin platform.
+ * Wajib ketik nama laundry persis sebagai konfirmasi.
+ */
+export async function deleteTenant(input: {
+  tenantId: string;
+  konfirmasi: string;
+}): Promise<AdminResult> {
+  if (!(await requireAdmin()))
+    return { ok: false, error: "Akses ditolak (bukan admin platform)." };
+
+  const db = getDb();
+  const [t] = await db
+    .select({ nama: tenants.nama })
+    .from(tenants)
+    .where(eq(tenants.id, input.tenantId))
+    .limit(1);
+  if (!t) return { ok: false, error: "Laundry tidak ditemukan." };
+  if ((input.konfirmasi ?? "").trim() !== t.nama)
+    return { ok: false, error: "Nama konfirmasi tidak cocok." };
+
+  // Kumpulkan akun login (authUserId) karyawan tenant ini SEBELUM dihapus.
+  const emps = await db
+    .select({ authUserId: employees.authUserId })
+    .from(employees)
+    .where(eq(employees.tenantId, input.tenantId));
+  const uids = [
+    ...new Set(emps.map((e) => e.authUserId).filter(Boolean)),
+  ] as string[];
+
+  // Hapus tenant → cascade menghapus seluruh data laundry.
+  try {
+    await db.delete(tenants).where(eq(tenants.id, input.tenantId));
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Gagal hapus." };
+  }
+
+  // Bersihkan akun login yang sudah tidak terpakai (best-effort).
+  const admin = createSupabaseAdminClient();
+  const adminEmails = platformAdminEmails();
+  for (const uid of uids) {
+    try {
+      // Masih dipakai tenant lain? jangan hapus login-nya.
+      const [other] = await db
+        .select({ id: employees.id })
+        .from(employees)
+        .where(eq(employees.authUserId, uid))
+        .limit(1);
+      if (other) continue;
+      const { data } = await admin.auth.admin.getUserById(uid);
+      const email = data?.user?.email?.toLowerCase();
+      if (email && adminEmails.includes(email)) continue; // jangan hapus admin
+      await admin.auth.admin.deleteUser(uid);
+    } catch {
+      // abaikan — tenant sudah terhapus; pembersihan login bersifat tambahan.
+    }
+  }
+
   revalidatePath("/admin");
   return { ok: true };
 }
