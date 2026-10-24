@@ -4,8 +4,9 @@ import { getSessionUser, getTenantIdFromUser } from "@/lib/auth";
 import { getTenantContext } from "@/lib/tenant";
 import { getTransactionWithItems } from "@/lib/transactions";
 import { getBaseUrl, qrSvg } from "@/lib/nota";
-import { ThermalPrint } from "@/components/nota/client";
+import { ThermalPrint, BluetoothPrint } from "@/components/nota/client";
 import { formatDateTime, formatRupiah, SATUAN_SINGKAT } from "@/lib/format";
+import type { LabelPrintData } from "@/lib/escpos";
 
 export const dynamic = "force-dynamic";
 
@@ -33,8 +34,24 @@ export default async function LabelPage({
   const { tx, consumer, items } = data;
 
   const base = await getBaseUrl();
-  const qr = await qrSvg(`${base}/n/${id}`, 96);
+  const link = `${base}/n/${id}`;
+  const qr = await qrSvg(link, 96);
   const totalUnit = items.reduce((n, it) => n + Number(it.qty), 0);
+
+  const labelData: LabelPrintData = {
+    namaToko: tenant?.nama ?? "AkaLink",
+    noNota: tx.noNota,
+    pelanggan: consumer?.nama ?? "Umum",
+    totalUnit: `${totalUnit} unit`,
+    grandTotal: formatRupiah(tx.grandTotal),
+    masuk: formatDateTime(tx.orderDiterima),
+    selesai: formatDateTime(tx.estimasiSelesai),
+    items: items.map((it) => ({
+      label: `${Number(it.qty)} ${SATUAN_SINGKAT[it.tipeSatuan] ?? ""} ${it.namaLayanan}`.trim(),
+      subtotal: formatRupiah(it.subtotal),
+    })),
+    link,
+  };
 
   return (
     <main className="min-h-dvh bg-slate-100 px-4 py-6">
@@ -90,8 +107,10 @@ export default async function LabelPage({
         </div>
       </div>
 
-      <div className="no-print mx-auto mt-4 w-64">
-        <ThermalPrint auto={sp.print === "1"} label="🏷️ Cetak Label" />
+      <div className="no-print mx-auto mt-4 flex w-64 flex-col items-center gap-4">
+        <BluetoothPrint kind="label" data={labelData} />
+        <div className="h-px w-40 bg-slate-200 dark:bg-slate-700" />
+        <ThermalPrint auto={sp.print === "1"} label="🏷️ Cetak (Dialog Browser)" />
       </div>
     </main>
   );
