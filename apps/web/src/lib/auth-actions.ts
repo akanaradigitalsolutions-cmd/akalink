@@ -6,6 +6,7 @@ import { z } from "zod";
 import { getDb, tenants, employees, accessLevels } from "@akalink/db";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { resolveLoginEmail } from "@/lib/employees-actions";
 
 async function baseUrl(): Promise<string> {
   const h = await headers();
@@ -127,7 +128,7 @@ export async function daftarTenant(
 
 // ---- Login ---------------------------------------------------------------
 const masukSchema = z.object({
-  email: z.string().email("Format email tidak valid"),
+  email: z.string().trim().min(1, "Email atau username wajib diisi"),
   password: z.string().min(1, "Password wajib diisi"),
 });
 
@@ -146,10 +147,19 @@ export async function masuk(
     };
   }
 
+  // Identifier bisa berupa email ATAU username — resolusi ke email akun.
+  const loginEmail = await resolveLoginEmail(parsed.data.email);
+  if (!loginEmail) {
+    return { error: "Email/username atau password salah." };
+  }
+
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.auth.signInWithPassword(parsed.data);
+  const { error } = await supabase.auth.signInWithPassword({
+    email: loginEmail,
+    password: parsed.data.password,
+  });
   if (error) {
-    return { error: "Email atau password salah." };
+    return { error: "Email/username atau password salah." };
   }
   // Di subdomain master.akalink.id, arahkan langsung ke konsol admin.
   const h = await headers();
@@ -163,10 +173,19 @@ export type ResetResult = { ok: true } | { ok: false; error: string };
 export async function kirimResetPassword(input: {
   email: string;
 }): Promise<ResetResult> {
-  const email = String(input.email ?? "").trim();
-  const parsed = z.string().email().safeParse(email);
-  if (!parsed.success)
-    return { ok: false, error: "Format email tidak valid." };
+  const identifier = String(input.email ?? "").trim();
+  if (!identifier)
+    return { ok: false, error: "Masukkan email atau username." };
+
+  // Resolusi email akun. Username → email akun (untuk akun username-only,
+  // email ini adalah alias pemilik, sehingga tautan reset masuk ke inbox pemilik).
+  const target = await resolveLoginEmail(identifier);
+  if (!target) {
+    // Username tak ditemukan → beri tahu. Email asing → balas sukses (tak bocor).
+    if (!identifier.includes("@"))
+      return { ok: false, error: "Username tidak ditemukan." };
+    return { ok: true };
+  }
 
   const supabase = await createSupabaseServerClient();
   const base = await baseUrl();
@@ -174,7 +193,7 @@ export async function kirimResetPassword(input: {
     "/atur-ulang-password",
   )}`;
 
-  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+  const { error } = await supabase.auth.resetPasswordForEmail(target, {
     redirectTo,
   });
   // Catatan: Supabase membalas sukses meski email tak terdaftar, jadi error di

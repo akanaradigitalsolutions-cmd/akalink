@@ -68,6 +68,7 @@ export default async function KaryawanPage() {
           nama: e.nama,
           email:
             e.email ?? (e.authUserId === user.id ? (user.email ?? null) : null),
+          username: e.username,
           role: e.role,
           status: e.status,
           outletIds: e.outletIds ?? [],

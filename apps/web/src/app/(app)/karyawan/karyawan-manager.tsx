@@ -15,6 +15,7 @@ type Emp = {
   id: string;
   nama: string;
   email: string | null;
+  username: string | null;
   role: string;
   status: string;
   outletIds: string[];
@@ -38,6 +39,7 @@ export function KaryawanManager({
 
   const [nama, setNama] = useState("");
   const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("kasir");
   const [outletIds, setOutletIds] = useState<string[]>([]);
@@ -51,13 +53,15 @@ export function KaryawanManager({
   function submit() {
     setMsg(undefined);
     if (nama.trim().length < 2) return setMsg({ text: "Nama minimal 2 huruf." });
-    if (!email.trim()) return setMsg({ text: "Email wajib diisi." });
+    if (!email.trim() && !username.trim())
+      return setMsg({ text: "Isi Email atau Username untuk login." });
     if (password.length < 8)
       return setMsg({ text: "Password minimal 8 karakter." });
     start(async () => {
       const res = await createEmployee({
         nama,
         email,
+        username,
         password,
         role,
         outletIds: role === "kasir" ? outletIds : [],
@@ -66,6 +70,7 @@ export function KaryawanManager({
         setMsg({ ok: true, text: "Akun karyawan dibuat ✓" });
         setNama("");
         setEmail("");
+        setUsername("");
         setPassword("");
         setRole("kasir");
         setOutletIds([]);
@@ -138,13 +143,15 @@ export function KaryawanManager({
                 <option value="owner">Pemilik (akses penuh)</option>
               </select>
             </Field>
-            <Field label="Email (untuk login)">
+            <Field label="Username (untuk login)">
               <input
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                type="email"
-                inputMode="email"
-                placeholder="kasir@contoh.com"
+                value={username}
+                onChange={(e) =>
+                  setUsername(
+                    e.target.value.toLowerCase().replace(/[^a-z0-9._-]/g, ""),
+                  )
+                }
+                placeholder="mis. sari"
                 className={`${inputBase} w-full`}
               />
             </Field>
@@ -154,6 +161,16 @@ export function KaryawanManager({
                 onChange={(e) => setPassword(e.target.value)}
                 type="text"
                 placeholder="beri password awal"
+                className={`${inputBase} w-full`}
+              />
+            </Field>
+            <Field label="Email (opsional)">
+              <input
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                type="email"
+                inputMode="email"
+                placeholder="kasir@contoh.com (boleh kosong)"
                 className={`${inputBase} w-full`}
               />
             </Field>
@@ -192,8 +209,9 @@ export function KaryawanManager({
           )}
 
           <p className="mt-3 text-xs text-slate-400">
-            Bagikan email &amp; password ini ke karyawan. Mereka bisa mengganti
-            password nanti. Peran <b>Kasir</b> tidak melihat menu Keuangan,
+            Karyawan bisa login pakai <b>Username</b> atau Email. Jika hanya
+            Username (tanpa email), tautan <b>reset password</b> akan dikirim ke{" "}
+            <b>email pemilik</b>. Peran <b>Kasir</b> tidak melihat menu Keuangan,
             Laporan, Pengaturan, maupun Karyawan.
           </p>
           <div className="mt-4 flex items-center gap-2">
@@ -243,7 +261,7 @@ export function KaryawanManager({
                   )}
                 </div>
                 <p className="truncate text-xs text-slate-500">
-                  {e.email ?? "—"}
+                  {e.username ? `@${e.username}` : (e.email ?? "—")}
                 </p>
               </div>
 
