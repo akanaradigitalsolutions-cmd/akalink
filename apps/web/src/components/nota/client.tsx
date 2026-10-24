@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { buildNotaEscPos, type NotaPrintData } from "@/lib/escpos";
+import { printBytes, isWebBluetoothSupported } from "@/lib/bt-print";
 
 /** Otomatis membuka dialog cetak saat halaman dibuka dengan ?print=1. */
 export function AutoPrint() {
@@ -26,7 +28,7 @@ export function ThermalPrint({
   auto?: boolean;
   label?: string;
 }) {
-  const [w, setW] = useState<PaperWidth>(80);
+  const [w, setW] = useState<PaperWidth>(58);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -80,6 +82,72 @@ export function ThermalPrint({
         </button>
       </div>
     </>
+  );
+}
+
+/**
+ * Cetak langsung ke printer termal Bluetooth (BLE), mis. iWare RPP02N.
+ * Mengirim byte ESC/POS via Web Bluetooth — tidak lewat dialog cetak browser.
+ * Lebar kolom mengikuti kertas tersimpan (58mm=32, 80mm=42).
+ */
+export function BluetoothPrint({ data }: { data: NotaPrintData }) {
+  const [status, setStatus] = useState<"idle" | "printing" | "ok" | "error">(
+    "idle",
+  );
+  const [msg, setMsg] = useState("");
+  const [supported, setSupported] = useState(true);
+
+  useEffect(() => {
+    setSupported(isWebBluetoothSupported());
+  }, []);
+
+  async function handlePrint() {
+    setStatus("printing");
+    setMsg("");
+    try {
+      const saved = Number(localStorage.getItem(PAPER_KEY));
+      const cols = saved === 80 ? 42 : 32;
+      const bytes = buildNotaEscPos(data, cols);
+      await printBytes(bytes);
+      setStatus("ok");
+      setMsg("Nota terkirim ke printer.");
+    } catch (e) {
+      // Pengguna membatalkan pemilihan perangkat bukan error yang perlu ditonjolkan.
+      const text = e instanceof Error ? e.message : String(e);
+      if (/cancel|user cancelled|chooser/i.test(text)) {
+        setStatus("idle");
+        return;
+      }
+      setStatus("error");
+      setMsg(text);
+    }
+  }
+
+  if (!supported) {
+    return (
+      <p className="no-print text-center text-xs text-slate-400">
+        Cetak Bluetooth butuh Chrome di Android (atau aplikasi AkaLink).
+      </p>
+    );
+  }
+
+  return (
+    <div className="no-print flex flex-col items-center gap-2">
+      <button
+        type="button"
+        onClick={handlePrint}
+        disabled={status === "printing"}
+        className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-60 dark:bg-slate-700"
+      >
+        {status === "printing" ? "Menyambung…" : "📶 Cetak via Bluetooth"}
+      </button>
+      {status === "ok" && (
+        <p className="text-center text-xs font-medium text-green-600">{msg}</p>
+      )}
+      {status === "error" && (
+        <p className="max-w-xs text-center text-xs text-red-600">{msg}</p>
+      )}
+    </div>
   );
 }
 

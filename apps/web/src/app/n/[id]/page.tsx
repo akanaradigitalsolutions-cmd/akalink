@@ -2,9 +2,16 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getPublicTransaction } from "@/lib/transactions";
 import { getBaseUrl, qrSvg, SYARAT_KETENTUAN_DEFAULT } from "@/lib/nota";
-import { formatRupiah, LABEL_STATUS_BAYAR } from "@/lib/format";
+import {
+  formatRupiah,
+  formatDateTime,
+  formatHp,
+  LABEL_STATUS_BAYAR,
+  SATUAN_SINGKAT,
+} from "@/lib/format";
 import { NotaView } from "@/components/nota/nota-view";
-import { ThermalPrint } from "@/components/nota/client";
+import { ThermalPrint, BluetoothPrint } from "@/components/nota/client";
+import type { NotaPrintData } from "@/lib/escpos";
 
 export const dynamic = "force-dynamic";
 
@@ -57,6 +64,36 @@ export default async function PublicNotaPage({
   const link = `${base}/n/${id}`;
   const qr = await qrSvg(link, 132);
 
+  const { tenant, consumer, tx, items } = data;
+  const sisa = tx.statusPembayaran === "lunas" ? 0 : Number(tx.grandTotal);
+  const printData: NotaPrintData = {
+    namaToko: tenant?.nama ?? "AkaLink",
+    alamat: tenant?.alamat ?? undefined,
+    kotaTelp:
+      [tenant?.kota, tenant?.telepon].filter(Boolean).join(" · ") || undefined,
+    tipe: tx.tipe,
+    noNota: tx.noNota,
+    pelanggan: consumer?.nama ?? "Umum",
+    hp: consumer?.hp ? formatHp(consumer.hp) : undefined,
+    terima: formatDateTime(tx.orderDiterima),
+    selesai: formatDateTime(tx.estimasiSelesai),
+    items: items.map((it) => ({
+      nama: it.namaLayanan,
+      qtyLabel: `${Number(it.qty)} ${SATUAN_SINGKAT[it.tipeSatuan] ?? ""}`.trim(),
+      harga: formatRupiah(it.harga),
+      subtotal: formatRupiah(it.subtotal),
+      selesai: it.status === "selesai",
+    })),
+    subtotal: formatRupiah(tx.subtotal),
+    express: Number(tx.biayaExpress) > 0 ? formatRupiah(tx.biayaExpress) : undefined,
+    diskon: Number(tx.diskon) > 0 ? formatRupiah(tx.diskon) : undefined,
+    grandTotal: formatRupiah(tx.grandTotal),
+    sisa: formatRupiah(sisa),
+    status: LABEL_STATUS_BAYAR[tx.statusPembayaran],
+    link,
+    sk: tenant?.syaratKetentuan ?? SYARAT_KETENTUAN_DEFAULT,
+  };
+
   return (
     <main className="min-h-dvh bg-slate-100 px-4 py-6">
       <NotaView
@@ -68,8 +105,10 @@ export default async function PublicNotaPage({
         link={link}
         sk={data.tenant?.syaratKetentuan ?? SYARAT_KETENTUAN_DEFAULT}
       />
-      <div className="no-print mx-auto mt-4 max-w-sm">
-        <ThermalPrint auto={sp.print === "1"} label="🖨️ Cetak Nota" />
+      <div className="no-print mx-auto mt-4 flex max-w-sm flex-col items-center gap-4">
+        <BluetoothPrint data={printData} />
+        <div className="h-px w-40 bg-slate-200 dark:bg-slate-700" />
+        <ThermalPrint auto={sp.print === "1"} label="🖨️ Cetak (Dialog Browser)" />
       </div>
     </main>
   );
