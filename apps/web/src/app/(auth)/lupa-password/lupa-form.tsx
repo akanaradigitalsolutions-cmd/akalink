@@ -28,8 +28,10 @@ export function LupaForm({ linkGagal }: { linkGagal?: boolean }) {
             Cek email Anda
           </h2>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            Jika <b>{email}</b> terdaftar, kami mengirim tautan untuk mengatur
-            ulang password. Buka email tersebut lalu klik tautannya.
+            Jika <b>{email}</b> cocok dengan akun, kami mengirim tautan untuk
+            mengatur ulang password. Untuk akun <b>username</b> (tanpa email),
+            tautan dikirim ke <b>email pemilik</b>. Buka email lalu klik
+            tautannya.
           </p>
         </div>
         <p className="text-xs text-slate-400">
@@ -53,8 +55,8 @@ export function LupaForm({ linkGagal }: { linkGagal?: boolean }) {
           Lupa Password
         </h2>
         <p className="text-sm text-slate-500 dark:text-slate-400">
-          Masukkan email akun Anda. Kami kirim tautan untuk mengatur ulang
-          password.
+          Masukkan email atau username akun Anda. Kami kirim tautan untuk
+          mengatur ulang password (akun username: tautan ke email pemilik).
         </p>
       </div>
 
@@ -74,15 +76,15 @@ export function LupaForm({ linkGagal }: { linkGagal?: boolean }) {
           htmlFor="email"
           className="text-sm font-medium text-slate-700 dark:text-slate-200"
         >
-          Email <span className="text-red-500">*</span>
+          Email atau Username <span className="text-red-500">*</span>
         </label>
         <input
           id="email"
-          type="email"
+          type="text"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          placeholder="email@contoh.com"
-          autoComplete="email"
+          placeholder="email@contoh.com atau username"
+          autoComplete="username"
           required
           className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-200 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:ring-brand-900"
         />

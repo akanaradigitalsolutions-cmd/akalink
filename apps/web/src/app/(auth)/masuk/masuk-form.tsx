@@ -47,11 +47,11 @@ export function MasukForm({
       )}
 
       <Field
-        label="Email"
+        label="Email atau Username"
         name="email"
-        type="email"
-        placeholder="email@contoh.com"
-        autoComplete="email"
+        type="text"
+        placeholder="email@contoh.com atau username"
+        autoComplete="username"
         required
         error={state?.fieldErrors?.email}
       />

@@ -8,6 +8,7 @@ export type EmployeeRow = {
   id: string;
   nama: string;
   email: string | null;
+  username: string | null;
   role: string;
   status: string;
   outletIds: string[];
@@ -24,6 +25,7 @@ export const getEmployees = cache(
         id: employees.id,
         nama: employees.nama,
         email: employees.email,
+        username: employees.employeeCode,
         role: employees.role,
         status: employees.status,
         outletIds: employees.outletIds,
