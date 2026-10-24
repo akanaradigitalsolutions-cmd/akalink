@@ -5,7 +5,13 @@ import Link from "next/link";
 import { masuk, type ActionState } from "@/lib/auth-actions";
 import { Field } from "../_components/field";
 
-export function MasukForm({ baruTerdaftar }: { baruTerdaftar?: boolean }) {
+export function MasukForm({
+  baruTerdaftar,
+  setelahReset,
+}: {
+  baruTerdaftar?: boolean;
+  setelahReset?: boolean;
+}) {
   const [state, action, pending] = useActionState<ActionState, FormData>(
     masuk,
     undefined,
@@ -25,6 +31,12 @@ export function MasukForm({ baruTerdaftar }: { baruTerdaftar?: boolean }) {
       {baruTerdaftar && (
         <div className="rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700 dark:bg-green-950 dark:text-green-300">
           Akun berhasil dibuat. Silakan masuk.
+        </div>
+      )}
+
+      {setelahReset && (
+        <div className="rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700 dark:bg-green-950 dark:text-green-300">
+          Data berhasil direset. Masuk kembali untuk menyiapkan laundry baru.
         </div>
       )}
 

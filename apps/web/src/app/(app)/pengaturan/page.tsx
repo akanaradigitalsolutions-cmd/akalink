@@ -4,6 +4,7 @@ import { getSessionUser, getTenantIdFromUser } from "@/lib/auth";
 import { getTenantSettings } from "@/lib/settings";
 import { SYARAT_KETENTUAN_DEFAULT } from "@/lib/nota";
 import { SettingsForm } from "./settings-form";
+import { ResetData } from "./reset-data";
 
 export const metadata: Metadata = { title: "Pengaturan — AkaLink" };
 
@@ -54,6 +55,8 @@ export default async function PengaturanPage() {
         }}
         skDefault={SYARAT_KETENTUAN_DEFAULT}
       />
+
+      <ResetData email={user.email ?? ""} namaUsaha={s.nama} />
     </div>
   );
 }
