@@ -28,6 +28,7 @@ export default async function AdminTenantPage({
         biayaPerWa: detail.tenant.biayaPerWa,
         createdAt: detail.tenant.createdAt.toISOString(),
       }}
+      ownerEmail={detail.ownerEmail}
       koinTerpakai={detail.koinTerpakai}
       txCount={detail.txCount}
       ledger={detail.ledger.map((l) => ({

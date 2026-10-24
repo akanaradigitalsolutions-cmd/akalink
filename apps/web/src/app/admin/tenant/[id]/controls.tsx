@@ -9,6 +9,7 @@ import {
   setTenantStatus,
   setTenantTier,
   setTenantBiaya,
+  deleteTenant,
 } from "@/lib/platform-actions";
 
 type Tenant = {
@@ -34,11 +35,13 @@ type Ledger = {
 
 export function AdminTenantControls({
   tenant,
+  ownerEmail,
   koinTerpakai,
   txCount,
   ledger,
 }: {
   tenant: Tenant;
+  ownerEmail: string | null;
   koinTerpakai: number;
   txCount: number;
   ledger: Ledger[];
@@ -51,6 +54,7 @@ export function AdminTenantControls({
   const [nota, setNota] = useState(String(tenant.biayaPerNota));
   const [wa, setWa] = useState(String(tenant.biayaPerWa));
   const [msg, setMsg] = useState<{ ok?: boolean; text: string }>();
+  const [hapusKonfirmasi, setHapusKonfirmasi] = useState("");
 
   function run(fn: () => Promise<{ ok: boolean; error?: string }>, okText: string) {
     setMsg(undefined);
@@ -67,9 +71,12 @@ export function AdminTenantControls({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center gap-3">
+      <div>
         <Link href="/admin" className="text-sm text-slate-400 hover:text-slate-600">← Admin</Link>
-        <h2 className="text-xl font-bold text-slate-900 dark:text-white">{tenant.nama}</h2>
+        <h2 className="mt-1 text-xl font-bold text-slate-900 dark:text-white">{tenant.nama}</h2>
+        <p className="text-sm text-brand-600 dark:text-brand-400">
+          {ownerEmail ?? "— email pemilik tidak ditemukan"}
+        </p>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-4">
@@ -184,6 +191,48 @@ export function AdminTenantControls({
             ))}
           </div>
         )}
+      </div>
+
+      {/* Zona berbahaya — hapus laundry */}
+      <div className="rounded-2xl border border-red-200 bg-red-50/60 p-5 dark:border-red-900 dark:bg-red-950/30">
+        <h3 className="text-sm font-bold text-red-700 dark:text-red-400">
+          Zona Berbahaya — Hapus Laundry
+        </h3>
+        <p className="mt-1 text-xs text-red-700/80 dark:text-red-300/80">
+          Menghapus <strong>{tenant.nama}</strong> beserta seluruh datanya
+          (outlet, transaksi, keuangan, karyawan) secara permanen, termasuk akun
+          login pemiliknya. <strong>Tidak dapat dibatalkan.</strong>
+        </p>
+        <div className="mt-3 flex flex-wrap items-end gap-2">
+          <label className="text-xs text-red-700 dark:text-red-300">
+            Ketik nama laundry untuk konfirmasi
+            <input
+              value={hapusKonfirmasi}
+              onChange={(e) => setHapusKonfirmasi(e.target.value)}
+              placeholder={tenant.nama}
+              className="mt-1 block w-64 rounded-lg border border-red-300 bg-white px-3 py-2 text-sm text-slate-900 dark:border-red-800 dark:bg-slate-950 dark:text-white"
+            />
+          </label>
+          <button
+            onClick={() =>
+              run(
+                () =>
+                  deleteTenant({
+                    tenantId: tenant.id,
+                    konfirmasi: hapusKonfirmasi,
+                  }).then((r) => {
+                    if (r.ok) router.push("/admin");
+                    return r;
+                  }),
+                "Laundry dihapus.",
+              )
+            }
+            disabled={pending || hapusKonfirmasi.trim() !== tenant.nama}
+            className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-700 disabled:opacity-50"
+          >
+            Hapus Permanen
+          </button>
+        </div>
       </div>
     </div>
   );
