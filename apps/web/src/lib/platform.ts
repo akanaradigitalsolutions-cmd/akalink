@@ -10,6 +10,7 @@ import {
   outlets,
   transactions,
   appCoinLedger,
+  coinTopupOrders,
 } from "@akalink/db";
 
 /** Email admin platform dari env (fallback bila tabel belum di-seed). */
@@ -171,4 +172,93 @@ export async function getTenantAdminDetail(id: string) {
     koinTerpakai: Math.round(terpakai),
     txCount: txAgg[0]?.n ?? 0,
   };
+}
+
+// --- Monitor isi ulang Saldo Koin (lintas-tenant) -------------------------
+export type CoinTopupStatus = "pending" | "success" | "failed" | "expired";
+
+export type CoinTopupRow = {
+  id: string;
+  tenantId: string;
+  tenantNama: string;
+  invoiceNumber: string;
+  amount: number;
+  status: string;
+  channel: string | null;
+  createdAt: Date;
+  paidAt: Date | null;
+};
+
+/** Daftar pesanan isi ulang koin seluruh laundry (opsional difilter status). */
+export async function getAllCoinTopups(opts?: {
+  status?: CoinTopupStatus;
+  limit?: number;
+}): Promise<CoinTopupRow[]> {
+  const db = getDb();
+  const limit = Math.min(opts?.limit ?? 200, 500);
+  const where = opts?.status
+    ? eq(coinTopupOrders.status, opts.status)
+    : undefined;
+  return db
+    .select({
+      id: coinTopupOrders.id,
+      tenantId: coinTopupOrders.tenantId,
+      tenantNama: tenants.nama,
+      invoiceNumber: coinTopupOrders.invoiceNumber,
+      amount: coinTopupOrders.amount,
+      status: coinTopupOrders.status,
+      channel: coinTopupOrders.channel,
+      createdAt: coinTopupOrders.createdAt,
+      paidAt: coinTopupOrders.paidAt,
+    })
+    .from(coinTopupOrders)
+    .innerJoin(tenants, eq(coinTopupOrders.tenantId, tenants.id))
+    .where(where)
+    .orderBy(desc(coinTopupOrders.createdAt))
+    .limit(limit);
+}
+
+export type TopupSummary = {
+  successCount: number;
+  successTotal: number;
+  pendingCount: number;
+  pendingTotal: number;
+  failedCount: number;
+  failedTotal: number;
+};
+
+/** Ringkasan isi ulang koin per status (seluruh platform). */
+export async function getTopupSummary(): Promise<TopupSummary> {
+  const db = getDb();
+  const rows = await db
+    .select({
+      status: coinTopupOrders.status,
+      count: sql<number>`count(*)::int`,
+      total: sql<number>`coalesce(sum(${coinTopupOrders.amount}),0)::float8`,
+    })
+    .from(coinTopupOrders)
+    .groupBy(coinTopupOrders.status);
+
+  const s: TopupSummary = {
+    successCount: 0,
+    successTotal: 0,
+    pendingCount: 0,
+    pendingTotal: 0,
+    failedCount: 0,
+    failedTotal: 0,
+  };
+  for (const r of rows) {
+    if (r.status === "success") {
+      s.successCount = r.count;
+      s.successTotal = Math.round(r.total);
+    } else if (r.status === "pending") {
+      s.pendingCount = r.count;
+      s.pendingTotal = Math.round(r.total);
+    } else {
+      // failed + expired digabung sebagai "gagal"
+      s.failedCount += r.count;
+      s.failedTotal += Math.round(r.total);
+    }
+  }
+  return s;
 }
