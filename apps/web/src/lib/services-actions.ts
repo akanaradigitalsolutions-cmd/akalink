@@ -85,6 +85,85 @@ export async function createService(
   return { ok: true };
 }
 
+// ---- Impor massal (CSV) --------------------------------------------------
+export type ImportResult = {
+  ok: boolean;
+  inserted: number;
+  failed: number;
+  errors: { baris: number; pesan: string }[];
+  error?: string;
+};
+
+const importRowSchema = z.object({
+  nama: z.string().trim().min(1, "Nama wajib diisi"),
+  tipeSatuan: z.enum(["kiloan", "satuan", "koin", "luas"]).default("kiloan"),
+  harga: z.coerce.number().min(0, "Harga tidak valid"),
+  estimasiNilai: z.coerce.number().int().min(0).max(9999).optional(),
+  estimasiSatuan: z.enum(["jam", "hari"]).default("jam"),
+  kategori: z.string().trim().optional(),
+  expressTersedia: z.boolean().optional(),
+});
+
+function toBool(v: unknown): boolean {
+  return ["ya", "yes", "true", "1", "y"].includes(
+    String(v ?? "").trim().toLowerCase(),
+  );
+}
+
+export async function importServices(
+  rows: Record<string, string>[],
+): Promise<ImportResult> {
+  const tenantId = await requireTenant();
+  if (!tenantId)
+    return { ok: false, inserted: 0, failed: 0, errors: [], error: "Sesi tidak valid. Masuk lagi." };
+  if (!Array.isArray(rows) || rows.length === 0)
+    return { ok: false, inserted: 0, failed: 0, errors: [], error: "File kosong atau format salah." };
+  if (rows.length > 1000)
+    return { ok: false, inserted: 0, failed: 0, errors: [], error: "Maksimal 1000 baris per impor." };
+
+  await seedDefaultOutletIfEmpty(tenantId);
+  const activeOutlet = await getActiveOutlet(tenantId);
+
+  const values: (typeof services.$inferInsert)[] = [];
+  const errors: { baris: number; pesan: string }[] = [];
+
+  rows.forEach((r, i) => {
+    const parsed = importRowSchema.safeParse({
+      nama: r.nama,
+      tipeSatuan: (r.tipe_satuan || "").trim().toLowerCase() || undefined,
+      harga: (r.harga ?? "").replace(/[^\d]/g, "") || "0",
+      estimasiNilai: r.estimasi_nilai ? r.estimasi_nilai : undefined,
+      estimasiSatuan: (r.estimasi_satuan || "").trim().toLowerCase() || undefined,
+      kategori: r.kategori || undefined,
+      expressTersedia: toBool(r.express),
+    });
+    if (!parsed.success) {
+      errors.push({
+        baris: i + 2,
+        pesan: parsed.error.issues[0]?.message ?? "Data tidak valid",
+      });
+      return;
+    }
+    const d = parsed.data;
+    values.push({
+      tenantId,
+      outletId: activeOutlet?.id ?? null,
+      nama: d.nama,
+      tipeSatuan: d.tipeSatuan,
+      harga: String(d.harga),
+      estimasiNilai: d.estimasiNilai ?? null,
+      estimasiSatuan: d.estimasiSatuan,
+      kategori: d.kategori ?? null,
+      expressTersedia: d.expressTersedia ?? false,
+    });
+  });
+
+  const db = getDb();
+  if (values.length) await db.insert(services).values(values);
+  revalidatePath("/layanan");
+  return { ok: true, inserted: values.length, failed: errors.length, errors };
+}
+
 export async function deleteService(formData: FormData) {
   const tenantId = await requireTenant();
   if (!tenantId) return;

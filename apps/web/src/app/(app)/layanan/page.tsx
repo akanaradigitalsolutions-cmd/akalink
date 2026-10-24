@@ -10,6 +10,7 @@ import {
 import { deleteService, toggleService } from "@/lib/services-actions";
 import { formatRupiah, formatEstimasi, LABEL_SATUAN } from "@/lib/format";
 import { ServiceForm } from "./service-form";
+import { BulkImport } from "@/components/bulk-import";
 import { IconTag, IconTrash } from "@/components/icons";
 
 export const metadata: Metadata = {
@@ -60,6 +61,8 @@ export default async function LayananPage() {
         </div>
         <ServiceForm />
       </header>
+
+      <BulkImport kind="layanan" />
 
       {list.length === 0 ? (
         <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-slate-300 bg-white py-16 text-center dark:border-slate-700 dark:bg-slate-900">
