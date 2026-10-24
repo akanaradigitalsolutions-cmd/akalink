@@ -1,7 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { buildNotaEscPos, type NotaPrintData } from "@/lib/escpos";
+import {
+  buildNotaEscPos,
+  buildLabelEscPos,
+  type NotaPrintData,
+  type LabelPrintData,
+} from "@/lib/escpos";
 import { printBytes, isWebBluetoothSupported } from "@/lib/bt-print";
 
 /** Otomatis membuka dialog cetak saat halaman dibuka dengan ?print=1. */
@@ -90,7 +95,11 @@ export function ThermalPrint({
  * Mengirim byte ESC/POS via Web Bluetooth — tidak lewat dialog cetak browser.
  * Lebar kolom mengikuti kertas tersimpan (58mm=32, 80mm=42).
  */
-export function BluetoothPrint({ data }: { data: NotaPrintData }) {
+type BluetoothPrintProps =
+  | { kind?: "nota"; data: NotaPrintData }
+  | { kind: "label"; data: LabelPrintData };
+
+export function BluetoothPrint(props: BluetoothPrintProps) {
   const [status, setStatus] = useState<"idle" | "printing" | "ok" | "error">(
     "idle",
   );
@@ -107,7 +116,10 @@ export function BluetoothPrint({ data }: { data: NotaPrintData }) {
     try {
       const saved = Number(localStorage.getItem(PAPER_KEY));
       const cols = saved === 80 ? 42 : 32;
-      const bytes = buildNotaEscPos(data, cols);
+      const bytes =
+        props.kind === "label"
+          ? buildLabelEscPos(props.data, cols)
+          : buildNotaEscPos(props.data, cols);
       await printBytes(bytes);
       setStatus("ok");
       setMsg("Nota terkirim ke printer.");

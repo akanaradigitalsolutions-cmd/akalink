@@ -125,9 +125,8 @@ export default async function DetailTransaksiPage({
                 ✏️ Edit
               </Link>
             )}
-          <PrintLink href={`/n/${tx.id}?print=1`} label="🖨️ Cetak Nota" />
-          <PrintLink href={`/label/${tx.id}?print=1`} label="🏷️ Cetak Label" />
-          <PrintLink href={`/n/${tx.id}`} label="🔗 Lihat Nota" />
+          <PrintLink href={`/n/${tx.id}`} label="🖨️ Cetak Nota" />
+          <PrintLink href={`/label/${tx.id}`} label="🏷️ Cetak Label" />
           {tx.statusPekerjaan === "selesai" && (
             <WhatsappButton
               hp={consumer?.hp}

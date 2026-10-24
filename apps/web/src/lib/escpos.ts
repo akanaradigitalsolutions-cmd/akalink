@@ -29,6 +29,18 @@ export type NotaPrintData = {
   sk: string[];
 };
 
+export type LabelPrintData = {
+  namaToko: string;
+  noNota: string;
+  pelanggan: string;
+  totalUnit: string;
+  grandTotal: string;
+  masuk: string;
+  selesai: string;
+  items: { label: string; subtotal: string }[];
+  link: string;
+};
+
 const ESC = 0x1b;
 const GS = 0x1d;
 const LF = 0x0a;
@@ -215,5 +227,33 @@ export function buildNotaEscPos(d: NotaPrintData, cols = 32): Uint8Array {
   p.align("center").line("Terima kasih").lf(1);
   p.align("left");
   p.lf(3); // ruang sobek
+  return p.bytes();
+}
+
+export function buildLabelEscPos(d: LabelPrintData, cols = 32): Uint8Array {
+  const p = new EscPos(cols);
+
+  // Header toko + nomor nota
+  p.align("center").bold(true).line(d.namaToko).line(d.noNota).bold(false);
+  p.divider();
+
+  // Nama pelanggan besar
+  p.align("left").bold(true).size(true).line(d.pelanggan).size(false);
+  p.kv(d.totalUnit, d.grandTotal);
+  p.bold(false);
+  p.line(`Masuk  : ${d.masuk}`);
+  p.line(`Selesai: ${d.selesai}`);
+  p.divider();
+
+  // Item
+  for (const it of d.items) {
+    p.kv(it.label, it.subtotal);
+  }
+  p.divider();
+
+  // QR
+  p.qr(d.link, 5);
+  p.align("center").line("Scan untuk cek status");
+  p.align("left").lf(3);
   return p.bytes();
 }
