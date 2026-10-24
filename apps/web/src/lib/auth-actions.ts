@@ -151,7 +151,10 @@ export async function masuk(
   if (error) {
     return { error: "Email atau password salah." };
   }
-  redirect("/dashboard");
+  // Di subdomain master.akalink.id, arahkan langsung ke konsol admin.
+  const h = await headers();
+  const host = h.get("host") ?? "";
+  redirect(host.startsWith("master.") ? "/admin" : "/dashboard");
 }
 
 // ---- Lupa password: kirim email reset -----------------------------------
