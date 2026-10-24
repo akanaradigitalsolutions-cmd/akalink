@@ -22,6 +22,7 @@ export function AppShell({
   tenantName,
   userName,
   userEmail = "",
+  loginId = "",
   role,
   outlets = [],
   activeOutletId = null,
@@ -38,6 +39,7 @@ export function AppShell({
   tenantName: string;
   userName: string;
   userEmail?: string;
+  loginId?: string;
   role: string;
   outlets?: { id: string; nama: string }[];
   activeOutletId?: string | null;
@@ -119,6 +121,7 @@ export function AppShell({
             <ProfileMenu
               userName={userName}
               userEmail={userEmail}
+              loginId={loginId}
               role={role}
               initials={initials}
             />

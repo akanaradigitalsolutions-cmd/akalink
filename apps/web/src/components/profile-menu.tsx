@@ -3,22 +3,30 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { keluar } from "@/lib/auth-actions";
+import { saveAccount } from "@/lib/accounts";
 import { IconUser, IconSettings, IconLogout } from "./icons";
 
 export function ProfileMenu({
   userName,
   userEmail,
+  loginId = "",
   role,
   initials,
 }: {
   userName: string;
   userEmail: string;
+  loginId?: string;
   role: string;
   initials: string;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const isOwner = role === "owner";
+
+  // Ingat akun ini di perangkat (untuk fitur "Ganti Pengguna"). Tanpa password.
+  useEffect(() => {
+    if (loginId) saveAccount(loginId, userName);
+  }, [loginId, userName]);
 
   // Tutup saat klik di luar atau tekan Escape.
   useEffect(() => {
@@ -107,8 +115,18 @@ export function ProfileMenu({
             )}
           </div>
 
-          {/* Keluar */}
+          {/* Ganti Pengguna & Keluar */}
           <div className="border-t border-slate-100 py-1 dark:border-slate-800">
+            <form action={keluar}>
+              <button
+                type="submit"
+                role="menuitem"
+                className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800"
+              >
+                <SwitchIcon />
+                Ganti Pengguna
+              </button>
+            </form>
             <form action={keluar}>
               <button
                 type="submit"
@@ -147,6 +165,20 @@ function MenuLink({
       <span className="text-slate-400">{icon}</span>
       {children}
     </Link>
+  );
+}
+
+function SwitchIcon() {
+  return (
+    <svg className="h-4 w-4 text-slate-400" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M4 9h12l-3-3M20 15H8l3 3"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }
 

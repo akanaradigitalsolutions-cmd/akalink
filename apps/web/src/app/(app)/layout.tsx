@@ -25,6 +25,7 @@ export default async function AppLayout({
 
   let tenantName = "AkaLink";
   let userName = user.email ?? "Pengguna";
+  let loginId = user.email ?? "";
   let role = "—";
   let outlets: { id: string; nama: string }[] = [];
   let activeOutletId: string | null = null;
@@ -44,6 +45,7 @@ export default async function AppLayout({
     ]);
     tenantName = tenant?.nama ?? tenantName;
     userName = me?.nama ?? userName;
+    loginId = me?.employeeCode ?? user.email ?? "";
     role = me?.role ?? role;
     showMember = tenant?.fiturMember ?? false;
     showPromo = tenant?.fiturPromo ?? false;
@@ -72,6 +74,7 @@ export default async function AppLayout({
       tenantName={tenantName}
       userName={userName}
       userEmail={user.email ?? ""}
+      loginId={loginId}
       role={role}
       outlets={outlets}
       activeOutletId={activeOutletId}
