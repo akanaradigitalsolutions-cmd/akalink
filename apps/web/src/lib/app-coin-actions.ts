@@ -3,13 +3,16 @@
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { and, eq, desc } from "drizzle-orm";
-import { getDb, employees, coinTopupOrders } from "@akalink/db";
+import { getDb, employees, coinTopupOrders, tenants } from "@akalink/db";
 import {
   getSessionUser,
   getTenantIdFromUser,
   getRoleFromUser,
 } from "@/lib/auth";
 import { topupAppCoin } from "@/lib/app-coin";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { sendOwnerEmail, sendWhatsappFonnte, waMeLink } from "@/lib/notify";
+import { formatRupiah } from "@/lib/format";
 import {
   isDokuConfigured,
   createCheckoutPayment,
@@ -205,5 +208,86 @@ export async function syncPendingTopups(): Promise<SyncTopupResult> {
     credited,
     saldoSesudah,
     pending: pending.length,
+  };
+}
+
+// ---- Pengingat isi ulang Koin ke pemilik (email + WhatsApp) --------------
+export type RemindResult = {
+  ok: boolean;
+  emailSent: boolean;
+  waSent: boolean;
+  waLink?: string;
+  error?: string;
+};
+
+/** Kirim pengingat isi ulang Saldo Koin ke pemilik (dipanggil kasir/owner). */
+export async function remindOwnerTopup(): Promise<RemindResult> {
+  const user = await getSessionUser();
+  const tenantId = getTenantIdFromUser(user);
+  if (!user || !tenantId)
+    return { ok: false, emailSent: false, waSent: false, error: "Sesi tidak valid." };
+
+  const db = getDb();
+  const [t] = await db
+    .select({
+      nama: tenants.nama,
+      telepon: tenants.telepon,
+      saldo: tenants.saldoKoin,
+      biaya: tenants.biayaPerNota,
+    })
+    .from(tenants)
+    .where(eq(tenants.id, tenantId))
+    .limit(1);
+  if (!t)
+    return { ok: false, emailSent: false, waSent: false, error: "Data laundry tidak ditemukan." };
+
+  // Email pemilik (dari akun owner).
+  const [owner] = await db
+    .select({ authUserId: employees.authUserId })
+    .from(employees)
+    .where(and(eq(employees.tenantId, tenantId), eq(employees.role, "owner")))
+    .limit(1);
+  let ownerEmail = "";
+  if (owner?.authUserId) {
+    try {
+      const admin = createSupabaseAdminClient();
+      const { data } = await admin.auth.admin.getUserById(owner.authUserId);
+      ownerEmail = data?.user?.email ?? "";
+    } catch {
+      /* abaikan */
+    }
+  }
+
+  const saldo = t.saldo ?? 0;
+  const biaya = t.biaya || 50;
+  const notaLagi = biaya > 0 ? Math.max(0, Math.floor(saldo / biaya)) : 0;
+  const pengirim = user.email ?? "kasir";
+
+  const pesan =
+    `*Pengingat Isi Ulang Koin AkaLink*\n\n` +
+    `Laundry: ${t.nama}\n` +
+    `Saldo Koin: ${formatRupiah(saldo)} (± ${notaLagi.toLocaleString("id-ID")} nota lagi)\n\n` +
+    `Mohon segera isi ulang Saldo Koin agar nota tetap bisa dicetak. Terima kasih.`;
+
+  const html =
+    `<div style="font-family:Arial,sans-serif;max-width:480px">` +
+    `<h2 style="color:#1d4ed8">Pengingat Isi Ulang Koin AkaLink</h2>` +
+    `<p>Laundry: <b>${t.nama}</b></p>` +
+    `<p>Saldo Koin: <b>${formatRupiah(saldo)}</b> (± ${notaLagi.toLocaleString("id-ID")} nota lagi)</p>` +
+    `<p>Mohon segera isi ulang Saldo Koin agar nota tetap bisa dicetak.</p>` +
+    `<p style="color:#64748b;font-size:12px">Dikirim dari aplikasi oleh ${pengirim}.</p></div>`;
+
+  const [emailSent, waSent] = await Promise.all([
+    ownerEmail
+      ? sendOwnerEmail(ownerEmail, "Pengingat Isi Ulang Koin AkaLink", html)
+      : Promise.resolve(false),
+    t.telepon ? sendWhatsappFonnte(t.telepon, pesan) : Promise.resolve(false),
+  ]);
+
+  return {
+    ok: true,
+    emailSent,
+    waSent,
+    waLink: t.telepon ? waMeLink(t.telepon, pesan) : undefined,
   };
 }
