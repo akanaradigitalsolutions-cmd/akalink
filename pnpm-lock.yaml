@@ -35,6 +35,9 @@ importers:
       next:
         specifier: 15.5.23
         version: 15.5.23(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      nodemailer:
+        specifier: ^10.2.1
+        version: 10.2.1
       qrcode:
         specifier: 1.5.4
         version: 1.5.4
@@ -57,6 +60,9 @@ importers:
       '@types/node':
         specifier: 22.20.1
         version: 22.20.1
+      '@types/nodemailer':
+        specifier: ^8.0.2
+        version: 8.0.2
       '@types/qrcode':
         specifier: 1.5.6
         version: 1.5.6
@@ -948,6 +954,9 @@ packages:
   '@types/node@22.20.1':
     resolution: {integrity: sha512-EANqOCF9QFyra+4pfxUcX9STKJpCLjMbObVzljIJomAWSnuSIEAvyzEU53GaajbXJEgdh0iEcPL+DGvpUd4k1Q==}
 
+  '@types/nodemailer@8.0.2':
+    resolution: {integrity: sha512-c7M5ox8p0nEOfbJ2E9Qcmt8/QCu/VzsiAhzBiZbvky2PhKZDHpKB3sQHBM5MEZNkCfBOaS6S9//AGPRTNB7IaA==}
+
   '@types/qrcode@1.5.6':
     resolution: {integrity: sha512-te7NQcV2BOvdj2b1hCAHzAoMNuj65kNBMz0KBaxM6c3VGBOhU0dURQKOtH8CFNI/dsKkwlv32p26qYQTWoB5bw==}
 
@@ -1267,6 +1276,10 @@ packages:
         optional: true
       sass:
         optional: true
+
+  nodemailer@10.2.1:
+    resolution: {integrity: sha512-ZrDNsPFoDMwefNs7sJwrYiEJ/CG4ClJWDZv05iNJsEBWa8GRDry1QJHTJxsuTAY9eDDKjX4k+q3SxslXJOao7w==}
+    engines: {node: '>=20.0.0'}
 
   p-limit@2.3.0:
     resolution: {integrity: sha512-//88mFWSJx8lxCzwdAABTJL2MyWB12+eIY7MDL2SqLmAkeKU9qxRvWuSyTjm3FUmpBEMuFfckAIqEaVGUDxb6w==}
@@ -1947,6 +1960,10 @@ snapshots:
     dependencies:
       undici-types: 6.21.0
 
+  '@types/nodemailer@8.0.2':
+    dependencies:
+      '@types/node': 22.20.1
+
   '@types/qrcode@1.5.6':
     dependencies:
       '@types/node': 22.20.1
@@ -2201,6 +2218,8 @@ snapshots:
     transitivePeerDependencies:
       - '@babel/core'
       - babel-plugin-macros
+
+  nodemailer@10.2.1: {}
 
   p-limit@2.3.0:
     dependencies:

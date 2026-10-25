@@ -9,6 +9,7 @@ import {
   getRevenueMonths,
 } from "@/lib/dashboard";
 import { RevenueChart } from "./revenue-chart";
+import { KasirCoinCard } from "./kasir-coin";
 import { getCoinConfig } from "@/lib/app-coin";
 import { getPendingDeleteRequests } from "@/lib/delete-requests";
 import { getPendingApprovals } from "@/lib/approvals";
@@ -209,6 +210,11 @@ export default async function DashboardPage() {
             Isi Ulang
           </span>
         </Link>
+      )}
+
+      {/* Saldo Koin untuk Kasir (pantau + ingatkan pemilik isi ulang) */}
+      {!isOwner && coin && (
+        <KasirCoinCard saldo={saldo} biayaNota={biayaNota} />
       )}
 
       {/* Statistik hari ini */}
