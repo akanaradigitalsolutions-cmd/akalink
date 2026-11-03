@@ -237,11 +237,12 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
   background: rgb(51 65 85);
 }
 
-/* Muat isi halaman dengan fade lembut. */
+/* Muat isi halaman dengan fade lembut + sedikit naik (hanya opacity & transform
+   → ramah GPU, murah). Easing ease-out agar terasa "mendarat" mulus. */
 @keyframes aka-fade-in {
   from {
     opacity: 0;
-    transform: translateY(6px);
+    transform: translateY(10px) scale(0.994);
   }
   to {
     opacity: 1;
@@ -249,7 +250,23 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
   }
 }
 .aka-fade-in {
-  animation: aka-fade-in 0.28s ease both;
+  animation: aka-fade-in 0.34s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+  will-change: opacity, transform;
+}
+
+/* Denyut lembut pada kepala bilah kemajuan saat menunggu (elemen mungil,
+   hanya opacity → sangat murah). */
+@keyframes aka-head-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+.aka-progress-head {
+  animation: aka-head-pulse 1s ease-in-out infinite;
 }
 
 /* Bar tipis indeterminate saat berpindah outlet (ringan, murni CSS). */
