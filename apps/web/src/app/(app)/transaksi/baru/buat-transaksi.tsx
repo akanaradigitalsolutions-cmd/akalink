@@ -9,7 +9,7 @@ import {
 import { quickCreateConsumer } from "@/lib/consumers-actions";
 import { validatePromo } from "@/lib/promos-actions";
 import { formatRupiah, SATUAN_SINGKAT } from "@/lib/format";
-import { IconPlus, IconTrash } from "@/components/icons";
+import { IconPlus, IconTrash, IconSearch, IconClose } from "@/components/icons";
 
 type Service = {
   id: string;
@@ -114,6 +114,7 @@ export function BuatTransaksi({
     });
   }
   const [items, setItems] = useState<Item[]>(initial?.items ?? []);
+  const [serviceQuery, setServiceQuery] = useState("");
   const [isExpress, setIsExpress] = useState(initial?.isExpress ?? false);
   const [biayaExpress, setBiayaExpress] = useState(initial?.biayaExpress ?? 0);
   const [diskon, setDiskon] = useState(initial?.diskon ?? 0);
@@ -126,6 +127,11 @@ export function BuatTransaksi({
   const [promoPending, startPromo] = useTransition();
 
   const selectedConsumer = consumers.find((c) => c.id === consumerId);
+  const filteredServices = useMemo(() => {
+    const q = serviceQuery.trim().toLowerCase();
+    if (!q) return services;
+    return services.filter((s) => s.nama.toLowerCase().includes(q));
+  }, [services, serviceQuery]);
   const filteredConsumers = useMemo(() => {
     const q = consumerQuery.trim().toLowerCase();
     if (!q) return consumers.slice(0, 6);
@@ -387,8 +393,37 @@ export function BuatTransaksi({
               Belum ada layanan aktif. Tambahkan dulu di menu Layanan.
             </p>
           ) : (
-            <div className="mt-3 grid gap-2 sm:grid-cols-2">
-              {services.map((s) => (
+            <>
+              {services.length > 6 && (
+                <div className="relative mt-3">
+                  <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                    <IconSearch className="h-4 w-4" />
+                  </span>
+                  <input
+                    value={serviceQuery}
+                    onChange={(e) => setServiceQuery(e.target.value)}
+                    placeholder="Cari layanan…"
+                    className="w-full rounded-lg border border-slate-300 bg-white py-2.5 pl-9 pr-9 text-sm text-slate-900 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-200 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+                  />
+                  {serviceQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setServiceQuery("")}
+                      aria-label="Hapus pencarian"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+                    >
+                      <IconClose className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+              )}
+              {filteredServices.length === 0 ? (
+                <p className="mt-3 text-sm text-slate-500">
+                  Tidak ada layanan cocok dengan “{serviceQuery}”.
+                </p>
+              ) : (
+                <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                  {filteredServices.map((s) => (
                 <button
                   key={s.id}
                   onClick={() => addService(s)}
@@ -407,8 +442,10 @@ export function BuatTransaksi({
                     <IconPlus className="h-4 w-4" />
                   </span>
                 </button>
-              ))}
-            </div>
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </section>
       </div>

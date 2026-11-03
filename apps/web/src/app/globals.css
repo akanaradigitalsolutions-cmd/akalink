@@ -29,12 +29,98 @@
 :root {
   --background: #f8fafc;
   --foreground: #0f172a;
+
+  /* ---- Tema "quiet luxury, glass" (mode terang) ---- */
+  --aka-accent: #c6a15b; /* champagne-gold: satu aksen mewah terkendali */
+  --aka-accent-soft: #e4cd9a;
+  --glass-bg: rgba(255, 255, 255, 0.62);
+  --glass-bg-strong: rgba(255, 255, 255, 0.82);
+  --glass-border: rgba(255, 255, 255, 0.75);
+  --glass-shadow: 0 10px 30px -14px rgba(15, 23, 42, 0.28);
+  --glass-blur: 14px;
+  /* Latar mewah: biru brand lembut + semburat emas tipis. */
+  --aka-bg:
+    radial-gradient(1100px 560px at 100% -8%, rgba(198, 161, 91, 0.1), transparent 60%),
+    radial-gradient(1000px 680px at -10% 0%, rgba(37, 99, 235, 0.09), transparent 55%),
+    linear-gradient(180deg, #eef2fb 0%, #f6f8fc 55%, #eef1f9 100%);
 }
 
 /* Nilai untuk mode gelap — hanya aktif bila kelas .dark dipasang. */
 .dark {
   --background: #0b1120;
   --foreground: #e2e8f0;
+
+  --aka-accent: #d8b979;
+  --aka-accent-soft: #b4965a;
+  --glass-bg: rgba(17, 25, 40, 0.55);
+  --glass-bg-strong: rgba(17, 25, 40, 0.74);
+  --glass-border: rgba(148, 163, 184, 0.18);
+  --glass-shadow: 0 12px 34px -14px rgba(0, 0, 0, 0.6);
+  --glass-blur: 14px;
+  --aka-bg:
+    radial-gradient(1100px 560px at 100% -8%, rgba(216, 185, 121, 0.1), transparent 60%),
+    radial-gradient(1000px 680px at -10% 0%, rgba(37, 99, 235, 0.16), transparent 55%),
+    linear-gradient(180deg, #070b16 0%, #0b1120 55%, #0a1426 100%);
+}
+
+/* ---- Lapisan kaca (glassmorphism) — ringan & murni CSS ------------------ */
+.aka-app-bg {
+  background: var(--aka-bg);
+  background-repeat: no-repeat;
+  background-size: cover;
+  /* Hindari background-attachment:fixed (mahal untuk di-repaint di HP kelas bawah). */
+}
+
+/* Permukaan kaca dasar (dipakai untuk shell: sidebar, topbar, bottom-nav). */
+.aka-glass {
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(140%);
+  backdrop-filter: blur(var(--glass-blur)) saturate(140%);
+}
+.aka-glass-strong {
+  background: var(--glass-bg-strong);
+  -webkit-backdrop-filter: blur(calc(var(--glass-blur) + 4px)) saturate(150%);
+  backdrop-filter: blur(calc(var(--glass-blur) + 4px)) saturate(150%);
+}
+
+/* Kartu kaca siap-pakai untuk konten (dipakai bertahap per-bagian). */
+.aka-card {
+  background: var(--glass-bg-strong);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(140%);
+  backdrop-filter: blur(var(--glass-blur)) saturate(140%);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  border-radius: 1rem;
+}
+
+/* Aksen emas mewah. */
+.aka-accent {
+  color: var(--aka-accent);
+}
+.aka-accent-bg {
+  background: var(--aka-accent);
+}
+
+/* Fallback 1 — peramban tanpa backdrop-filter → warna solid translucent. */
+@supports not (
+  (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))
+) {
+  .aka-glass,
+  .aka-glass-strong,
+  .aka-card {
+    background: var(--glass-bg-strong);
+  }
+}
+
+/* Fallback 2 — pengguna meminta "kurangi transparansi". */
+@media (prefers-reduced-transparency: reduce) {
+  .aka-glass,
+  .aka-glass-strong,
+  .aka-card {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    background: var(--glass-bg-strong);
+  }
 }
 
 body {

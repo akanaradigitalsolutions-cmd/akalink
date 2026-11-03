@@ -161,6 +161,15 @@ export function IconClose(p: IconProps) {
   );
 }
 
+export function IconSearch(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <circle cx="11" cy="11" r="7" />
+      <path d="M21 21l-4.3-4.3" />
+    </Svg>
+  );
+}
+
 export function IconStore(p: IconProps) {
   return (
     <Svg {...p}>
