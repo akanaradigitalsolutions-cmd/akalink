@@ -7,7 +7,7 @@ import {
   getTenantIdFromUser,
   getRoleFromUser,
 } from "@/lib/auth";
-import { seedDefaultCoaIfEmpty } from "@/lib/coa";
+import { seedDefaultCoaIfEmpty, ensureExpenseCoa } from "@/lib/coa";
 import { postJournal } from "@/lib/journal";
 
 export type FinanceResult = { ok: true } | { ok: false; error: string };
@@ -48,6 +48,7 @@ export async function catatKeuangan(
   }
 
   await seedDefaultCoaIfEmpty(tenantId);
+  if (jenis === "pengeluaran") await ensureExpenseCoa(tenantId);
 
   let lines: { kode: string; debit?: number; kredit?: number }[];
   let ket: string;
@@ -119,6 +120,7 @@ export async function catatKeuangan(
   revalidatePath("/keuangan/laba-rugi");
   revalidatePath("/keuangan/neraca");
   revalidatePath("/keuangan/catat");
+  revalidatePath("/keuangan/rincian");
   revalidatePath("/pengeluaran");
   return { ok: true };
 }

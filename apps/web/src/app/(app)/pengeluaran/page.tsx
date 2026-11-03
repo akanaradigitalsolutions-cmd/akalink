@@ -1,7 +1,11 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { getSessionUser, getTenantIdFromUser } from "@/lib/auth";
-import { getCoa, seedDefaultCoaIfEmpty } from "@/lib/coa";
+import {
+  getSessionUser,
+  getTenantIdFromUser,
+  getRoleFromUser,
+} from "@/lib/auth";
+import { getExpensePicker } from "@/lib/expense";
 import { getPengeluaran } from "@/lib/journal";
 import { formatRupiah, formatDateTime } from "@/lib/format";
 import { PengeluaranForm } from "./pengeluaran-form";
@@ -14,15 +18,8 @@ export default async function PengeluaranPage() {
   const tenantId = getTenantIdFromUser(user);
   if (!tenantId) redirect("/masuk");
 
-  await seedDefaultCoaIfEmpty(tenantId);
-  const akun = await getCoa(tenantId);
-
-  const kas = akun
-    .filter((a) => a.isKas && a.aktif)
-    .map((a) => ({ kode: a.kode, nama: a.nama }));
-  const beban = akun
-    .filter((a) => a.tipe === "beban" && a.kode !== "5" && a.aktif)
-    .map((a) => ({ kode: a.kode, nama: a.nama }));
+  const { groups, kas } = await getExpensePicker(tenantId);
+  const canAdd = getRoleFromUser(user) === "owner";
 
   const terbaru = await getPengeluaran(tenantId, 30);
 
@@ -38,7 +35,7 @@ export default async function PengeluaranPage() {
         </p>
       </div>
 
-      <PengeluaranForm kas={kas} beban={beban} />
+      <PengeluaranForm kas={kas} groups={groups} canAdd={canAdd} />
 
       <div>
         <h2 className="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-200">

@@ -3,6 +3,12 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { catatKeuangan } from "@/lib/finance-actions";
+import { formatRupiah } from "@/lib/format";
+import {
+  ExpenseCategoryPicker,
+  type PickerGroup,
+  type ExpenseSelection,
+} from "@/components/expense-category-picker";
 
 type Acc = { kode: string; nama: string };
 
@@ -16,7 +22,15 @@ const JENIS: { v: string; label: string }[] = [
 const inputBase =
   "rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-200 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100";
 
-export function FinanceForms({ kas, beban }: { kas: Acc[]; beban: Acc[] }) {
+export function FinanceForms({
+  kas,
+  groups,
+  canAdd = false,
+}: {
+  kas: Acc[];
+  groups: PickerGroup[];
+  canAdd?: boolean;
+}) {
   const router = useRouter();
   const [jenis, setJenis] = useState("pengeluaran");
   const [pending, start] = useTransition();
@@ -25,27 +39,40 @@ export function FinanceForms({ kas, beban }: { kas: Acc[]; beban: Acc[] }) {
   const [jumlah, setJumlah] = useState("");
   const [keterangan, setKeterangan] = useState("");
   const [tanggal, setTanggal] = useState("");
-  const [akunBebanKode, setBeban] = useState(beban[0]?.kode ?? "");
+  const [exp, setExp] = useState<ExpenseSelection>({
+    groupKode: "",
+    kategoriKode: "",
+    produk: "",
+  });
   const [kasKode, setKas] = useState(
     kas.find((k) => k.kode === "1.1.02")?.kode ?? kas[0]?.kode ?? "",
   );
   const [dariKode, setDari] = useState(kas[0]?.kode ?? "");
   const [keKode, setKe] = useState(kas[1]?.kode ?? kas[0]?.kode ?? "");
 
+  const jml = Number(jumlah.replace(/[^0-9]/g, ""));
+
   function submit() {
     setMsg(undefined);
-    const jml = Number(jumlah.replace(/[^0-9.]/g, ""));
     if (!(jml > 0)) {
       setMsg({ text: "Jumlah harus lebih dari 0." });
       return;
     }
+    if (jenis === "pengeluaran" && !exp.kategoriKode) {
+      setMsg({ text: "Pilih kategori pengeluaran." });
+      return;
+    }
+    const ketPengeluaran =
+      [exp.produk, keterangan].filter((s) => s && s.trim()).join(" — ") ||
+      undefined;
+
     start(async () => {
       const res = await catatKeuangan({
         jenis,
         jumlah: jml,
-        keterangan,
+        keterangan: jenis === "pengeluaran" ? ketPengeluaran : keterangan,
         tanggal: tanggal || undefined,
-        akunBebanKode,
+        akunBebanKode: exp.kategoriKode,
         kasKode,
         dariKode,
         keKode,
@@ -84,26 +111,17 @@ export function FinanceForms({ kas, beban }: { kas: Acc[]; beban: Acc[] }) {
         ))}
       </div>
 
+      {jenis === "pengeluaran" && (
+        <div className="mb-4">
+          <ExpenseCategoryPicker groups={groups} canAdd={canAdd} onChange={setExp} />
+        </div>
+      )}
+
       <div className="grid gap-4 sm:grid-cols-2">
         {jenis === "pengeluaran" && (
-          <>
-            <Field label="Kategori Beban">
-              <select
-                value={akunBebanKode}
-                onChange={(e) => setBeban(e.target.value)}
-                className={`${inputBase} w-full`}
-              >
-                {beban.map((b) => (
-                  <option key={b.kode} value={b.kode}>
-                    {b.kode} · {b.nama}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <Field label="Sumber Kas">
-              <KasSelect kas={kas} value={kasKode} onChange={setKas} />
-            </Field>
-          </>
+          <Field label="Sumber Kas">
+            <KasSelect kas={kas} value={kasKode} onChange={setKas} />
+          </Field>
         )}
 
         {jenis === "modal" && (
@@ -137,6 +155,11 @@ export function FinanceForms({ kas, beban }: { kas: Acc[]; beban: Acc[] }) {
             placeholder="mis. 50000"
             className={`${inputBase} w-full`}
           />
+          {jml > 0 && (
+            <span className="text-xs font-medium text-brand-600 dark:text-brand-400">
+              {formatRupiah(jml)}
+            </span>
+          )}
         </Field>
         <Field label="Tanggal (opsional)">
           <input
@@ -151,7 +174,11 @@ export function FinanceForms({ kas, beban }: { kas: Acc[]; beban: Acc[] }) {
             <input
               value={keterangan}
               onChange={(e) => setKeterangan(e.target.value)}
-              placeholder="mis. Beli deterjen"
+              placeholder={
+                jenis === "pengeluaran"
+                  ? "Catatan tambahan (mis. merk/jumlah)"
+                  : "mis. keterangan transaksi"
+              }
               className={`${inputBase} w-full`}
             />
           </Field>

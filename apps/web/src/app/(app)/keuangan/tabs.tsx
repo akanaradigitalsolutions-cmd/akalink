@@ -11,6 +11,7 @@ const tabs = [
   { href: "/keuangan/buku-besar", label: "Buku Besar" },
   { href: "/keuangan/laba-rugi", label: "Laba-Rugi" },
   { href: "/keuangan/neraca", label: "Neraca" },
+  { href: "/keuangan/rincian", label: "Rincian Biaya" },
 ];
 
 export function KeuanganTabs() {
