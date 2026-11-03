@@ -33,16 +33,19 @@
   /* ---- Tema "quiet luxury, glass" (mode terang) ---- */
   --aka-accent: #c6a15b; /* champagne-gold: satu aksen mewah terkendali */
   --aka-accent-soft: #e4cd9a;
-  --glass-bg: rgba(255, 255, 255, 0.62);
-  --glass-bg-strong: rgba(255, 255, 255, 0.82);
-  --glass-border: rgba(255, 255, 255, 0.75);
-  --glass-shadow: 0 10px 30px -14px rgba(15, 23, 42, 0.28);
+  --glass-bg: rgba(255, 255, 255, 0.55); /* shell (dengan blur) */
+  --glass-bg-strong: rgba(255, 255, 255, 0.78);
+  --glass-card-bg: rgba(255, 255, 255, 0.72); /* kartu konten (tanpa blur) */
+  --glass-sheen: rgba(255, 255, 255, 0.55); /* kilau kaca diagonal (murah) */
+  --glass-border: rgba(255, 255, 255, 0.85);
+  --glass-shadow: 0 14px 34px -18px rgba(30, 41, 90, 0.4);
   --glass-blur: 14px;
-  /* Latar mewah: biru brand lembut + semburat emas tipis. */
+  /* Latar mewah: biru brand + emas + semburat indigo (lebih kaya agar kaca terbaca). */
   --aka-bg:
-    radial-gradient(1100px 560px at 100% -8%, rgba(198, 161, 91, 0.1), transparent 60%),
-    radial-gradient(1000px 680px at -10% 0%, rgba(37, 99, 235, 0.09), transparent 55%),
-    linear-gradient(180deg, #eef2fb 0%, #f6f8fc 55%, #eef1f9 100%);
+    radial-gradient(1200px 600px at 100% -8%, rgba(198, 161, 91, 0.16), transparent 58%),
+    radial-gradient(1000px 680px at -12% 2%, rgba(37, 99, 235, 0.18), transparent 55%),
+    radial-gradient(900px 520px at 50% 118%, rgba(99, 102, 241, 0.12), transparent 60%),
+    linear-gradient(180deg, #e7edfb 0%, #eef2fb 50%, #e9ecf8 100%);
 }
 
 /* Nilai untuk mode gelap — hanya aktif bila kelas .dark dipasang. */
@@ -52,15 +55,18 @@
 
   --aka-accent: #d8b979;
   --aka-accent-soft: #b4965a;
-  --glass-bg: rgba(17, 25, 40, 0.55);
-  --glass-bg-strong: rgba(17, 25, 40, 0.74);
-  --glass-border: rgba(148, 163, 184, 0.18);
-  --glass-shadow: 0 12px 34px -14px rgba(0, 0, 0, 0.6);
+  --glass-bg: rgba(17, 25, 40, 0.5);
+  --glass-bg-strong: rgba(17, 25, 40, 0.72);
+  --glass-card-bg: rgba(20, 28, 46, 0.62);
+  --glass-sheen: rgba(255, 255, 255, 0.07);
+  --glass-border: rgba(148, 163, 184, 0.2);
+  --glass-shadow: 0 16px 36px -18px rgba(0, 0, 0, 0.7);
   --glass-blur: 14px;
   --aka-bg:
-    radial-gradient(1100px 560px at 100% -8%, rgba(216, 185, 121, 0.1), transparent 60%),
-    radial-gradient(1000px 680px at -10% 0%, rgba(37, 99, 235, 0.16), transparent 55%),
-    linear-gradient(180deg, #070b16 0%, #0b1120 55%, #0a1426 100%);
+    radial-gradient(1200px 600px at 100% -8%, rgba(216, 185, 121, 0.14), transparent 58%),
+    radial-gradient(1000px 680px at -12% 2%, rgba(37, 99, 235, 0.28), transparent 55%),
+    radial-gradient(900px 520px at 50% 118%, rgba(79, 70, 229, 0.22), transparent 60%),
+    linear-gradient(180deg, #060a14 0%, #0b1120 55%, #0a1428 100%);
 }
 
 /* ---- Lapisan kaca (glassmorphism) — ringan & murni CSS ------------------ */
@@ -83,14 +89,28 @@
   backdrop-filter: blur(calc(var(--glass-blur) + 4px)) saturate(150%);
 }
 
-/* Kartu kaca siap-pakai untuk konten (dipakai bertahap per-bagian). */
+/* Kartu kaca konten — TANPA backdrop-filter (ringan & aman di daftar panjang).
+   Efek "kaca" didapat dari warna translusen di atas latar yang kaya warna,
+   sehingga tidak ada biaya blur per-kartu saat menggulir. */
 .aka-card {
-  background: var(--glass-bg-strong);
-  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(140%);
-  backdrop-filter: blur(var(--glass-blur)) saturate(140%);
+  background:
+    linear-gradient(140deg, var(--glass-sheen), transparent 42%),
+    var(--glass-card-bg);
   border: 1px solid var(--glass-border);
   box-shadow: var(--glass-shadow);
   border-radius: 1rem;
+}
+
+/* Fase 2 — terapkan gaya kaca ke SEMUA kartu konten bertanda standar
+   (rounded-2xl + border + bg-white) di dalam area utama, dalam satu aturan.
+   Spesifisitas (0,3,0) mengalahkan utilitas Tailwind tunggal, termasuk
+   varian dark:, tanpa !important dan tanpa mengubah 43 berkas. */
+#aka-main .rounded-2xl.border.bg-white {
+  background:
+    linear-gradient(140deg, var(--glass-sheen), transparent 42%),
+    var(--glass-card-bg);
+  border-color: var(--glass-border);
+  box-shadow: var(--glass-shadow);
 }
 
 /* Aksen emas mewah. */
