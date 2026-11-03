@@ -149,7 +149,7 @@ export function SidebarNav({
             href={item.href}
             className={
               active
-                ? "flex items-center gap-3 rounded-lg bg-brand-50 px-3 py-2 text-sm font-semibold text-brand-700 dark:bg-brand-950/50 dark:text-brand-300"
+                ? "relative flex items-center gap-3 rounded-lg bg-brand-50/80 px-3 py-2 text-sm font-semibold text-brand-700 before:absolute before:left-0 before:top-1.5 before:bottom-1.5 before:w-1 before:rounded-r-full before:bg-[var(--aka-accent)] dark:bg-brand-950/50 dark:text-brand-300"
                 : "flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-slate-600 transition hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
             }
           >
