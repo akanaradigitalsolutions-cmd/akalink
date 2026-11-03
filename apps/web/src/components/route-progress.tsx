@@ -76,13 +76,23 @@ export function RouteProgress() {
   return (
     <div
       aria-hidden
-      className="pointer-events-none fixed inset-x-0 top-0 z-[200] h-0.5"
-      style={{ opacity: visible ? 1 : 0, transition: "opacity .2s ease" }}
+      className="pointer-events-none fixed inset-x-0 top-0 z-[200] h-[2px]"
+      style={{ opacity: visible ? 1 : 0, transition: "opacity .25s ease" }}
     >
       <div
-        className="h-full bg-gradient-to-r from-brand-400 to-brand-600 shadow-[0_0_8px_theme(colors.brand.500)]"
-        style={{ width: `${width}%`, transition: "width .3s ease" }}
-      />
+        className="relative h-full"
+        style={{
+          width: `${width}%`,
+          transition: "width .3s cubic-bezier(.4,0,.2,1)",
+        }}
+      >
+        {/* Isi bilah: brand → emas champagne (aksen mewah). */}
+        <div className="h-full w-full bg-gradient-to-r from-brand-600 via-brand-400 to-[var(--aka-accent)]" />
+        {/* Ekor cahaya lembut di ujung. */}
+        <span className="absolute right-0 top-1/2 h-[2px] w-12 -translate-y-1/2 bg-gradient-to-r from-transparent to-[var(--aka-accent)] blur-[1px]" />
+        {/* Kepala "komet" bercahaya. */}
+        <span className="aka-progress-head absolute right-0 top-1/2 h-1.5 w-1.5 -translate-y-1/2 translate-x-1/2 rounded-full bg-white shadow-[0_0_10px_2px_var(--aka-accent)]" />
+      </div>
     </div>
   );
 }
