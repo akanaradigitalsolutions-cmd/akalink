@@ -4,13 +4,26 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { catatKeuangan } from "@/lib/finance-actions";
 import { formatRupiah } from "@/lib/format";
+import {
+  ExpenseCategoryPicker,
+  type PickerGroup,
+  type ExpenseSelection,
+} from "@/components/expense-category-picker";
 
 type Acc = { kode: string; nama: string };
 
 const inputBase =
   "rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-200 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100";
 
-export function PengeluaranForm({ kas, beban }: { kas: Acc[]; beban: Acc[] }) {
+export function PengeluaranForm({
+  kas,
+  groups,
+  canAdd = false,
+}: {
+  kas: Acc[];
+  groups: PickerGroup[];
+  canAdd?: boolean;
+}) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [msg, setMsg] = useState<{ ok?: boolean; text: string }>();
@@ -18,13 +31,17 @@ export function PengeluaranForm({ kas, beban }: { kas: Acc[]; beban: Acc[] }) {
   const [jumlah, setJumlah] = useState("");
   const [keterangan, setKeterangan] = useState("");
   const [tanggal, setTanggal] = useState("");
-  const [akunBebanKode, setBeban] = useState(beban[0]?.kode ?? "");
+  const [exp, setExp] = useState<ExpenseSelection>({
+    groupKode: "",
+    kategoriKode: "",
+    produk: "",
+  });
   const [kasKode, setKas] = useState(
     kas.find((k) => k.kode === "1.1.02")?.kode ?? kas[0]?.kode ?? "",
   );
 
   const jml = Number(jumlah.replace(/[^0-9]/g, ""));
-  const noAccounts = beban.length === 0 || kas.length === 0;
+  const noData = groups.length === 0 || kas.length === 0;
 
   function submit() {
     setMsg(undefined);
@@ -32,13 +49,21 @@ export function PengeluaranForm({ kas, beban }: { kas: Acc[]; beban: Acc[] }) {
       setMsg({ text: "Jumlah harus lebih dari 0." });
       return;
     }
+    if (!exp.kategoriKode) {
+      setMsg({ text: "Pilih kategori pengeluaran." });
+      return;
+    }
+    const ket =
+      [exp.produk, keterangan].filter((s) => s && s.trim()).join(" — ") ||
+      undefined;
+
     start(async () => {
       const res = await catatKeuangan({
         jenis: "pengeluaran",
         jumlah: jml,
-        keterangan,
+        keterangan: ket,
         tanggal: tanggal || undefined,
-        akunBebanKode,
+        akunBebanKode: exp.kategoriKode,
         kasKode,
       });
       if (res.ok) {
@@ -54,20 +79,9 @@ export function PengeluaranForm({ kas, beban }: { kas: Acc[]; beban: Acc[] }) {
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Kategori Beban">
-          <select
-            value={akunBebanKode}
-            onChange={(e) => setBeban(e.target.value)}
-            className={`${inputBase} w-full`}
-          >
-            {beban.map((b) => (
-              <option key={b.kode} value={b.kode}>
-                {b.kode} · {b.nama}
-              </option>
-            ))}
-          </select>
-        </Field>
+      <ExpenseCategoryPicker groups={groups} canAdd={canAdd} onChange={setExp} />
+
+      <div className="mt-4 grid gap-4 sm:grid-cols-2">
         <Field label="Sumber Kas">
           <select
             value={kasKode}
@@ -104,12 +118,12 @@ export function PengeluaranForm({ kas, beban }: { kas: Acc[]; beban: Acc[] }) {
             className={`${inputBase} w-full`}
           />
         </Field>
-        <div className="sm:col-span-2">
-          <Field label="Keterangan (opsional)">
+        <div className="sm:col-span-1">
+          <Field label="Catatan (opsional)">
             <input
               value={keterangan}
               onChange={(e) => setKeterangan(e.target.value)}
-              placeholder="mis. Beli deterjen, plastik, token listrik"
+              placeholder="mis. merk / jumlah"
               className={`${inputBase} w-full`}
             />
           </Field>
@@ -119,7 +133,7 @@ export function PengeluaranForm({ kas, beban }: { kas: Acc[]; beban: Acc[] }) {
       <div className="mt-5 flex flex-wrap items-center gap-3">
         <button
           onClick={submit}
-          disabled={pending || noAccounts}
+          disabled={pending || noData}
           className="rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-700 disabled:opacity-60"
         >
           {pending ? "Menyimpan…" : "Simpan Pengeluaran"}
@@ -135,10 +149,10 @@ export function PengeluaranForm({ kas, beban }: { kas: Acc[]; beban: Acc[] }) {
         )}
       </div>
 
-      {noAccounts && (
+      {noData && (
         <p className="mt-3 text-xs text-amber-600 dark:text-amber-400">
           Daftar akun belum lengkap. Minta pemilik membuka menu Keuangan sekali
-          agar akun kas & beban tersedia.
+          agar akun kas & kategori tersedia.
         </p>
       )}
     </div>

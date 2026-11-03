@@ -1,7 +1,11 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { getSessionUser, getTenantIdFromUser } from "@/lib/auth";
-import { getCoa, seedDefaultCoaIfEmpty } from "@/lib/coa";
+import {
+  getSessionUser,
+  getTenantIdFromUser,
+  getRoleFromUser,
+} from "@/lib/auth";
+import { getExpensePicker } from "@/lib/expense";
 import { KeuanganTabs } from "../tabs";
 import { FinanceForms } from "./finance-forms";
 
@@ -13,15 +17,8 @@ export default async function CatatPage() {
   const tenantId = getTenantIdFromUser(user);
   if (!tenantId) redirect("/masuk");
 
-  await seedDefaultCoaIfEmpty(tenantId);
-  const akun = await getCoa(tenantId);
-
-  const kas = akun
-    .filter((a) => a.isKas && a.aktif)
-    .map((a) => ({ kode: a.kode, nama: a.nama }));
-  const beban = akun
-    .filter((a) => a.tipe === "beban" && a.kode !== "5" && a.aktif)
-    .map((a) => ({ kode: a.kode, nama: a.nama }));
+  const { groups, kas } = await getExpensePicker(tenantId);
+  const canAdd = getRoleFromUser(user) === "owner";
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6">
@@ -36,11 +33,11 @@ export default async function CatatPage() {
       </div>
       <KeuanganTabs />
 
-      <FinanceForms kas={kas} beban={beban} />
+      <FinanceForms kas={kas} groups={groups} canAdd={canAdd} />
 
       <p className="text-center text-xs text-slate-400">
-        Entri yang tersimpan bisa dilihat di tab Jurnal dan memengaruhi
-        Laba-Rugi & Neraca.
+        Entri yang tersimpan bisa dilihat di tab Jurnal & Rincian Biaya, serta
+        memengaruhi Laba-Rugi & Neraca.
       </p>
     </div>
   );

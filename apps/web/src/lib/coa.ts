@@ -2,6 +2,7 @@ import "server-only";
 
 import { and, asc, eq } from "drizzle-orm";
 import { getDb, chartOfAccounts } from "@akalink/db";
+import { expenseCoaSeeds } from "@/lib/expense-taxonomy";
 
 type Tipe = "aset" | "kewajiban" | "modal" | "pendapatan" | "beban";
 type Normal = "debit" | "kredit";
@@ -137,4 +138,46 @@ export async function ensureCoaAccount(tenantId: string, kode: string) {
     parentId,
     isKas: seed.kas ?? false,
   });
+}
+
+/**
+ * Pastikan akun taksonomi Pengeluaran (Kelompok Akun + Kategori dari daftar
+ * baku) tersedia untuk tenant. Idempoten & self-healing: hanya menambah akun
+ * yang belum ada, sehingga tenant lama pun otomatis mendapat akun baru.
+ */
+export async function ensureExpenseCoa(tenantId: string) {
+  // Pastikan COA default (termasuk akun induk "1" & "5") ada lebih dulu.
+  await seedDefaultCoaIfEmpty(tenantId);
+
+  const db = getDb();
+  const existing = await db
+    .select({ id: chartOfAccounts.id, kode: chartOfAccounts.kode })
+    .from(chartOfAccounts)
+    .where(eq(chartOfAccounts.tenantId, tenantId));
+
+  const kodeToId = new Map<string, string>(existing.map((r) => [r.kode, r.id]));
+  const seeds = expenseCoaSeeds();
+  const missing = seeds.filter((s) => !kodeToId.has(s.kode));
+  if (missing.length === 0) return;
+
+  // Urutan seeds menaruh induk sebelum anak, jadi parentId bisa langsung resolve.
+  for (const s of missing) {
+    const parentId = kodeToId.get(s.parentKode) ?? null;
+    const [row] = await db
+      .insert(chartOfAccounts)
+      .values({
+        tenantId,
+        kode: s.kode,
+        nama: s.nama,
+        tipe: s.tipe,
+        saldoNormal: "debit",
+        parentId,
+        isKas: false,
+      })
+      .onConflictDoNothing({
+        target: [chartOfAccounts.tenantId, chartOfAccounts.kode],
+      })
+      .returning({ id: chartOfAccounts.id });
+    if (row) kodeToId.set(s.kode, row.id);
+  }
 }
