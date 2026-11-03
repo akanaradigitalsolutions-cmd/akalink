@@ -28,6 +28,7 @@ type NavItem = {
   icon: (p: { className?: string }) => React.ReactNode;
   soon?: boolean;
   ownerOnly?: boolean;
+  kasirOnly?: boolean;
   feature?: "member" | "promo" | "bayar" | "self" | "antar" | "b2b" | "investor" | "admin";
 };
 
@@ -51,6 +52,7 @@ const items: NavItem[] = [
     feature: "promo",
   },
   { label: "Kas & Setoran", href: "/kas", icon: IconCash },
+  { label: "Pengeluaran", href: "/pengeluaran", icon: IconWallet, kasirOnly: true },
   { label: "Inventori", href: "/inventori", icon: IconBox },
   { label: "Mesin", href: "/mesin", icon: IconMachine, feature: "self" },
   { label: "Antar-Jemput", href: "/antar-jemput", icon: IconTruck, feature: "antar" },
@@ -122,6 +124,7 @@ export function SidebarNav({
     <nav className="mt-6 flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto pr-1">
       {items
         .filter((item) => !item.ownerOnly || isOwner)
+        .filter((item) => !item.kasirOnly || !isOwner)
         .filter((item) => !item.feature || featureOn[item.feature])
         .map((item) => {
         if (item.soon) {
