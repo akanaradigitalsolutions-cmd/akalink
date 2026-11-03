@@ -129,3 +129,72 @@ export async function getJurnal(tenantId: string, limit = 100) {
 
   return entries.map((e) => ({ ...e, lines: byEntry.get(e.id) ?? [] }));
 }
+
+export type PengeluaranRow = {
+  id: string;
+  tanggal: Date;
+  keterangan: string;
+  jumlah: number;
+  kategori: string;
+  kas: string;
+};
+
+/**
+ * Daftar pengeluaran (beban) terbaru. Dipakai pada halaman Pengeluaran kasir
+ * agar entri yang baru dicatat langsung terlihat. Hanya entri refType
+ * "pengeluaran": baris debit = akun beban, baris kredit = kas.
+ */
+export async function getPengeluaran(
+  tenantId: string,
+  limit = 30,
+): Promise<PengeluaranRow[]> {
+  const db = getDb();
+  const entries = await db
+    .select({
+      id: journalEntries.id,
+      tanggal: journalEntries.tanggal,
+      keterangan: journalEntries.keterangan,
+    })
+    .from(journalEntries)
+    .where(
+      and(
+        eq(journalEntries.tenantId, tenantId),
+        eq(journalEntries.refType, "pengeluaran"),
+      ),
+    )
+    .orderBy(desc(journalEntries.tanggal), desc(journalEntries.createdAt))
+    .limit(limit);
+  if (entries.length === 0) return [];
+
+  const ids = entries.map((e) => e.id);
+  const lines = await db
+    .select({
+      entryId: journalLines.entryId,
+      debit: journalLines.debit,
+      kredit: journalLines.kredit,
+      nama: chartOfAccounts.nama,
+    })
+    .from(journalLines)
+    .leftJoin(chartOfAccounts, eq(journalLines.accountId, chartOfAccounts.id))
+    .where(inArray(journalLines.entryId, ids));
+
+  const byEntry = new Map<string, typeof lines>();
+  for (const l of lines) {
+    if (!byEntry.has(l.entryId)) byEntry.set(l.entryId, []);
+    byEntry.get(l.entryId)!.push(l);
+  }
+
+  return entries.map((e) => {
+    const ls = byEntry.get(e.id) ?? [];
+    const beban = ls.find((l) => Number(l.debit) > 0);
+    const kas = ls.find((l) => Number(l.kredit) > 0);
+    return {
+      id: e.id,
+      tanggal: e.tanggal,
+      keterangan: e.keterangan,
+      jumlah: beban ? Number(beban.debit) : Number(kas?.kredit ?? 0),
+      kategori: beban?.nama ?? "—",
+      kas: kas?.nama ?? "—",
+    };
+  });
+}

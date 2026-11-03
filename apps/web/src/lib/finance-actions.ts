@@ -2,7 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { getDb } from "@akalink/db";
-import { getSessionUser, getTenantIdFromUser } from "@/lib/auth";
+import {
+  getSessionUser,
+  getTenantIdFromUser,
+  getRoleFromUser,
+} from "@/lib/auth";
 import { seedDefaultCoaIfEmpty } from "@/lib/coa";
 import { postJournal } from "@/lib/journal";
 
@@ -33,6 +37,15 @@ export async function catatKeuangan(
   const keterangan = String(input.keterangan ?? "").trim();
   const tanggal = input.tanggal ? new Date(String(input.tanggal)) : new Date();
   const jenis = String(input.jenis);
+
+  // Kasir hanya boleh mencatat Pengeluaran (biaya). Setoran modal, prive, dan
+  // transfer kas tetap khusus pemilik — dibatasi di sisi server (bukan hanya UI).
+  if (getRoleFromUser(user) !== "owner" && jenis !== "pengeluaran") {
+    return {
+      ok: false,
+      error: "Hanya pemilik yang dapat mencatat transaksi ini.",
+    };
+  }
 
   await seedDefaultCoaIfEmpty(tenantId);
 
@@ -106,5 +119,6 @@ export async function catatKeuangan(
   revalidatePath("/keuangan/laba-rugi");
   revalidatePath("/keuangan/neraca");
   revalidatePath("/keuangan/catat");
+  revalidatePath("/pengeluaran");
   return { ok: true };
 }
