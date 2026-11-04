@@ -250,6 +250,7 @@ export function BuatTransaksi({
   }
 
   return (
+    <>
     <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
       {/* Kiri: pilih konsumen & layanan */}
       <div className="flex flex-col gap-6">
@@ -685,6 +686,39 @@ export function BuatTransaksi({
         </section>
       </div>
     </div>
+
+    {/* Bilah aksi lekat (mobile/tablet): ringkasan + Simpan tanpa scroll jauh. */}
+    {items.length > 0 && (
+      <div
+        className="aka-glass-strong fixed inset-x-0 bottom-0 z-50 border-t border-[var(--glass-border)] px-4 pt-3 lg:hidden"
+        style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 0.75rem)" }}
+      >
+        <div className="mx-auto flex max-w-lg items-center gap-3">
+          <div className="min-w-0 flex-1">
+            <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
+              {items.length} layanan{isExpress ? " · Express" : ""}
+            </p>
+            <p className="truncate text-lg font-bold text-slate-900 dark:text-white">
+              {formatRupiah(grandTotal)}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={submit}
+            disabled={pending}
+            className="shrink-0 rounded-xl bg-brand-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-brand-600/25 transition hover:bg-brand-700 active:scale-95 disabled:opacity-60"
+          >
+            {pending ? "Menyimpan…" : isEdit ? "Simpan" : "Simpan Transaksi"}
+          </button>
+        </div>
+        {error && (
+          <p className="mx-auto mt-1.5 max-w-lg text-xs font-medium text-red-600">
+            {error}
+          </p>
+        )}
+      </div>
+    )}
+    </>
   );
 }
 
