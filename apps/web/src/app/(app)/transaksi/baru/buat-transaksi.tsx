@@ -115,6 +115,7 @@ export function BuatTransaksi({
   }
   const [items, setItems] = useState<Item[]>(initial?.items ?? []);
   const [serviceQuery, setServiceQuery] = useState("");
+  const [showAllServices, setShowAllServices] = useState(false);
   const [isExpress, setIsExpress] = useState(initial?.isExpress ?? false);
   const [biayaExpress, setBiayaExpress] = useState(initial?.biayaExpress ?? 0);
   const [diskon, setDiskon] = useState(initial?.diskon ?? 0);
@@ -137,10 +138,10 @@ export function BuatTransaksi({
       (!qLower || s.nama.toLowerCase().includes(qLower)),
   );
   const AVAIL_LIMIT = 8;
-  const availableShown = qLower
-    ? availableAll
-    : availableAll.slice(0, AVAIL_LIMIT);
-  const moreHidden = availableAll.length - availableShown.length;
+  const availableShown =
+    qLower || showAllServices
+      ? availableAll
+      : availableAll.slice(0, AVAIL_LIMIT);
   const filteredConsumers = useMemo(() => {
     const q = consumerQuery.trim().toLowerCase();
     if (!q) return consumers.slice(0, 6);
@@ -541,10 +542,16 @@ export function BuatTransaksi({
                   ))}
                 </div>
               )}
-              {moreHidden > 0 && (
-                <p className="mt-2 text-center text-xs text-slate-400">
-                  +{moreHidden} layanan lain — ketik untuk mencari
-                </p>
+              {!qLower && availableAll.length > AVAIL_LIMIT && (
+                <button
+                  type="button"
+                  onClick={() => setShowAllServices((v) => !v)}
+                  className="mt-3 w-full rounded-lg border border-slate-200 py-2.5 text-sm font-semibold text-brand-700 transition hover:bg-brand-50 dark:border-slate-700 dark:text-brand-300 dark:hover:bg-brand-950/30"
+                >
+                  {showAllServices
+                    ? "Tampilkan lebih sedikit"
+                    : `Tampilkan semua layanan (+${availableAll.length - AVAIL_LIMIT})`}
+                </button>
               )}
             </>
           )}
