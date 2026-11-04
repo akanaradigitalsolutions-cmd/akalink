@@ -11,13 +11,14 @@ import {
   employees,
   journalEntries,
   tenants,
+  consumers,
 } from "@akalink/db";
 import {
   getSessionUser,
   getTenantIdFromUser,
   getRoleFromUser,
 } from "@/lib/auth";
-import { seedDefaultCoaIfEmpty } from "@/lib/coa";
+import { seedDefaultCoaIfEmpty, ensureCoaAccount } from "@/lib/coa";
 import { getActiveOutlet, seedDefaultOutletIfEmpty } from "@/lib/outlets";
 import { postJournal, hasJournal } from "@/lib/journal";
 import { awardPointsOnPayment } from "@/lib/loyalty";
@@ -80,7 +81,25 @@ export async function createTransaction(
     return { ok: false, error: "Data transaksi tidak valid." };
   const d = parsed.data;
 
+  // Setiap nota WAJIB memiliki nama konsumen (tidak boleh "umum" kosong).
+  if (!d.consumerId)
+    return {
+      ok: false,
+      error: "Nama konsumen wajib diisi. Pilih atau tambah konsumen dulu.",
+    };
+
   const db = getDb();
+
+  // Pastikan konsumen benar-benar milik tenant ini.
+  const [consumerRow] = await db
+    .select({ id: consumers.id })
+    .from(consumers)
+    .where(
+      and(eq(consumers.id, d.consumerId), eq(consumers.tenantId, tenantId)),
+    )
+    .limit(1);
+  if (!consumerRow)
+    return { ok: false, error: "Konsumen tidak ditemukan." };
 
   // Ambil layanan otoritatif dari DB (jangan percaya harga dari klien).
   const ids = [...new Set(d.items.map((i) => i.serviceId))];
@@ -368,10 +387,13 @@ export async function updateTransaction(
 // ---- Ubah status pengerjaan / pembayaran / item (Phase 1.4) --------------
 export type UpdateStatusResult = { ok: true } | { ok: false; error: string };
 
+const METODE_BAYAR = ["tunai", "transfer", "qris"] as const;
+
 export async function updateStatuses(input: {
   id: string;
   statusPekerjaan: string;
   statusPembayaran: string;
+  metodeBayar?: string;
 }): Promise<UpdateStatusResult> {
   const tenantId = await requireTenant();
   if (!tenantId) return { ok: false, error: "Sesi tidak valid." };
@@ -437,18 +459,31 @@ export async function updateStatuses(input: {
   }
 
   // Jurnal pelunasan (sekali saja) saat status menjadi Lunas.
+  // Metode menentukan kas tujuan: Tunai → Kas Outlet (kas kasir),
+  // Transfer Bank / QRIS → Bank (rekening laundry).
   if (
     pay === "lunas" &&
     grand > 0 &&
     !(await hasJournal(tenantId, "pelunasan", input.id))
   ) {
+    const metode = METODE_BAYAR.includes(
+      input.metodeBayar as (typeof METODE_BAYAR)[number],
+    )
+      ? (input.metodeBayar as (typeof METODE_BAYAR)[number])
+      : "tunai";
+    const toBank = metode === "transfer" || metode === "qris";
+    const kasKode = toBank ? "1.1.04" : "1.1.02"; // Bank vs Kas Outlet
+    const metodeLabel =
+      metode === "transfer" ? "Transfer Bank" : metode === "qris" ? "QRIS" : "Tunai";
+    // Pastikan akun Bank tersedia (tenant lama bisa saja belum punya).
+    if (toBank) await ensureCoaAccount(tenantId, "1.1.04");
     await db.transaction(async (tx) => {
       await postJournal(tx, tenantId, {
-        keterangan: `Pelunasan ${txRow.noNota}`,
+        keterangan: `Pelunasan ${txRow.noNota} (${metodeLabel})`,
         refType: "pelunasan",
         refId: input.id,
         lines: [
-          { kode: "1.1.02", debit: grand }, // Dr Kas Outlet
+          { kode: kasKode, debit: grand }, // Dr Kas tujuan sesuai metode
           { kode: "1.2", kredit: grand }, // Cr Piutang Usaha
         ],
       });

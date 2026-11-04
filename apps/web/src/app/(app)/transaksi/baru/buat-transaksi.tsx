@@ -199,6 +199,10 @@ export function BuatTransaksi({
 
   function submit() {
     setError(undefined);
+    if (!consumerId) {
+      setError("Nama konsumen wajib diisi. Pilih atau tambah konsumen dulu.");
+      return;
+    }
     if (items.length === 0) {
       setError("Tambahkan minimal satu layanan.");
       return;
@@ -375,7 +379,7 @@ export function BuatTransaksi({
 
                 {!addOpen && (
                   <p className="px-3 pt-1 text-xs text-slate-400">
-                    Atau lanjut tanpa konsumen (umum).
+                    Nama konsumen wajib diisi untuk setiap nota.
                   </p>
                 )}
               </div>
