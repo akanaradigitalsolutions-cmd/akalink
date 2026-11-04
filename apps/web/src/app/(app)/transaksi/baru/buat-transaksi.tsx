@@ -180,6 +180,23 @@ export function BuatTransaksi({
   function removeItem(serviceId: string) {
     setItems((prev) => prev.filter((i) => i.serviceId !== serviceId));
   }
+  // Jumlah terpilih untuk sebuah layanan (0 bila belum dipilih).
+  function qtyOf(serviceId: string): number {
+    const it = items.find((i) => i.serviceId === serviceId);
+    return it ? toNum(it.qty) : 0;
+  }
+  // Kurangi 1; bila mencapai 0 hapus dari keranjang.
+  function decService(serviceId: string) {
+    setItems((prev) => {
+      const found = prev.find((i) => i.serviceId === serviceId);
+      if (!found) return prev;
+      const q = toNum(found.qty) - 1;
+      if (q <= 0) return prev.filter((i) => i.serviceId !== serviceId);
+      return prev.map((i) =>
+        i.serviceId === serviceId ? { ...i, qty: String(q) } : i,
+      );
+    });
+  }
 
   function applyPromo() {
     setPromoErr(undefined);
@@ -427,26 +444,66 @@ export function BuatTransaksi({
                 </p>
               ) : (
                 <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                  {filteredServices.map((s) => (
-                <button
-                  key={s.id}
-                  onClick={() => addService(s)}
-                  className="flex items-center justify-between gap-2 rounded-lg border border-slate-200 px-3 py-2.5 text-left transition hover:border-brand-400 hover:bg-brand-50 dark:border-slate-700 dark:hover:bg-brand-950/30"
-                >
-                  <div>
-                    <p className="text-sm font-medium text-slate-800 dark:text-slate-100">
-                      {s.nama}
-                    </p>
-                    <p className="text-xs text-slate-500">
-                      {formatRupiah(s.harga)} /{" "}
-                      {SATUAN_SINGKAT[s.tipeSatuan] ?? s.tipeSatuan}
-                    </p>
-                  </div>
-                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-brand-100 text-brand-600 dark:bg-brand-900 dark:text-brand-300">
-                    <IconPlus className="h-4 w-4" />
-                  </span>
-                </button>
-                  ))}
+                  {filteredServices.map((s) => {
+                    const qty = qtyOf(s.id);
+                    const selected = qty > 0;
+                    return (
+                      <div
+                        key={s.id}
+                        className={`flex items-center justify-between gap-2 rounded-lg border px-3 py-2 transition ${
+                          selected
+                            ? "border-brand-400 bg-brand-50 dark:border-brand-700 dark:bg-brand-950/30"
+                            : "border-slate-200 dark:border-slate-700"
+                        }`}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => addService(s)}
+                          className="min-w-0 flex-1 py-0.5 text-left"
+                        >
+                          <p className="truncate text-sm font-medium text-slate-800 dark:text-slate-100">
+                            {s.nama}
+                          </p>
+                          <p className="text-xs text-slate-500">
+                            {formatRupiah(s.harga)} /{" "}
+                            {SATUAN_SINGKAT[s.tipeSatuan] ?? s.tipeSatuan}
+                          </p>
+                        </button>
+                        {selected ? (
+                          <div className="flex shrink-0 items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => decService(s.id)}
+                              aria-label="Kurangi"
+                              className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-300 text-lg leading-none text-slate-600 transition active:scale-95 dark:border-slate-600 dark:text-slate-300"
+                            >
+                              −
+                            </button>
+                            <span className="w-7 text-center text-sm font-bold text-brand-700 dark:text-brand-300">
+                              {qty}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => addService(s)}
+                              aria-label="Tambah"
+                              className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-600 text-white transition active:scale-95"
+                            >
+                              <IconPlus className="h-4 w-4" />
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => addService(s)}
+                            aria-label="Tambah layanan"
+                            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-100 text-brand-600 transition active:scale-95 dark:bg-brand-900 dark:text-brand-300"
+                          >
+                            <IconPlus className="h-4 w-4" />
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </>
