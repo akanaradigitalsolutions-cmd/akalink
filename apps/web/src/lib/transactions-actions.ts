@@ -20,7 +20,7 @@ import {
 } from "@/lib/auth";
 import { seedDefaultCoaIfEmpty, ensureCoaAccount } from "@/lib/coa";
 import { getActiveOutlet, seedDefaultOutletIfEmpty } from "@/lib/outlets";
-import { postJournal, hasJournal } from "@/lib/journal";
+import { postJournal, hasJournal, getPaidAmount } from "@/lib/journal";
 import { awardPointsOnPayment } from "@/lib/loyalty";
 import { chargeAppCoin, getCoinConfig } from "@/lib/app-coin";
 
@@ -389,11 +389,30 @@ export type UpdateStatusResult = { ok: true } | { ok: false; error: string };
 
 const METODE_BAYAR = ["tunai", "transfer", "qris"] as const;
 
+/** Kas tujuan + label menurut metode: Tunai→Kas Outlet, Transfer/QRIS→Bank. */
+function resolveMetode(m?: string): {
+  kasKode: string;
+  label: string;
+  toBank: boolean;
+} {
+  const metode = METODE_BAYAR.includes(m as (typeof METODE_BAYAR)[number])
+    ? (m as (typeof METODE_BAYAR)[number])
+    : "tunai";
+  const toBank = metode === "transfer" || metode === "qris";
+  return {
+    kasKode: toBank ? "1.1.04" : "1.1.02",
+    label:
+      metode === "transfer" ? "Transfer Bank" : metode === "qris" ? "QRIS" : "Tunai",
+    toBank,
+  };
+}
+
 export async function updateStatuses(input: {
   id: string;
   statusPekerjaan: string;
   statusPembayaran: string;
   metodeBayar?: string;
+  jumlahBayar?: number | string;
 }): Promise<UpdateStatusResult> {
   const tenantId = await requireTenant();
   if (!tenantId) return { ok: false, error: "Sesi tidak valid." };
@@ -458,33 +477,50 @@ export async function updateStatuses(input: {
     });
   }
 
-  // Jurnal pelunasan (sekali saja) saat status menjadi Lunas.
-  // Metode menentukan kas tujuan: Tunai → Kas Outlet (kas kasir),
-  // Transfer Bank / QRIS → Bank (rekening laundry).
+  // Sudah dibayar sejauh ini (DP + pelunasan sebelumnya), dari jurnal.
+  const paidBefore = grand > 0 ? await getPaidAmount(tenantId, input.id) : 0;
+  const sisa = Math.max(0, grand - paidBefore);
+
+  // DP (uang muka): catat kas masuk sebesar jumlahBayar (dibatasi sisa tagihan).
+  // Metode menentukan kas tujuan: Tunai → Kas Outlet, Transfer/QRIS → Bank.
+  if (pay === "dp" && grand > 0) {
+    const bayar = Math.round(Number(input.jumlahBayar) || 0);
+    const amt = Math.min(Math.max(0, bayar), sisa);
+    if (amt > 0) {
+      const { kasKode, label, toBank } = resolveMetode(input.metodeBayar);
+      if (toBank) await ensureCoaAccount(tenantId, "1.1.04");
+      await db.transaction(async (tx) => {
+        await postJournal(tx, tenantId, {
+          keterangan: `DP ${txRow.noNota} (${label})`,
+          refType: "dp",
+          refId: input.id,
+          lines: [
+            { kode: kasKode, debit: amt }, // Dr Kas tujuan
+            { kode: "1.2", kredit: amt }, // Cr Piutang Usaha
+          ],
+        });
+      });
+    }
+  }
+
+  // Pelunasan saat status menjadi Lunas: catat SISA tagihan (grand − dibayar),
+  // sehingga DP yang sudah masuk tidak dihitung dua kali. Idempoten.
   if (
     pay === "lunas" &&
     grand > 0 &&
+    sisa > 0 &&
     !(await hasJournal(tenantId, "pelunasan", input.id))
   ) {
-    const metode = METODE_BAYAR.includes(
-      input.metodeBayar as (typeof METODE_BAYAR)[number],
-    )
-      ? (input.metodeBayar as (typeof METODE_BAYAR)[number])
-      : "tunai";
-    const toBank = metode === "transfer" || metode === "qris";
-    const kasKode = toBank ? "1.1.04" : "1.1.02"; // Bank vs Kas Outlet
-    const metodeLabel =
-      metode === "transfer" ? "Transfer Bank" : metode === "qris" ? "QRIS" : "Tunai";
-    // Pastikan akun Bank tersedia (tenant lama bisa saja belum punya).
+    const { kasKode, label, toBank } = resolveMetode(input.metodeBayar);
     if (toBank) await ensureCoaAccount(tenantId, "1.1.04");
     await db.transaction(async (tx) => {
       await postJournal(tx, tenantId, {
-        keterangan: `Pelunasan ${txRow.noNota} (${metodeLabel})`,
+        keterangan: `Pelunasan ${txRow.noNota} (${label})`,
         refType: "pelunasan",
         refId: input.id,
         lines: [
-          { kode: kasKode, debit: grand }, // Dr Kas tujuan sesuai metode
-          { kode: "1.2", kredit: grand }, // Cr Piutang Usaha
+          { kode: kasKode, debit: sisa }, // Dr Kas tujuan sesuai metode
+          { kode: "1.2", kredit: sisa }, // Cr Piutang Usaha (sisa)
         ],
       });
     });

@@ -26,6 +26,7 @@ import {
 } from "@/lib/nota";
 import { getPaymentFeeConfig, getLatestPaymentOrder, hitungFee } from "@/lib/payments";
 import { getPendingDeleteForTx } from "@/lib/delete-requests";
+import { getPaidAmount } from "@/lib/journal";
 import { StatusEditor } from "./status-editor";
 import { DeleteNota } from "./delete-nota";
 import { DigitalPayment } from "./digital-payment";
@@ -48,11 +49,12 @@ export default async function DetailTransaksiPage({
   const tenantId = getTenantIdFromUser(user);
   if (!tenantId) redirect("/masuk");
 
-  const [data, ctx, feeCfg, pendingDelete] = await Promise.all([
+  const [data, ctx, feeCfg, pendingDelete, paidSoFar] = await Promise.all([
     getTransactionWithItems(tenantId, id),
     getTenantContext(user.id, tenantId),
     getPaymentFeeConfig(tenantId),
     getPendingDeleteForTx(tenantId, id),
+    getPaidAmount(tenantId, id),
   ]);
   if (!data) notFound();
   const { tx, consumer, items } = data;
@@ -257,6 +259,8 @@ export default async function DetailTransaksiPage({
         txId={tx.id}
         work={tx.statusPekerjaan}
         pay={tx.statusPembayaran}
+        grandTotal={Math.round(Number(tx.grandTotal))}
+        paidSoFar={paidSoFar}
       />
 
       {/* Hapus nota — pemilik langsung; staf mengajukan persetujuan */}
