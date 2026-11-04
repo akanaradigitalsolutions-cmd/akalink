@@ -98,6 +98,37 @@ export async function hasJournal(
   return rows.length > 0;
 }
 
+/**
+ * Total yang sudah dibayar untuk sebuah transaksi (DP + pelunasan), dihitung
+ * dari jurnal: jumlah kredit ke Piutang Usaha (1.2) pada entri pembayaran.
+ * Dipakai untuk menghitung sisa tagihan tanpa perlu kolom DB baru.
+ */
+export async function getPaidAmount(
+  tenantId: string,
+  refId: string,
+): Promise<number> {
+  const db = getDb();
+  const [row] = await db
+    .select({
+      paid: sql<number>`coalesce(sum(${journalLines.kredit}),0)::float8`,
+    })
+    .from(journalLines)
+    .innerJoin(journalEntries, eq(journalLines.entryId, journalEntries.id))
+    .innerJoin(
+      chartOfAccounts,
+      eq(journalLines.accountId, chartOfAccounts.id),
+    )
+    .where(
+      and(
+        eq(journalLines.tenantId, tenantId),
+        eq(journalEntries.refId, refId),
+        inArray(journalEntries.refType, ["dp", "pelunasan"]),
+        eq(chartOfAccounts.kode, "1.2"),
+      ),
+    );
+  return Math.round(row?.paid ?? 0);
+}
+
 /** Ambil daftar jurnal terbaru beserta barisnya (untuk laporan Jurnal). */
 export async function getJurnal(tenantId: string, limit = 100) {
   const db = getDb();
