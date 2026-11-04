@@ -253,7 +253,7 @@ export function BuatTransaksi({
     <>
     <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
       {/* Kiri: pilih konsumen & layanan */}
-      <div className="flex flex-col gap-6">
+      <div className="flex min-w-0 flex-col gap-6">
         {/* Konsumen */}
         <section className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
           <h3 className="font-semibold text-slate-900 dark:text-white">
@@ -513,7 +513,7 @@ export function BuatTransaksi({
       </div>
 
       {/* Kanan: keranjang */}
-      <div className="lg:sticky lg:top-20 lg:self-start">
+      <div className="min-w-0 lg:sticky lg:top-20 lg:self-start">
         <section className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
           <h3 className="font-semibold text-slate-900 dark:text-white">
             Rincian Order

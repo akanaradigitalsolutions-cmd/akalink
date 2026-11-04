@@ -250,8 +250,12 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
   }
 }
 .aka-fade-in {
-  animation: aka-fade-in 0.34s cubic-bezier(0.22, 0.61, 0.36, 1) both;
-  will-change: opacity, transform;
+  /* fill-mode "backwards" (bukan "both"): cegah animasi transform TERUS mengisi
+     setelah selesai. "both"/"forwards" yang menganimasikan transform membuat
+     elemen jadi containing block permanen, sehingga elemen position:fixed
+     (mis. bilah "Simpan" lekat) terkurung di dalam konten & ikut ter-scroll.
+     "backwards" tetap mencegah kedip awal tanpa efek samping itu. */
+  animation: aka-fade-in 0.34s cubic-bezier(0.22, 0.61, 0.36, 1) backwards;
 }
 
 /* Denyut lembut pada kepala bilah kemajuan saat menunggu (elemen mungil,
