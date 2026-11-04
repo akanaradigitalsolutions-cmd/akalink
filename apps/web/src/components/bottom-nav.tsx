@@ -32,6 +32,10 @@ const RIGHT: Item[] = [
  */
 export function BottomNav() {
   const pathname = usePathname();
+  // Sembunyikan pada alur fokus (buat/edit transaksi) agar tidak bertumpuk
+  // dengan bilah aksi "Simpan" yang muncul di bawah.
+  if (pathname === "/transaksi/baru" || /^\/transaksi\/[^/]+\/edit$/.test(pathname))
+    return null;
   const isActive = (href: string) =>
     pathname === href || pathname.startsWith(href + "/");
 
