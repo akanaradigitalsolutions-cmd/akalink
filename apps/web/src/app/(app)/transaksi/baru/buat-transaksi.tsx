@@ -127,11 +127,20 @@ export function BuatTransaksi({
   const [promoPending, startPromo] = useTransition();
 
   const selectedConsumer = consumers.find((c) => c.id === consumerId);
-  const filteredServices = useMemo(() => {
-    const q = serviceQuery.trim().toLowerCase();
-    if (!q) return services;
-    return services.filter((s) => s.nama.toLowerCase().includes(q));
-  }, [services, serviceQuery]);
+  // Daftar layanan ringkas: yang dipilih ditaruh di atas (bisa atur jumlah di
+  // tempat); sisanya dicari lewat kotak pencarian & dibatasi agar tak panjang.
+  const qLower = serviceQuery.trim().toLowerCase();
+  const selectedServices = services.filter((s) => qtyOf(s.id) > 0);
+  const availableAll = services.filter(
+    (s) =>
+      qtyOf(s.id) === 0 &&
+      (!qLower || s.nama.toLowerCase().includes(qLower)),
+  );
+  const AVAIL_LIMIT = 8;
+  const availableShown = qLower
+    ? availableAll
+    : availableAll.slice(0, AVAIL_LIMIT);
+  const moreHidden = availableAll.length - availableShown.length;
   const filteredConsumers = useMemo(() => {
     const q = consumerQuery.trim().toLowerCase();
     if (!q) return consumers.slice(0, 6);
@@ -184,6 +193,10 @@ export function BuatTransaksi({
   function qtyOf(serviceId: string): number {
     const it = items.find((i) => i.serviceId === serviceId);
     return it ? toNum(it.qty) : 0;
+  }
+  // Nilai mentah input jumlah (biar bisa ketik desimal mis. "6.8").
+  function qtyStrOf(serviceId: string): string {
+    return items.find((i) => i.serviceId === serviceId)?.qty ?? "";
   }
   // Kurangi 1; bila mencapai 0 hapus dari keranjang.
   function decService(serviceId: string) {
@@ -416,96 +429,122 @@ export function BuatTransaksi({
             </p>
           ) : (
             <>
-              {services.length > 6 && (
-                <div className="relative mt-3">
-                  <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
-                    <IconSearch className="h-4 w-4" />
-                  </span>
-                  <input
-                    value={serviceQuery}
-                    onChange={(e) => setServiceQuery(e.target.value)}
-                    placeholder="Cari layanan…"
-                    className="w-full rounded-lg border border-slate-300 bg-white py-2.5 pl-9 pr-9 text-sm text-slate-900 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-200 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
-                  />
-                  {serviceQuery && (
-                    <button
-                      type="button"
-                      onClick={() => setServiceQuery("")}
-                      aria-label="Hapus pencarian"
-                      className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
-                    >
-                      <IconClose className="h-4 w-4" />
-                    </button>
-                  )}
-                </div>
-              )}
-              {filteredServices.length === 0 ? (
-                <p className="mt-3 text-sm text-slate-500">
-                  Tidak ada layanan cocok dengan “{serviceQuery}”.
-                </p>
-              ) : (
-                <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                  {filteredServices.map((s) => {
-                    const qty = qtyOf(s.id);
-                    const selected = qty > 0;
+              {/* Dipilih — atur jumlah langsung di sini (tanpa scroll ke bawah) */}
+              {selectedServices.length > 0 && (
+                <div className="mt-3 flex flex-col gap-2">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-brand-600 dark:text-brand-300">
+                    Dipilih ({selectedServices.length})
+                  </p>
+                  {selectedServices.map((s) => {
+                    const unit = SATUAN_SINGKAT[s.tipeSatuan] ?? s.tipeSatuan;
                     return (
                       <div
                         key={s.id}
-                        className={`flex items-center justify-between gap-2 rounded-lg border px-3 py-2 transition ${
-                          selected
-                            ? "border-brand-400 bg-brand-50 dark:border-brand-700 dark:bg-brand-950/30"
-                            : "border-slate-200 dark:border-slate-700"
-                        }`}
+                        className="flex items-center gap-2 rounded-lg border border-brand-300 bg-brand-50 px-3 py-2 dark:border-brand-800 dark:bg-brand-950/30"
                       >
-                        <button
-                          type="button"
-                          onClick={() => addService(s)}
-                          className="min-w-0 flex-1 py-0.5 text-left"
-                        >
+                        <div className="min-w-0 flex-1">
                           <p className="truncate text-sm font-medium text-slate-800 dark:text-slate-100">
                             {s.nama}
                           </p>
                           <p className="text-xs text-slate-500">
-                            {formatRupiah(s.harga)} /{" "}
-                            {SATUAN_SINGKAT[s.tipeSatuan] ?? s.tipeSatuan}
-                          </p>
-                        </button>
-                        {selected ? (
-                          <div className="flex shrink-0 items-center gap-1.5">
-                            <button
-                              type="button"
-                              onClick={() => decService(s.id)}
-                              aria-label="Kurangi"
-                              className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-300 text-lg leading-none text-slate-600 transition active:scale-95 dark:border-slate-600 dark:text-slate-300"
-                            >
-                              −
-                            </button>
-                            <span className="w-7 text-center text-sm font-bold text-brand-700 dark:text-brand-300">
-                              {qty}
+                            {formatRupiah(s.harga)} / {unit} ·{" "}
+                            <span className="font-semibold text-brand-700 dark:text-brand-300">
+                              {formatRupiah(Number(s.harga) * qtyOf(s.id))}
                             </span>
-                            <button
-                              type="button"
-                              onClick={() => addService(s)}
-                              aria-label="Tambah"
-                              className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-600 text-white transition active:scale-95"
-                            >
-                              <IconPlus className="h-4 w-4" />
-                            </button>
-                          </div>
-                        ) : (
+                          </p>
+                        </div>
+                        <div className="flex shrink-0 items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => decService(s.id)}
+                            aria-label="Kurangi"
+                            className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-300 text-lg leading-none text-slate-600 transition active:scale-95 dark:border-slate-600 dark:text-slate-300"
+                          >
+                            −
+                          </button>
+                          <input
+                            value={qtyStrOf(s.id)}
+                            onChange={(e) =>
+                              setQty(s.id, e.target.value.replace(/[^0-9.,]/g, ""))
+                            }
+                            inputMode="decimal"
+                            aria-label="Jumlah"
+                            className="h-9 w-12 rounded-lg border border-slate-300 bg-white text-center text-sm font-bold text-slate-800 outline-none focus:border-brand-500 dark:border-slate-600 dark:bg-slate-950 dark:text-slate-100"
+                          />
                           <button
                             type="button"
                             onClick={() => addService(s)}
-                            aria-label="Tambah layanan"
-                            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-100 text-brand-600 transition active:scale-95 dark:bg-brand-900 dark:text-brand-300"
+                            aria-label="Tambah"
+                            className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-600 text-white transition active:scale-95"
                           >
                             <IconPlus className="h-4 w-4" />
                           </button>
-                        )}
+                        </div>
                       </div>
                     );
                   })}
                 </div>
+              )}
+
+              {/* Pencarian layanan (mirip pencarian konsumen) */}
+              <div className="relative mt-3">
+                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                  <IconSearch className="h-4 w-4" />
+                </span>
+                <input
+                  value={serviceQuery}
+                  onChange={(e) => setServiceQuery(e.target.value)}
+                  placeholder="Cari layanan…"
+                  className="w-full rounded-lg border border-slate-300 bg-white py-2.5 pl-9 pr-9 text-sm text-slate-900 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-200 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+                />
+                {serviceQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setServiceQuery("")}
+                    aria-label="Hapus pencarian"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+                  >
+                    <IconClose className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+
+              {/* Daftar tersedia — dibatasi agar ringkas; ketik untuk cari lainnya */}
+              {availableShown.length === 0 ? (
+                <p className="mt-3 text-sm text-slate-500">
+                  {qLower
+                    ? `Tidak ada layanan cocok dengan “${serviceQuery.trim()}”.`
+                    : "Semua layanan sudah dipilih."}
+                </p>
+              ) : (
+                <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                  {availableShown.map((s) => (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => addService(s)}
+                      className="flex items-center justify-between gap-2 rounded-lg border border-slate-200 px-3 py-2 text-left transition hover:border-brand-400 hover:bg-brand-50 active:scale-[.99] dark:border-slate-700 dark:hover:bg-brand-950/30"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-slate-800 dark:text-slate-100">
+                          {s.nama}
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          {formatRupiah(s.harga)} /{" "}
+                          {SATUAN_SINGKAT[s.tipeSatuan] ?? s.tipeSatuan}
+                        </p>
+                      </div>
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-100 text-brand-600 dark:bg-brand-900 dark:text-brand-300">
+                        <IconPlus className="h-4 w-4" />
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {moreHidden > 0 && (
+                <p className="mt-2 text-center text-xs text-slate-400">
+                  +{moreHidden} layanan lain — ketik untuk mencari
+                </p>
               )}
             </>
           )}
