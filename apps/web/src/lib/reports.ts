@@ -1,10 +1,11 @@
 import "server-only";
 
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import {
   getDb,
   chartOfAccounts,
   journalLines,
+  transactions,
 } from "@akalink/db";
 
 export type LedgerRow = {
@@ -48,6 +49,32 @@ export async function getLedger(tenantId: string): Promise<LedgerRow[]> {
     saldo:
       r.saldoNormal === "debit" ? r.debit - r.kredit : r.kredit - r.debit,
   }));
+}
+
+/**
+ * Pendapatan basis kas: hanya dari transaksi yang sudah LUNAS.
+ * bruto = subtotal + biaya express; net = bruto − diskon (= Σ grandTotal).
+ */
+export async function getLunasRevenue(
+  tenantId: string,
+): Promise<{ bruto: number; diskon: number; net: number }> {
+  const db = getDb();
+  const [row] = await db
+    .select({
+      subtotal: sql<number>`coalesce(sum(${transactions.subtotal}),0)::float8`,
+      express: sql<number>`coalesce(sum(${transactions.biayaExpress}),0)::float8`,
+      diskon: sql<number>`coalesce(sum(${transactions.diskon}),0)::float8`,
+    })
+    .from(transactions)
+    .where(
+      and(
+        eq(transactions.tenantId, tenantId),
+        eq(transactions.statusPembayaran, "lunas"),
+      ),
+    );
+  const bruto = Math.round((row?.subtotal ?? 0) + (row?.express ?? 0));
+  const diskon = Math.round(row?.diskon ?? 0);
+  return { bruto, diskon, net: bruto - diskon };
 }
 
 /** Net per tipe: pendapatan & modal/kewajiban pakai (kredit−debit); aset & beban pakai (debit−kredit). */

@@ -11,6 +11,7 @@ import {
 import { RevenueChart } from "./revenue-chart";
 import { KasirCoinCard } from "./kasir-coin";
 import { getCoinConfig } from "@/lib/app-coin";
+import { getAccountBalance } from "@/lib/cash";
 import { getPendingDeleteRequests } from "@/lib/delete-requests";
 import { getPendingApprovals } from "@/lib/approvals";
 import { searchTransactions } from "@/lib/transactions";
@@ -33,6 +34,7 @@ import {
   IconChart,
   IconPlus,
   IconCoin,
+  IconCash,
 } from "@/components/icons";
 
 export const metadata: Metadata = {
@@ -55,6 +57,8 @@ export default async function DashboardPage() {
   let coin: Awaited<ReturnType<typeof getCoinConfig>> | undefined;
   let pendingDeletes: Awaited<ReturnType<typeof getPendingDeleteRequests>> = [];
   let pendingApprovals: Awaited<ReturnType<typeof getPendingApprovals>> = [];
+  let kasOutlet = 0;
+  let bankSaldo = 0;
   try {
     if (tenantId) {
       const [ctx, active, outletList, coinConfig, delReqs, apprs] =
@@ -76,6 +80,11 @@ export default async function DashboardPage() {
       if (outletList[0])
         await backfillOrphanTransactions(tenantId, outletList[0].id);
       stats = await getDashboardStats(tenantId, active?.id);
+      // Saldo kas menurut sistem (dari jurnal) — untuk rekonsiliasi dgn fisik.
+      [kasOutlet, bankSaldo] = await Promise.all([
+        getAccountBalance(tenantId, "1.1.02"),
+        getAccountBalance(tenantId, "1.1.04"),
+      ]);
       // Bagan omzet hanya untuk pemilik; kegagalan bagan tak boleh merusak dasbor.
       if (ctx.me?.role === "owner") {
         try {
@@ -243,6 +252,43 @@ export default async function DashboardPage() {
           sub="perlu diselesaikan"
           tone={s.lateCount > 0 ? "danger" : "default"}
         />
+      </section>
+
+      {/* Kas saat ini menurut sistem — untuk dicocokkan dengan uang fisik */}
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-400">
+            Kas Saat Ini (menurut sistem)
+          </h3>
+          <Link
+            href="/kas"
+            className="text-sm font-medium text-brand-600 hover:underline"
+          >
+            Kelola →
+          </Link>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-800/40">
+            <p className="flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400">
+              <IconCash className="h-4 w-4" /> Kas Outlet (Tunai)
+            </p>
+            <p className="mt-1 text-2xl font-bold text-slate-900 dark:text-white">
+              {formatRupiah(kasOutlet)}
+            </p>
+            <p className="text-xs text-slate-400">
+              Cocokkan dengan uang tunai di laci
+            </p>
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-800/40">
+            <p className="flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400">
+              <IconWallet className="h-4 w-4" /> Bank (Transfer/QRIS)
+            </p>
+            <p className="mt-1 text-2xl font-bold text-slate-900 dark:text-white">
+              {formatRupiah(bankSaldo)}
+            </p>
+            <p className="text-xs text-slate-400">Saldo rekening laundry</p>
+          </div>
+        </div>
       </section>
 
       {/* Bagan omzet (harian / bulanan) — hanya pemilik */}
