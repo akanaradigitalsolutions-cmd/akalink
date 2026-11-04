@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getSessionUser, getTenantIdFromUser } from "@/lib/auth";
-import { getLedger, netByTipe } from "@/lib/reports";
+import { getLedger, netByTipe, getLunasRevenue } from "@/lib/reports";
 import { formatRupiah } from "@/lib/format";
 import { KeuanganTabs } from "../tabs";
 
@@ -12,8 +12,18 @@ export default async function LabaRugiPage() {
   if (!user) redirect("/masuk");
   const tenantId = getTenantIdFromUser(user);
   const rows = tenantId ? await getLedger(tenantId) : [];
+  const rev = tenantId
+    ? await getLunasRevenue(tenantId)
+    : { bruto: 0, diskon: 0, net: 0 };
 
-  const pendapatan = netByTipe(rows, "pendapatan");
+  // Pendapatan basis kas: hanya transaksi Lunas (uang yang sudah diterima).
+  const pendapatanItems = [
+    { kode: "4", nama: "Pendapatan Jasa (Lunas)", nilai: rev.bruto },
+    ...(rev.diskon > 0
+      ? [{ kode: "4.9", nama: "Diskon Penjualan", nilai: -rev.diskon }]
+      : []),
+  ];
+  const pendapatan = { items: pendapatanItems, total: rev.net };
   const beban = netByTipe(rows, "beban");
   const laba = pendapatan.total - beban.total;
 
@@ -24,7 +34,8 @@ export default async function LabaRugiPage() {
           Keuangan — Laba-Rugi
         </h1>
         <p className="text-sm text-slate-500 dark:text-slate-400">
-          Pendapatan dikurangi beban (seluruh periode).
+          Pendapatan hanya dari transaksi <b>Lunas</b> (uang yang sudah
+          diterima) dikurangi beban.
         </p>
       </div>
       <KeuanganTabs />
