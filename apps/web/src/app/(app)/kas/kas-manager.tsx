@@ -66,8 +66,8 @@ export function KasManager({
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Saldo */}
-      <div className="grid gap-3 sm:grid-cols-2">
+      {/* Saldo — Saldo Bank hanya untuk pemilik */}
+      <div className={`grid gap-3 ${isOwner ? "sm:grid-cols-2" : ""}`}>
         <div
           className={`rounded-2xl border p-5 ${
             kasHabis
@@ -83,15 +83,17 @@ export function KasManager({
           </p>
           <p className="mt-1 text-xs text-slate-400">uang tunai yang ada saat ini</p>
         </div>
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
-          <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
-            🏦 Saldo Bank
-          </p>
-          <p className="mt-1 text-2xl font-bold text-slate-900 dark:text-white">
-            {formatRupiah(bank)}
-          </p>
-          <p className="mt-1 text-xs text-slate-400">akumulasi setoran ke bank</p>
-        </div>
+        {isOwner && (
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
+            <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
+              🏦 Saldo Bank
+            </p>
+            <p className="mt-1 text-2xl font-bold text-slate-900 dark:text-white">
+              {formatRupiah(bank)}
+            </p>
+            <p className="mt-1 text-xs text-slate-400">akumulasi setoran ke bank</p>
+          </div>
+        )}
       </div>
 
       {/* Catat pemindahan */}

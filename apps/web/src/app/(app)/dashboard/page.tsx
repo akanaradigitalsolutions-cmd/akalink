@@ -267,7 +267,7 @@ export default async function DashboardPage() {
             Kelola →
           </Link>
         </div>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className={`grid gap-4 ${isOwner ? "sm:grid-cols-2" : ""}`}>
           <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-800/40">
             <p className="flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400">
               <IconCash className="h-4 w-4" /> Kas Outlet (Tunai)
@@ -279,15 +279,17 @@ export default async function DashboardPage() {
               Cocokkan dengan uang tunai di laci
             </p>
           </div>
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-800/40">
-            <p className="flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400">
-              <IconWallet className="h-4 w-4" /> Bank (Transfer/QRIS)
-            </p>
-            <p className="mt-1 text-2xl font-bold text-slate-900 dark:text-white">
-              {formatRupiah(bankSaldo)}
-            </p>
-            <p className="text-xs text-slate-400">Saldo rekening laundry</p>
-          </div>
+          {isOwner && (
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-800/40">
+              <p className="flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400">
+                <IconWallet className="h-4 w-4" /> Bank (Transfer/QRIS)
+              </p>
+              <p className="mt-1 text-2xl font-bold text-slate-900 dark:text-white">
+                {formatRupiah(bankSaldo)}
+              </p>
+              <p className="text-xs text-slate-400">Saldo rekening laundry</p>
+            </div>
+          )}
         </div>
       </section>
 
