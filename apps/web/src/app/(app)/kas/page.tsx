@@ -15,10 +15,12 @@ export default async function KasPage() {
   if (!tenantId) redirect("/masuk");
 
   await seedDefaultCoaIfEmpty(tenantId);
+  const isOwner = getRoleFromUser(user) === "owner";
   const activeOutlet = await getActiveOutlet(tenantId);
   const [kas, bank, movements, bankAccount] = await Promise.all([
     getAccountBalance(tenantId, "1.1.02"),
-    getAccountBalance(tenantId, "1.1.04"),
+    // Saldo Bank hanya untuk pemilik — jangan kirim ke klien bila kasir.
+    isOwner ? getAccountBalance(tenantId, "1.1.04") : Promise.resolve(0),
     getCashMovements(tenantId, 40, activeOutlet?.id ?? null),
     getBankAccount(tenantId),
   ]);
@@ -44,7 +46,7 @@ export default async function KasPage() {
         kas={kas}
         bank={bank}
         movements={movements}
-        isOwner={getRoleFromUser(user) === "owner"}
+        isOwner={isOwner}
         bankAccount={bankAccount}
       />
     </div>
