@@ -122,5 +122,8 @@ export async function catatKeuangan(
   revalidatePath("/keuangan/catat");
   revalidatePath("/keuangan/rincian");
   revalidatePath("/pengeluaran");
+  // Saldo kas berubah → segarkan tampilan Kas & Setoran dan Beranda.
+  revalidatePath("/kas");
+  revalidatePath("/dashboard");
   return { ok: true };
 }

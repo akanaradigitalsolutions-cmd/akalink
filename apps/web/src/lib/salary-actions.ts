@@ -153,6 +153,8 @@ export async function giveAdvance(input: {
     return { ok: false, error: e instanceof Error ? e.message : "Gagal." };
   }
   revalidatePath("/gaji");
+  revalidatePath("/kas");
+  revalidatePath("/dashboard");
   return { ok: true };
 }
 
@@ -238,6 +240,8 @@ export async function repayAdvance(input: {
   }
   revalidatePath("/gaji");
   revalidatePath(`/gaji/${adv.employeeId}`);
+  revalidatePath("/kas");
+  revalidatePath("/dashboard");
   return { ok: true };
 }
 
@@ -379,6 +383,8 @@ export async function runPayroll(input: {
   revalidatePath(`/gaji/${emp.id}`);
   revalidatePath("/keuangan/neraca");
   revalidatePath("/keuangan/laba-rugi");
+  revalidatePath("/kas");
+  revalidatePath("/dashboard");
   return { ok: true };
 }
 
@@ -451,5 +457,7 @@ export async function deleteAdvance(id: string): Promise<SalaryResult> {
   }
   revalidatePath("/gaji");
   revalidatePath(`/gaji/${adv.employeeId}`);
+  revalidatePath("/kas");
+  revalidatePath("/dashboard");
   return { ok: true };
 }

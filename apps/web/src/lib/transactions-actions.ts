@@ -553,6 +553,9 @@ export async function updateStatuses(input: {
 
   revalidatePath(`/transaksi/${input.id}`);
   revalidatePath("/transaksi");
+  // Pembayaran (DP/Lunas) menambah kas → segarkan Kas & Setoran + Beranda.
+  revalidatePath("/kas");
+  revalidatePath("/dashboard");
   return { ok: true };
 }
 
