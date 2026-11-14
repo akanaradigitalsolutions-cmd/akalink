@@ -48,6 +48,9 @@ function revalidate() {
   revalidatePath("/keuangan/buku-besar");
   revalidatePath("/keuangan/laba-rugi");
   revalidatePath("/keuangan/neraca");
+  // Saldo kas berubah (beli stok tunai) → segarkan Kas & Setoran + Beranda.
+  revalidatePath("/kas");
+  revalidatePath("/dashboard");
 }
 
 export async function createItem(input: {

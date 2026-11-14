@@ -74,6 +74,9 @@ export async function approveApproval(id: string): Promise<ApprovalResult> {
 
   revalidatePath("/dashboard");
   revalidatePath("/inventori");
+  // Pembelian yang disetujui mengurangi kas → segarkan Kas & Setoran.
+  revalidatePath("/kas");
+  revalidatePath("/keuangan/neraca");
   return { ok: true };
 }
 
