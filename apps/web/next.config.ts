@@ -4,7 +4,9 @@ import path from "path";
 const nextConfig: NextConfig = {
   // Output mandiri (standalone): hasil build berisi server.js + node_modules
   // minimal, ringan dijalankan di VM 1 GB (tanpa `next start`/`pnpm install`).
-  output: "standalone",
+  // Di Vercel JANGAN pakai standalone — Vercel memakai format output-nya sendiri
+  // dan "standalone" dapat membuat build gagal. Vercel menyetel VERCEL=1 saat build.
+  output: process.env.VERCEL ? undefined : "standalone",
   // Monorepo: telusuri dependensi dari root repo (2 tingkat di atas apps/web).
   outputFileTracingRoot: path.join(__dirname, "../../"),
   // Kompilasi paket workspace TypeScript (mis. @akalink/db).
