@@ -33,6 +33,7 @@ export type LabelPrintData = {
   namaToko: string;
   noNota: string;
   pelanggan: string;
+  statusBayar: string;
   totalUnit: string;
   grandTotal: string;
   masuk: string;
@@ -240,6 +241,7 @@ export function buildLabelEscPos(d: LabelPrintData, cols = 32): Uint8Array {
   // Nama pelanggan besar
   p.align("left").bold(true).size(true).line(d.pelanggan).size(false);
   p.kv(d.totalUnit, d.grandTotal);
+  p.kv("Pembayaran", d.statusBayar);
   p.bold(false);
   p.line(`Masuk  : ${d.masuk}`);
   p.line(`Selesai: ${d.selesai}`);
