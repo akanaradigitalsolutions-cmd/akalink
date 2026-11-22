@@ -5,7 +5,12 @@ import { getTenantContext } from "@/lib/tenant";
 import { getTransactionWithItems } from "@/lib/transactions";
 import { getBaseUrl, qrSvg } from "@/lib/nota";
 import { ThermalPrint, BluetoothPrint } from "@/components/nota/client";
-import { formatDateTime, formatRupiah, SATUAN_SINGKAT } from "@/lib/format";
+import {
+  formatDateTime,
+  formatRupiah,
+  SATUAN_SINGKAT,
+  LABEL_STATUS_BAYAR,
+} from "@/lib/format";
 import type { LabelPrintData } from "@/lib/escpos";
 
 export const dynamic = "force-dynamic";
@@ -37,11 +42,20 @@ export default async function LabelPage({
   const link = `${base}/n/${id}`;
   const qr = await qrSvg(link, 96);
   const totalUnit = items.reduce((n, it) => n + Number(it.qty), 0);
+  const statusBayar =
+    LABEL_STATUS_BAYAR[tx.statusPembayaran] ?? tx.statusPembayaran;
+  const payStyle =
+    tx.statusPembayaran === "lunas"
+      ? "border-green-600 text-green-700"
+      : tx.statusPembayaran === "dp"
+        ? "border-amber-500 text-amber-700"
+        : "border-red-600 text-red-700";
 
   const labelData: LabelPrintData = {
     namaToko: tenant?.nama ?? "AkaLink",
     noNota: tx.noNota,
     pelanggan: consumer?.nama ?? "Umum",
+    statusBayar,
     totalUnit: `${totalUnit} unit`,
     grandTotal: formatRupiah(tx.grandTotal),
     masuk: formatDateTime(tx.orderDiterima),
@@ -73,7 +87,12 @@ export default async function LabelPage({
           <span>{totalUnit} unit</span>
           <span>{formatRupiah(tx.grandTotal)}</span>
         </div>
-        <p className="mt-1 text-xs font-medium text-slate-600">
+        <div
+          className={`mt-2 rounded-md border-2 bg-white py-1 text-center text-base font-extrabold uppercase tracking-wide ${payStyle}`}
+        >
+          {statusBayar}
+        </div>
+        <p className="mt-2 text-xs font-medium text-slate-600">
           Masuk: {formatDateTime(tx.orderDiterima)}
         </p>
         <p className="text-xs font-medium text-slate-600">
