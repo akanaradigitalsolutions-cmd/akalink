@@ -7,6 +7,7 @@ import {
   giveAdvance,
   repayAdvance,
   deleteAdvance,
+  deletePayrollRun,
   setEmployeeStart,
   runPayroll,
 } from "@/lib/salary-actions";
@@ -445,6 +446,7 @@ function PayrollHistory({ detail }: { detail: EmployeeGajiDetail }) {
               <th className="px-3 py-2 text-right font-medium">Potong</th>
               <th className="px-3 py-2 text-right font-medium">Bersih</th>
               <th className="px-3 py-2 text-left font-medium">Sumber</th>
+              <th className="px-3 py-2 text-right font-medium">Aksi</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -466,11 +468,46 @@ function PayrollHistory({ detail }: { detail: EmployeeGajiDetail }) {
                   {formatRupiah(p.gajiBersih)}
                 </td>
                 <td className="px-3 py-2 text-slate-500">{labelAkun(p.akun)}</td>
+                <td className="px-3 py-2 text-right">
+                  <PayrollDeleteButton runId={p.id} />
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+    </div>
+  );
+}
+
+function PayrollDeleteButton({ runId }: { runId: string }) {
+  const router = useRouter();
+  const [pending, start] = useTransition();
+  const [err, setErr] = useState<string>();
+  function batal() {
+    if (
+      !confirm(
+        "Batalkan penggajian ini? Beban gaji, potongan kasbon, dan saldo Kas/Bank akan dikembalikan seperti sebelum penggajian.",
+      )
+    )
+      return;
+    setErr(undefined);
+    start(async () => {
+      const res = await deletePayrollRun(runId);
+      if (res.ok) router.refresh();
+      else setErr(res.error);
+    });
+  }
+  return (
+    <div className="flex flex-col items-end gap-0.5">
+      <button
+        onClick={batal}
+        disabled={pending}
+        className="font-medium text-slate-400 hover:text-red-600 disabled:opacity-60"
+      >
+        {pending ? "…" : "Batalkan"}
+      </button>
+      {err && <span className="text-[10px] text-red-600">{err}</span>}
     </div>
   );
 }
