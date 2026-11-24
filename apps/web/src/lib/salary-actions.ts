@@ -461,3 +461,109 @@ export async function deleteAdvance(id: string): Promise<SalaryResult> {
   revalidatePath("/dashboard");
   return { ok: true };
 }
+
+/**
+ * Batalkan / hapus satu PROSES GAJI (payroll run) — koreksi bila salah input.
+ * Membalik SEMUA dampaknya agar uang kembali seperti sebelum penggajian:
+ *  - Hapus jurnal penggajian → Beban Gaji, Piutang Karyawan, dan Kas/Bank
+ *    kembali seperti semula (otomatis terkoreksi di Laba-Rugi & Neraca).
+ *  - Kembalikan potongan kasbon: `dibayar` tiap kasbon dikurangi lagi dan
+ *    statusnya di-set ulang (kasbon aktif kembali bila jadi belum lunas).
+ *  - Hapus baris pembayaran "potong_gaji" milik run ini & baris payroll run.
+ * Hanya untuk pemilik.
+ */
+export async function deletePayrollRun(id: string): Promise<SalaryResult> {
+  const c = await ownerCtx();
+  if (!c) return { ok: false, error: "Hanya pemilik." };
+  const db = getDb();
+  const [run] = await db
+    .select({ id: payrollRuns.id, employeeId: payrollRuns.employeeId })
+    .from(payrollRuns)
+    .where(and(eq(payrollRuns.id, id), eq(payrollRuns.tenantId, c.tenantId)))
+    .limit(1);
+  if (!run) return { ok: false, error: "Data penggajian tidak ditemukan." };
+
+  try {
+    await db.transaction(async (tx) => {
+      // 1) Kembalikan potongan kasbon yang dilakukan lewat run ini.
+      const pays = await tx
+        .select({
+          advanceId: salaryAdvancePayments.advanceId,
+          jumlah: salaryAdvancePayments.jumlah,
+        })
+        .from(salaryAdvancePayments)
+        .where(
+          and(
+            eq(salaryAdvancePayments.tenantId, c.tenantId),
+            eq(salaryAdvancePayments.payrollRunId, id),
+          ),
+        );
+      for (const p of pays) {
+        const [adv] = await tx
+          .select({
+            jumlah: salaryAdvances.jumlah,
+            dibayar: salaryAdvances.dibayar,
+          })
+          .from(salaryAdvances)
+          .where(
+            and(
+              eq(salaryAdvances.id, p.advanceId),
+              eq(salaryAdvances.tenantId, c.tenantId),
+            ),
+          )
+          .limit(1);
+        if (!adv) continue;
+        const dibayarBaru = Math.max(0, adv.dibayar - p.jumlah);
+        const lunas = dibayarBaru >= adv.jumlah;
+        await tx
+          .update(salaryAdvances)
+          .set({
+            dibayar: dibayarBaru,
+            status: lunas ? "dipotong" : "belum_dipotong",
+            settledAt: lunas ? new Date() : null,
+          })
+          .where(eq(salaryAdvances.id, p.advanceId));
+      }
+
+      // 2) Hapus baris pembayaran "potong_gaji" milik run ini.
+      await tx
+        .delete(salaryAdvancePayments)
+        .where(
+          and(
+            eq(salaryAdvancePayments.tenantId, c.tenantId),
+            eq(salaryAdvancePayments.payrollRunId, id),
+          ),
+        );
+
+      // 3) Hapus jurnal penggajian (membalik Beban Gaji / Piutang / Kas·Bank).
+      await tx
+        .delete(journalEntries)
+        .where(
+          and(
+            eq(journalEntries.tenantId, c.tenantId),
+            eq(journalEntries.refType, "penggajian"),
+            eq(journalEntries.refId, id),
+          ),
+        );
+
+      // 4) Hapus payroll run.
+      await tx
+        .delete(payrollRuns)
+        .where(
+          and(eq(payrollRuns.id, id), eq(payrollRuns.tenantId, c.tenantId)),
+        );
+    });
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Gagal." };
+  }
+
+  revalidatePath("/gaji");
+  revalidatePath(`/gaji/${run.employeeId}`);
+  revalidatePath("/keuangan/neraca");
+  revalidatePath("/keuangan/laba-rugi");
+  revalidatePath("/keuangan/jurnal");
+  revalidatePath("/keuangan/buku-besar");
+  revalidatePath("/kas");
+  revalidatePath("/dashboard");
+  return { ok: true };
+}
