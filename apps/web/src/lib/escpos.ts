@@ -241,8 +241,9 @@ export function buildLabelEscPos(d: LabelPrintData, cols = 32): Uint8Array {
   // Nama pelanggan besar
   p.align("left").bold(true).size(true).line(d.pelanggan).size(false);
   p.kv(d.totalUnit, d.grandTotal);
-  p.kv("Pembayaran", d.statusBayar);
   p.bold(false);
+  // Status pembayaran — rata tengah & tebal agar jelas (independen lebar kertas).
+  p.align("center").bold(true).line(`[ ${d.statusBayar} ]`).bold(false).align("left");
   p.line(`Masuk  : ${d.masuk}`);
   p.line(`Selesai: ${d.selesai}`);
   p.divider();
