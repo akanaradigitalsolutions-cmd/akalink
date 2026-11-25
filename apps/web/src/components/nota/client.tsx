@@ -19,7 +19,7 @@ export function AutoPrint() {
 }
 
 const PAPER_KEY = "akalink_paper_mm";
-type PaperWidth = 58 | 80;
+type PaperWidth = 58 | 80 | 88;
 
 /**
  * Kontrol cetak untuk printer struk termal: pilih lebar kertas (58/80mm),
@@ -38,7 +38,7 @@ export function ThermalPrint({
 
   useEffect(() => {
     const saved = Number(localStorage.getItem(PAPER_KEY));
-    if (saved === 58 || saved === 80) setW(saved);
+    if (saved === 58 || saved === 80 || saved === 88) setW(saved);
     setReady(true);
   }, []);
 
@@ -76,6 +76,9 @@ export function ThermalPrint({
             <button type="button" onClick={() => setW(80)} className={btn(80)}>
               80mm
             </button>
+            <button type="button" onClick={() => setW(88)} className={btn(88)}>
+              88mm
+            </button>
           </div>
         </div>
         <button
@@ -93,7 +96,7 @@ export function ThermalPrint({
 /**
  * Cetak langsung ke printer termal Bluetooth (BLE), mis. iWare RPP02N.
  * Mengirim byte ESC/POS via Web Bluetooth — tidak lewat dialog cetak browser.
- * Lebar kolom mengikuti kertas tersimpan (58mm=32, 80mm=42).
+ * Lebar kolom mengikuti kertas tersimpan (58mm=32, 80mm=42, 88mm=48).
  */
 type BluetoothPrintProps =
   | { kind?: "nota"; data: NotaPrintData }
@@ -115,7 +118,7 @@ export function BluetoothPrint(props: BluetoothPrintProps) {
     setMsg("");
     try {
       const saved = Number(localStorage.getItem(PAPER_KEY));
-      const cols = saved === 80 ? 42 : 32;
+      const cols = saved === 88 ? 48 : saved === 80 ? 42 : 32;
       const bytes =
         props.kind === "label"
           ? buildLabelEscPos(props.data, cols)

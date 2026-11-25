@@ -88,7 +88,7 @@ export default async function LabelPage({
           <span>{formatRupiah(tx.grandTotal)}</span>
         </div>
         <div
-          className={`mt-2 rounded-md border-2 bg-white py-1 text-center text-base font-extrabold uppercase tracking-wide ${payStyle}`}
+          className={`mt-2 rounded-md border-2 bg-white py-1 text-center text-base font-extrabold uppercase ${payStyle}`}
         >
           {statusBayar}
         </div>
